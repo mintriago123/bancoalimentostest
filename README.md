@@ -9,7 +9,6 @@
   - Proceso de registro simplificado: formulario mínimo, sin pasos múltiples ni validaciones extensas; onboarding mucho más rápido.
 ![Ruta /auth/registrar ](images/Screenshot%202025-06-20%20at%2017-43-45%20Banco%20de%20Alimentos.png)
 ![Ruta /auth/registrar ](images/image%20copy.png)
-![Ruta /auth/registrar ](images/Screenshot%202025-06-20%20at%2017-49-44%20Banco%20de%20Alimentos.png)
 - /auth/olvide-contrasena
 ![Ruta /auth/olvide-contrasena ](images/Screenshot%202025-06-20%20at%2017-51-23%20Banco%20de%20Alimentos.png)
 - /dashboard

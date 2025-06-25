@@ -87,38 +87,41 @@ export default function PaginaRegistroSimple() {
         <>
           <input type="hidden" name="rol" value={rolSeleccionado} />
           <p className="text-center text-gray-500">Rol: <b>{rolSeleccionado}</b></p>
-          <input
-            name="email"
-            type="email"
-            required
-            placeholder="Correo"
-            className="w-full border p-2 rounded"
-            value={datos.email}
-            onChange={manejarCambio}
-          />
-          <input
-            name="contrasena"
-            type="password"
-            required
-            placeholder="Contraseña"
-            className="w-full border p-2 rounded"
-            value={datos.contrasena}
-            onChange={manejarCambio}
-          />
-          <input
-            name="confirmar"
-            type="password"
-            required
-            placeholder="Confirmar contraseña"
-            className="w-full border p-2 rounded"
-            value={datos.confirmar}
-            onChange={manejarCambio}
-          />
-          {error && <div className="text-red-600">{error}</div>}
+
+          <div className="space-y-3">
+            <input
+              name="email"
+              type="email"
+              required
+              placeholder="Correo"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-400 outline-none transition-all shadow-sm bg-white placeholder-gray-500"
+              value={datos.email}
+              onChange={manejarCambio}
+            />
+            <input
+              name="contrasena"
+              type="password"
+              required
+              placeholder="Contraseña"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-400 outline-none transition-all shadow-sm bg-white placeholder-gray-500"
+              value={datos.contrasena}
+              onChange={manejarCambio}
+            />
+            <input
+              name="confirmar"
+              type="password"
+              required
+              placeholder="Confirmar contraseña"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-400 outline-none transition-all shadow-sm bg-white placeholder-gray-500"
+              value={datos.confirmar}
+              onChange={manejarCambio}
+            />
+          </div>
+          {error && <div className="text-red-600 bg-red-100 p-2 rounded mt-2 text-center">{error}</div>}
           <button
             type="submit"
             disabled={cargando}
-            className="w-full bg-blue-600 text-white py-2 rounded"
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all mt-2"
           >
             {cargando ? 'Creando...' : 'Crear cuenta'}
           </button>

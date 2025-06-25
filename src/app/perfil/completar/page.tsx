@@ -271,7 +271,7 @@ export default function CompletarPerfil() {
   };
 
   return (
-    <div className="min-h-screen py-10 flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-100">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 via-blue-200 to-blue-400">
       <form
         className="w-full max-w-lg mx-auto bg-white rounded-2xl shadow-xl border border-blue-100 p-8 space-y-6"
         onSubmit={manejarEnvio}
