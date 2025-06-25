@@ -60,10 +60,6 @@ export default function CompletarPerfil() {
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
 
-  const clasesInput = "block w-full px-4 py-3 text-gray-900 placeholder-gray-500 bg-white/70 border border-gray-300/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm transition-all duration-200";
-  const clasesLabel = "block mb-2 text-sm font-bold text-gray-700";
-  const clasesBoton = "w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50";
-
   const manejarCambio = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -135,7 +131,6 @@ export default function CompletarPerfil() {
         const datos = await respuesta.json();
         const datosRuc = extraerDatosRuc(datos);
 
-        // Aquí nos aseguramos que si no existe el dato, sea ""
         setFechaExpedicionRepre(datosRuc.fechaExpedicionRepresentante || "");
 
         if (respuesta.ok && datosRuc.razonSocial) {
@@ -276,154 +271,187 @@ export default function CompletarPerfil() {
   };
 
   return (
-    <form className="space-y-6 max-w-md mx-auto bg-white/90 shadow-lg rounded-xl p-6 mt-8" onSubmit={manejarEnvio}>
-      <div className="mb-8 text-center">
-        <h2 className="text-3xl font-extrabold tracking-tight text-gray-900">
+    <div className="min-h-screen py-10 flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-100">
+      <form
+        className="w-full max-w-lg mx-auto bg-white rounded-2xl shadow-xl border border-blue-100 p-8 space-y-6"
+        onSubmit={manejarEnvio}
+      >
+        <h2 className="text-3xl font-extrabold text-center text-blue-800 mb-4">
           Completa tu Perfil
         </h2>
-      </div>
-      <div>
-        <label htmlFor="tipo_persona" className={clasesLabel}>Tipo de Persona</label>
-        <select
-          name="tipo_persona"
-          id="tipo_persona"
-          value={form.tipo_persona}
-          onChange={manejarCambio}
-          className={clasesInput}
-        >
-          <option value="Natural">Natural (Cédula)</option>
-          <option value="Juridica">Jurídica (RUC)</option>
-        </select>
-      </div>
-      <div>
-        <label htmlFor={form.tipo_persona === 'Natural' ? 'cedula' : 'ruc'} className={clasesLabel}>
-          {form.tipo_persona === 'Natural' ? 'Cédula' : 'RUC'}
-        </label>
-        <div className="flex gap-2">
-          <input
-            name={form.tipo_persona === 'Natural' ? 'cedula' : 'ruc'}
-            id={form.tipo_persona === 'Natural' ? 'cedula' : 'ruc'}
-            type="text"
-            maxLength={form.tipo_persona === 'Natural' ? 10 : 13}
-            placeholder={form.tipo_persona === 'Natural' ? 'Cédula' : 'RUC'}
-            className={clasesInput}
-            value={form.tipo_persona === 'Natural' ? form.cedula : form.ruc}
-            onChange={manejarCambio}
-          />
-          <button
-            type="button"
-            className="inline-flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg shadow-sm font-medium hover:bg-blue-700 transition-colors focus:outline-none disabled:opacity-50"
-            disabled={consultando}
-            onClick={consultarIdentificacion}
-          >
-            {consultando ? "Consultando..." : "Consultar"}
-          </button>
-        </div>
-        {validacionDocumento.mensaje && (
-          <div className={`mt-2 text-sm rounded-lg p-3 ${validacionDocumento.esValido ? "text-green-700 bg-green-100" : "text-red-600 bg-red-100"}`}>
-            {validacionDocumento.mensaje}
+
+        {/* Selector visual de tipo de persona */}
+        <div>
+          <label className="font-semibold text-gray-700 block mb-2 text-center">Tipo de Persona</label>
+          <div className="grid grid-cols-2 gap-4 mb-2">
+            <button
+              type="button"
+              className={`flex flex-col items-center justify-center px-0 py-4 rounded-xl border-2 transition-all font-medium
+                ${form.tipo_persona === 'Natural'
+                  ? 'bg-blue-600 text-white border-blue-700 shadow-lg'
+                  : 'bg-white text-blue-900 border-blue-200 hover:bg-blue-50'}
+              `}
+              onClick={() => setForm(f => ({ ...f, tipo_persona: 'Natural' }))}
+            >
+              Natural
+              <span className="block text-xs font-normal mt-1">Cédula</span>
+            </button>
+            <button
+              type="button"
+              className={`flex flex-col items-center justify-center px-0 py-4 rounded-xl border-2 transition-all font-medium
+                ${form.tipo_persona === 'Juridica'
+                  ? 'bg-blue-600 text-white border-blue-700 shadow-lg'
+                  : 'bg-white text-blue-900 border-blue-200 hover:bg-blue-50'}
+              `}
+              onClick={() => setForm(f => ({ ...f, tipo_persona: 'Juridica' }))}
+            >
+              Jurídica
+              <span className="block text-xs font-normal mt-1">RUC</span>
+            </button>
           </div>
-        )}
-      </div>
-      {/* FECHA DE EMISIÓN - NATURAL */}
-      {form.tipo_persona === 'Natural' && fechaExpedicionReal && (
+        </div>
+
+        {/* Documento de identidad */}
         <div>
-          <label htmlFor="fechaEmisionIngresada" className={clasesLabel}>
-            Fecha de emisión de la cédula
+          <label htmlFor={form.tipo_persona === 'Natural' ? 'cedula' : 'ruc'} className="font-semibold text-gray-700 block mb-1">
+            {form.tipo_persona === 'Natural' ? 'Cédula' : 'RUC'}
           </label>
-          <input
-            name="fechaEmisionIngresada"
-            id="fechaEmisionIngresada"
-            type="text"
-            placeholder="Ej: 22/03/2020"
-            className={clasesInput}
-            value={form.fechaEmisionIngresada}
-            onChange={manejarCambio}
-          />
-          <div className="text-xs text-gray-500 mt-1">Esta información se usará para validar tu identidad.</div>
-          {form.fechaEmisionIngresada && !validarFechaEmision() && (
-            <div className="text-sm text-red-600 mt-1">La fecha ingresada no coincide con el registro oficial.</div>
-          )}
-          {form.fechaEmisionIngresada && validarFechaEmision() && (
-            <div className="text-sm text-green-700 mt-1">Fecha de emisión verificada correctamente.</div>
+          <div className="flex gap-2">
+            <input
+              name={form.tipo_persona === 'Natural' ? 'cedula' : 'ruc'}
+              id={form.tipo_persona === 'Natural' ? 'cedula' : 'ruc'}
+              type="text"
+              maxLength={form.tipo_persona === 'Natural' ? 10 : 13}
+              placeholder={form.tipo_persona === 'Natural' ? 'Cédula' : 'RUC'}
+              className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
+              value={form.tipo_persona === 'Natural' ? form.cedula : form.ruc}
+              onChange={manejarCambio}
+            />
+            <button
+              type="button"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition-all"
+              disabled={consultando}
+              onClick={consultarIdentificacion}
+            >
+              {consultando ? "..." : "Consultar"}
+            </button>
+          </div>
+          {validacionDocumento.mensaje && (
+            <div className={`mt-2 text-xs rounded-lg px-3 py-2 ${
+              validacionDocumento.esValido
+                ? "text-green-700 bg-green-100"
+                : "text-red-600 bg-red-100"
+            }`}>
+              {validacionDocumento.mensaje}
+            </div>
           )}
         </div>
-      )}
-      {/* FECHA DE EMISIÓN REPRESENTANTE LEGAL - JURÍDICA */}
-      {form.tipo_persona === 'Juridica' && (
-        <div>
-          <label htmlFor="fechaExpRepreIngresada" className={clasesLabel}>
-            Fecha de emisión de la cédula del representante legal
-          </label>
-          <input
-            name="fechaExpRepreIngresada"
-            id="fechaExpRepreIngresada"
-            type="text"
-            placeholder="Ej: 29/10/2018"
-            className={clasesInput}
-            value={form.fechaExpRepreIngresada}
-            onChange={manejarCambio}
-          />
-          <div className="text-xs text-gray-500 mt-1">
-            Esta información se usará para validar la identidad del representante legal.
-            {!fechaExpedicionRepre && (
-              <span className="block text-red-500 mt-1">
-                (No se pudo obtener la fecha oficial, se guardará tu dato pero no se validará)
-              </span>
+
+        {/* FECHA DE EMISIÓN - NATURAL */}
+        {form.tipo_persona === 'Natural' && fechaExpedicionReal && (
+          <div>
+            <label htmlFor="fechaEmisionIngresada" className="font-semibold text-gray-700 block mb-1">
+              Fecha de emisión de la cédula
+            </label>
+            <input
+              name="fechaEmisionIngresada"
+              id="fechaEmisionIngresada"
+              type="text"
+              placeholder="Ej: 22/03/2020"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
+              value={form.fechaEmisionIngresada}
+              onChange={manejarCambio}
+            />
+            <div className="text-xs text-gray-500 mt-1">Esta información se usará para validar tu identidad.</div>
+            {form.fechaEmisionIngresada && !validarFechaEmision() && (
+              <div className="text-sm text-red-600 mt-1">La fecha ingresada no coincide con el registro oficial.</div>
+            )}
+            {form.fechaEmisionIngresada && validarFechaEmision() && (
+              <div className="text-sm text-green-700 mt-1">Fecha de emisión verificada correctamente.</div>
             )}
           </div>
-          {form.fechaExpRepreIngresada && fechaExpedicionRepre && !validarFechaExpedicionRepre() && (
-            <div className="text-sm text-red-600 mt-1">La fecha ingresada no coincide con el registro oficial.</div>
-          )}
-          {form.fechaExpRepreIngresada && fechaExpedicionRepre && validarFechaExpedicionRepre() && (
-            <div className="text-sm text-green-700 mt-1">Fecha de emisión verificada correctamente.</div>
-          )}
+        )}
+
+        {/* FECHA DE EMISIÓN REPRESENTANTE LEGAL - JURÍDICA SOLO DESPUÉS DE CONSULTA */}
+        {form.tipo_persona === 'Juridica' && nombreBloqueado && (
+          <div>
+            <label htmlFor="fechaExpRepreIngresada" className="font-semibold text-gray-700 block mb-1">
+              Fecha de emisión de la cédula del representante legal
+            </label>
+            <input
+              name="fechaExpRepreIngresada"
+              id="fechaExpRepreIngresada"
+              type="text"
+              placeholder="Ej: 29/10/2018"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
+              value={form.fechaExpRepreIngresada}
+              onChange={manejarCambio}
+            />
+            <div className="text-xs text-gray-500 mt-1">
+              Esta información se usará para validar la identidad del representante legal.
+              {!fechaExpedicionRepre && (
+                <span className="block text-red-500 mt-1">
+                  (No se pudo obtener la fecha oficial, se guardará tu dato pero no se validará)
+                </span>
+              )}
+            </div>
+            {form.fechaExpRepreIngresada && fechaExpedicionRepre && !validarFechaExpedicionRepre() && (
+              <div className="text-sm text-red-600 mt-1">La fecha ingresada no coincide con el registro oficial.</div>
+            )}
+            {form.fechaExpRepreIngresada && fechaExpedicionRepre && validarFechaExpedicionRepre() && (
+              <div className="text-sm text-green-700 mt-1">Fecha de emisión verificada correctamente.</div>
+            )}
+          </div>
+        )}
+
+        <div>
+          <label htmlFor="nombre" className="font-semibold text-gray-700 block mb-1">Nombre o Razón Social</label>
+          <input
+            name="nombre"
+            id="nombre"
+            type="text"
+            placeholder="Nombre o Razón Social"
+            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
+            value={form.nombre}
+            onChange={manejarCambio}
+            disabled={nombreBloqueado}
+          />
         </div>
-      )}
-      <div>
-        <label htmlFor="nombre" className={clasesLabel}>Nombre o Razón Social</label>
-        <input
-          name="nombre"
-          id="nombre"
-          type="text"
-          placeholder="Nombre o Razón Social"
-          className={clasesInput}
-          value={form.nombre}
-          onChange={manejarCambio}
-          disabled={nombreBloqueado}
-        />
-      </div>
-      <div>
-        <label htmlFor="direccion" className={clasesLabel}>Dirección</label>
-        <input
-          name="direccion"
-          id="direccion"
-          type="text"
-          placeholder="Dirección"
-          className={clasesInput}
-          value={form.direccion}
-          onChange={manejarCambio}
-        />
-      </div>
-      <div>
-        <label htmlFor="telefono" className={clasesLabel}>Teléfono</label>
-        <input
-          name="telefono"
-          id="telefono"
-          type="tel"
-          placeholder="Teléfono"
-          className={clasesInput}
-          value={form.telefono}
-          onChange={manejarCambio}
-        />
-      </div>
-      {error && <div className="text-sm text-center text-red-600 bg-red-100 p-3 rounded-lg">{error}</div>}
-      {exito && <div className="text-sm text-center text-green-700 bg-green-100 p-3 rounded-lg">{exito}</div>}
-      <div>
-        <button type="submit" className={clasesBoton}>
+        <div>
+          <label htmlFor="direccion" className="font-semibold text-gray-700 block mb-1">Dirección</label>
+          <input
+            name="direccion"
+            id="direccion"
+            type="text"
+            placeholder="Dirección"
+            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
+            value={form.direccion}
+            onChange={manejarCambio}
+          />
+        </div>
+        <div>
+          <label htmlFor="telefono" className="font-semibold text-gray-700 block mb-1">Teléfono</label>
+          <input
+            name="telefono"
+            id="telefono"
+            type="tel"
+            placeholder="Teléfono"
+            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
+            value={form.telefono}
+            onChange={manejarCambio}
+          />
+        </div>
+
+        {error && <div className="text-center text-red-700 bg-red-100 py-2 px-3 rounded-lg">{error}</div>}
+        {exito && <div className="text-center text-green-700 bg-green-100 py-2 px-3 rounded-lg">{exito}</div>}
+
+        <button
+          type="submit"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow transition-all"
+        >
           Guardar
         </button>
-      </div>
-    </form>
+      </form>
+    </div>
   );
 }
