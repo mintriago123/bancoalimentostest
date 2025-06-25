@@ -1,17 +1,34 @@
 ## Rutas
 - /
+  - Ahora incluye opciones de navegación rápida desde la landing page para mejorar el acceso de los usuarios.
 ![Ruta / ](images/Screenshot%202025-06-20%20at%2017-40-26%20Banco%20de%20Alimentos.png)
 - /auth/iniciar-sesion
+  - El flujo de inicio de sesión requiere que el usuario complete su perfil si faltan datos esenciales.
 ![Ruta /auth/iniciar-sesion ](images/Screenshot%202025-06-20%20at%2017-42-19%20Banco%20de%20Alimentos.png)
 - /auth/registrar
+  - Proceso de registro simplificado: formulario mínimo, sin pasos múltiples ni validaciones extensas; onboarding mucho más rápido.
 ![Ruta /auth/registrar ](images/Screenshot%202025-06-20%20at%2017-43-45%20Banco%20de%20Alimentos.png)
 ![Ruta /auth/registrar ](images/Screenshot%202025-06-20%20at%2017-48-09%20Banco%20de%20Alimentos.png)
 ![Ruta /auth/registrar ](images/Screenshot%202025-06-20%20at%2017-49-44%20Banco%20de%20Alimentos.png)
 - /auth/olvide-contrasena
 ![Ruta /auth/olvide-contrasena ](images/Screenshot%202025-06-20%20at%2017-51-23%20Banco%20de%20Alimentos.png)
+- /dashboard
+  - Ahora muestra los detalles del perfil del usuario obtenidos directamente de la base de datos.
+- /perfil/completar
+  - Ruta pública para completar el perfil si faltan datos obligatorios.
 
 ## Esquema de Base de Datos
+- Valida RUC de manera más precisa.
 ![Esquema de Base de Datos](images/supabase-schema-bfjmwjvzsywhmyruerxi.png)
+
+## Cambios Recientes Destacados
+
+- **Registro simplificado:** El formulario de registro es ahora mínimo, facilitando el onboarding y eliminando pasos/validaciones innecesarias.
+- **Flujo de login y perfil mejorados:** Si el usuario inicia sesión pero su perfil está incompleto, el sistema lo dirige a completarlo antes de acceder a otras secciones.
+- **Dashboard enriquecido:** El panel muestra los datos actuales del perfil directamente de la base de datos.
+- **Validación de RUC optimizada:** Las comprobaciones de RUC han sido actualizadas para mayor precisión.
+- **Rutas públicas para perfil:** Los usuarios pueden completar su perfil desde rutas accesibles públicamente.
+- **Mejor navegación:** Se agregaron accesos rápidos y navegación mejorada en la landing page para facilitar el flujo de usuario.
 
 ## Tecnologías Utilizadas
 
@@ -73,7 +90,8 @@ banco-alimentos/
 │   ├── app/                   # App Router de Next.js
 │   │   ├── api/               # API Routes
 │   │   ├── auth/              # Páginas de autenticación
-│   │   ├── dashboard/         # Panel de control
+│   │   ├── dashboard/         # Panel de control (ahora muestra datos del perfil)
+│   │   ├── perfil/            # Páginas de perfil y completado de perfil
 │   │   ├── components/        # Componentes reutilizables
 │   │   └── globals.css        # Estilos globales
 │   ├── lib/                   # Utilidades y configuraciones
