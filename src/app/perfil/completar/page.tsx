@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/app/components/SupabaseProvider';
-import { Iconos } from '@/app/components/ui/Iconos';
-import { CLASES_ESTILO, MENSAJES, CONFIGURACION } from '@/lib/constantes';
 import { validarCedulaEcuatoriana, validarRucEcuatoriano } from '@/lib/validaciones';
 
 // Función para extraer datos de cédula (DINA-RAP)
@@ -21,17 +19,21 @@ function extraerDatosDemograficos(apiResponse: any) {
     profesion: getCampo('profesion'),
     fechaNacimiento: getCampo('fechaNacimiento'),
     lugarNacimiento: getCampo('lugarNacimiento'),
+    fechaExpedicion: getCampo('fechaExpedicion') || getCampo('fecha_expedicion'),
   };
 }
 
-// Función para extraer datos de RUC (nuevo endpoint)
+// Función para extraer datos de RUC (incluye fecha de expedición del representante legal)
 function extraerDatosRuc(respuesta: any) {
   const s5383 = respuesta?.["Servicio 5383"];
   const s5387 = respuesta?.["Servicio 5387"];
+  const datosRepre = s5387?.["Datos Representante Legal"];
   return {
     razonSocial: s5383?.["Razon Social"] || "",
     direccion: s5383?.["Descripcion Ubicacion Geo"] || "",
     representante: s5387?.["Nombre Repre Legal"] || "",
+    cedulaRepresentante: datosRepre?.["Cedula"] || "",
+    fechaExpedicionRepresentante: datosRepre?.["Fecha Expedicion"] || "",
   };
 }
 
@@ -46,7 +48,11 @@ export default function CompletarPerfil() {
     nombre: '',
     direccion: '',
     telefono: '',
+    fechaEmisionIngresada: '',
+    fechaExpRepreIngresada: '',
   });
+  const [fechaExpedicionReal, setFechaExpedicionReal] = useState<string>(''); // Para usuario natural
+  const [fechaExpedicionRepre, setFechaExpedicionRepre] = useState<string>(''); // Para representante legal
   const [consultando, setConsultando] = useState(false);
   const [nombreBloqueado, setNombreBloqueado] = useState(false);
   const [identificacionValidada, setIdentificacionValidada] = useState(false);
@@ -60,18 +66,7 @@ export default function CompletarPerfil() {
 
   const manejarCambio = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    if (name === 'cedula' || name === 'ruc') {
-      const soloNumeros = value.replace(/\D/g, '');
-      const longitudMaxima = name === 'cedula' ? 10 : 13;
-      if (soloNumeros.length <= longitudMaxima) {
-        setForm((prev) => ({ ...prev, [name]: soloNumeros }));
-        setIdentificacionValidada(false);
-        setValidacionDocumento({ esValido: false, mensaje: null });
-        setNombreBloqueado(false);
-      }
-    } else {
-      setForm((prev) => ({ ...prev, [name]: value }));
-    }
+    setForm((prev) => ({ ...prev, [name]: value }));
     setError(null);
   };
 
@@ -105,7 +100,6 @@ export default function CompletarPerfil() {
 
     try {
       if (form.tipo_persona === 'Natural') {
-        // Consulta cédula normal
         const url = `${process.env.NEXT_PUBLIC_SERVICIO_CONSULTAS_DINARAP}?identificacion=${numero}`;
         const respuesta = await fetch(url, {
           method: 'GET',
@@ -115,30 +109,24 @@ export default function CompletarPerfil() {
         const datosDemograficos = extraerDatosDemograficos(datos);
 
         if (respuesta.ok && datosDemograficos && datosDemograficos.nombre) {
-          const nombreObtenido = datosDemograficos.nombre;
-          if (nombreObtenido && nombreObtenido.trim() !== '' && nombreObtenido !== 'No disponible') {
-            setForm(prev => ({
-              ...prev,
-              nombre: datosDemograficos.nombre,
-              cedula: datosDemograficos.cedula || prev.cedula,
-              ruc: prev.ruc,
-            }));
-            setNombreBloqueado(true);
-            setIdentificacionValidada(true);
-            setValidacionDocumento({ esValido: true, mensaje: null });
-            setExito('Datos obtenidos correctamente.');
-          } else {
-            setNombreBloqueado(false);
-            setIdentificacionValidada(true);
-            setValidacionDocumento({ esValido: true, mensaje: 'Puedes ingresar los datos manualmente.' });
-          }
+          setFechaExpedicionReal(datosDemograficos.fechaExpedicion || '');
+          setForm(prev => ({
+            ...prev,
+            nombre: datosDemograficos.nombre,
+            cedula: datosDemograficos.cedula || prev.cedula,
+            ruc: prev.ruc,
+          }));
+          setNombreBloqueado(true);
+          setIdentificacionValidada(false);
+          setValidacionDocumento({ esValido: false, mensaje: "Por favor, ingresa la fecha de emisión de tu cédula para continuar." });
+          setExito(null);
         } else {
           setNombreBloqueado(false);
-          setIdentificacionValidada(true);
-          setValidacionDocumento({ esValido: true, mensaje: 'Puedes ingresar los datos manualmente.' });
+          setIdentificacionValidada(false);
+          setValidacionDocumento({ esValido: false, mensaje: 'Puedes ingresar los datos manualmente.' });
+          setFechaExpedicionReal('');
         }
       } else {
-        // Consulta RUC con endpoint y variable de entorno
         const url = `${process.env.NEXT_PUBLIC_SERVICIO_CONSULTAS_RUC}?ruc=${numero}`;
         const respuesta = await fetch(url, {
           method: 'GET',
@@ -147,44 +135,61 @@ export default function CompletarPerfil() {
         const datos = await respuesta.json();
         const datosRuc = extraerDatosRuc(datos);
 
+        // Aquí nos aseguramos que si no existe el dato, sea ""
+        setFechaExpedicionRepre(datosRuc.fechaExpedicionRepresentante || "");
+
         if (respuesta.ok && datosRuc.razonSocial) {
           setForm(prev => ({
             ...prev,
             nombre: datosRuc.razonSocial,
             direccion: datosRuc.direccion,
-            // puedes guardar el representante en otro campo si deseas
           }));
           setNombreBloqueado(true);
-          setIdentificacionValidada(true);
+          setIdentificacionValidada(false);
           setValidacionDocumento({
-            esValido: true,
-            mensaje: datosRuc.representante
-              ? `Representante Legal: ${datosRuc.representante}`
-              : null
+            esValido: false,
+            mensaje: "Por favor, ingresa la fecha de emisión de la cédula del representante legal para continuar."
           });
-          setExito('Datos de empresa obtenidos correctamente.');
+          setExito(null);
         } else {
           setNombreBloqueado(false);
-          setIdentificacionValidada(true);
-          setValidacionDocumento({ esValido: true, mensaje: 'Puedes ingresar los datos manualmente.' });
+          setIdentificacionValidada(false);
+          setValidacionDocumento({ esValido: false, mensaje: 'Puedes ingresar los datos manualmente.' });
+          setFechaExpedicionRepre('');
         }
       }
     } catch {
       setNombreBloqueado(false);
       setIdentificacionValidada(false);
       setError('No se pudo consultar la identificación.');
+      setFechaExpedicionReal('');
+      setFechaExpedicionRepre('');
     } finally {
       setConsultando(false);
     }
   };
 
-  // Nuevo: Handler para guardar perfil en la DB
+  // Validar fecha de emisión (natural)
+  const validarFechaEmision = () => {
+    if (!fechaExpedicionReal || !form.fechaEmisionIngresada) return false;
+    const normalizar = (fecha: string) =>
+      fecha.replace(/[-/]/g, '').trim().toLowerCase();
+    return normalizar(form.fechaEmisionIngresada) === normalizar(fechaExpedicionReal);
+  };
+
+  // Validar fecha de emisión del representante (jurídica)
+  const validarFechaExpedicionRepre = () => {
+    if (!fechaExpedicionRepre || !form.fechaExpRepreIngresada) return false;
+    const normalizar = (fecha: string) =>
+      fecha.replace(/[-/]/g, '').trim().toLowerCase();
+    return normalizar(form.fechaExpRepreIngresada) === normalizar(fechaExpedicionRepre);
+  };
+
   const manejarEnvio = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setExito(null);
 
-    // Validar que la cédula no esté vacía
     if (form.tipo_persona === 'Natural' && !form.cedula) {
       setError("La cédula es obligatoria.");
       return;
@@ -194,7 +199,29 @@ export default function CompletarPerfil() {
       return;
     }
 
-    // Obtener usuario autenticado
+    // Validación natural
+    if (form.tipo_persona === 'Natural' && fechaExpedicionReal) {
+      if (!form.fechaEmisionIngresada) {
+        setError("Debes ingresar la fecha de emisión de tu cédula.");
+        return;
+      }
+      if (!validarFechaEmision()) {
+        setError("La fecha de emisión no coincide con la registrada.");
+        return;
+      }
+    }
+    // Validación jurídica
+    if (form.tipo_persona === 'Juridica' && fechaExpedicionRepre) {
+      if (!form.fechaExpRepreIngresada) {
+        setError("Debes ingresar la fecha de emisión de la cédula del representante legal.");
+        return;
+      }
+      if (!validarFechaExpedicionRepre()) {
+        setError("La fecha de emisión del representante legal no coincide con la registrada.");
+        return;
+      }
+    }
+
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user?.id) {
       setError("No se pudo obtener el usuario autenticado.");
@@ -228,7 +255,6 @@ export default function CompletarPerfil() {
       }
     }
 
-    // Actualizar el perfil en la tabla usuarios
     const { error: updateError } = await supabase
       .from("usuarios")
       .update({
@@ -299,6 +325,61 @@ export default function CompletarPerfil() {
           </div>
         )}
       </div>
+      {/* FECHA DE EMISIÓN - NATURAL */}
+      {form.tipo_persona === 'Natural' && fechaExpedicionReal && (
+        <div>
+          <label htmlFor="fechaEmisionIngresada" className={clasesLabel}>
+            Fecha de emisión de la cédula
+          </label>
+          <input
+            name="fechaEmisionIngresada"
+            id="fechaEmisionIngresada"
+            type="text"
+            placeholder="Ej: 22/03/2020"
+            className={clasesInput}
+            value={form.fechaEmisionIngresada}
+            onChange={manejarCambio}
+          />
+          <div className="text-xs text-gray-500 mt-1">Esta información se usará para validar tu identidad.</div>
+          {form.fechaEmisionIngresada && !validarFechaEmision() && (
+            <div className="text-sm text-red-600 mt-1">La fecha ingresada no coincide con el registro oficial.</div>
+          )}
+          {form.fechaEmisionIngresada && validarFechaEmision() && (
+            <div className="text-sm text-green-700 mt-1">Fecha de emisión verificada correctamente.</div>
+          )}
+        </div>
+      )}
+      {/* FECHA DE EMISIÓN REPRESENTANTE LEGAL - JURÍDICA */}
+      {form.tipo_persona === 'Juridica' && (
+        <div>
+          <label htmlFor="fechaExpRepreIngresada" className={clasesLabel}>
+            Fecha de emisión de la cédula del representante legal
+          </label>
+          <input
+            name="fechaExpRepreIngresada"
+            id="fechaExpRepreIngresada"
+            type="text"
+            placeholder="Ej: 29/10/2018"
+            className={clasesInput}
+            value={form.fechaExpRepreIngresada}
+            onChange={manejarCambio}
+          />
+          <div className="text-xs text-gray-500 mt-1">
+            Esta información se usará para validar la identidad del representante legal.
+            {!fechaExpedicionRepre && (
+              <span className="block text-red-500 mt-1">
+                (No se pudo obtener la fecha oficial, se guardará tu dato pero no se validará)
+              </span>
+            )}
+          </div>
+          {form.fechaExpRepreIngresada && fechaExpedicionRepre && !validarFechaExpedicionRepre() && (
+            <div className="text-sm text-red-600 mt-1">La fecha ingresada no coincide con el registro oficial.</div>
+          )}
+          {form.fechaExpRepreIngresada && fechaExpedicionRepre && validarFechaExpedicionRepre() && (
+            <div className="text-sm text-green-700 mt-1">Fecha de emisión verificada correctamente.</div>
+          )}
+        </div>
+      )}
       <div>
         <label htmlFor="nombre" className={clasesLabel}>Nombre o Razón Social</label>
         <input
@@ -312,11 +393,6 @@ export default function CompletarPerfil() {
           disabled={nombreBloqueado}
         />
       </div>
-      {form.tipo_persona === 'Juridica' && validacionDocumento.esValido && validacionDocumento.mensaje && (
-        <div className="text-sm text-blue-700 bg-blue-100 rounded-lg p-2 mt-2">
-          {validacionDocumento.mensaje}
-        </div>
-      )}
       <div>
         <label htmlFor="direccion" className={clasesLabel}>Dirección</label>
         <input

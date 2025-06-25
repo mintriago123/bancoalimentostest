@@ -14,19 +14,23 @@
 ![Ruta /auth/olvide-contrasena ](images/Screenshot%202025-06-20%20at%2017-51-23%20Banco%20de%20Alimentos.png)
 - /dashboard
   - Ahora muestra los detalles del perfil del usuario obtenidos directamente de la base de datos.
+  - Etiquetado refinado para mayor claridad en los datos presentados.
 - /perfil/completar
   - Ruta pública para completar el perfil si faltan datos obligatorios.
+  - El formulario de perfil ahora solicita y valida la fecha de emisión de la cédula para personas naturales. Se previene el envío si la fecha no coincide con registros oficiales, mostrando retroalimentación clara al usuario.
 
 ## Esquema de Base de Datos
 - Valida RUC de manera más precisa.
-![Esquema de Base de Datos](images/supabase-schema-bfjmwjvzsywhmyruerxi.png)
+- Valida la fecha de emisión de cédula para personas naturales.
+![Esquema de Base de Datos](images/supabase-schema-nnqlqiokomkvaxnqtmgl.png)
 
 ## Cambios Recientes Destacados
 
 - **Registro simplificado:** El formulario de registro es ahora mínimo, facilitando el onboarding y eliminando pasos/validaciones innecesarias.
 - **Flujo de login y perfil mejorados:** Si el usuario inicia sesión pero su perfil está incompleto, el sistema lo dirige a completarlo antes de acceder a otras secciones.
-- **Dashboard enriquecido:** El panel muestra los datos actuales del perfil directamente de la base de datos.
+- **Dashboard enriquecido:** El panel muestra los datos actuales del perfil directamente de la base de datos, con etiquetas refinadas.
 - **Validación de RUC optimizada:** Las comprobaciones de RUC han sido actualizadas para mayor precisión.
+- **Validación de fecha de emisión de cédula:** Para personas naturales, el formulario de perfil ahora requiere la fecha de emisión de la cédula y la valida contra registros oficiales, bloqueando el envío en caso de error y mostrando retroalimentación.
 - **Rutas públicas para perfil:** Los usuarios pueden completar su perfil desde rutas accesibles públicamente.
 - **Mejor navegación:** Se agregaron accesos rápidos y navegación mejorada en la landing page para facilitar el flujo de usuario.
 
@@ -90,8 +94,8 @@ banco-alimentos/
 │   ├── app/                   # App Router de Next.js
 │   │   ├── api/               # API Routes
 │   │   ├── auth/              # Páginas de autenticación
-│   │   ├── dashboard/         # Panel de control (ahora muestra datos del perfil)
-│   │   ├── perfil/            # Páginas de perfil y completado de perfil
+│   │   ├── dashboard/         # Panel de control 
+│   │   ├── perfil/            # Páginas de perfil y completado de perfil (validación de cédula incluida)
 │   │   ├── components/        # Componentes reutilizables
 │   │   └── globals.css        # Estilos globales
 │   ├── lib/                   # Utilidades y configuraciones
