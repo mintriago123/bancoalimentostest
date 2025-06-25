@@ -60,6 +60,45 @@ export default function CompletarPerfil() {
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
 
+  // Formateo automático y validación de fecha tipo DD/MM/AAAA
+// NUEVO: formateo automático y validación de rango de fecha DD/MM/AAAA
+const manejarCambioFecha = (e: React.ChangeEvent<HTMLInputElement>) => {
+  let value = e.target.value.replace(/\D/g, ""); // Solo números
+  if (value.length > 8) value = value.slice(0, 8);
+
+  // Validar días y meses en el input
+  let dia = value.slice(0, 2);
+  let mes = value.slice(2, 4);
+  let anio = value.slice(4, 8);
+
+  if (dia) {
+    let nDia = parseInt(dia, 10);
+    if (nDia > 31) dia = "31";
+    if (nDia < 1 && dia.length === 2) dia = "01";
+  }
+  if (mes) {
+    let nMes = parseInt(mes, 10);
+    if (nMes > 12) mes = "12";
+    if (nMes < 1 && mes.length === 2) mes = "01";
+  }
+
+  let nuevaFecha = dia;
+  if (mes) nuevaFecha += "/" + mes;
+  if (anio) nuevaFecha += "/" + anio;
+
+  setForm(prev => ({
+    ...prev,
+    [e.target.name]: nuevaFecha,
+  }));
+  setError(null);
+};
+
+  // Validación de número de teléfono: debe ser de 10 dígitos numéricos
+  const validarTelefono = (telefono: string) => {
+    const soloNumeros = telefono.replace(/\D/g, "");
+    return soloNumeros.length === 10 && /^[0-9]+$/.test(soloNumeros);
+  };
+
   const manejarCambio = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -191,6 +230,12 @@ export default function CompletarPerfil() {
     }
     if (form.tipo_persona === 'Juridica' && !form.ruc) {
       setError("El RUC es obligatorio.");
+      return;
+    }
+
+    // Teléfono obligatorio y válido
+    if (!form.telefono || !validarTelefono(form.telefono)) {
+      setError("El número de teléfono es obligatorio y debe tener 10 dígitos.");
       return;
     }
 
@@ -353,15 +398,19 @@ export default function CompletarPerfil() {
             <label htmlFor="fechaEmisionIngresada" className="font-semibold text-gray-700 block mb-1">
               Fecha de emisión de la cédula
             </label>
-            <input
-              name="fechaEmisionIngresada"
-              id="fechaEmisionIngresada"
-              type="text"
-              placeholder="Ej: 22/03/2020"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
-              value={form.fechaEmisionIngresada}
-              onChange={manejarCambio}
-            />
+              <input
+                name="fechaEmisionIngresada"
+                id="fechaEmisionIngresada"
+                type="text"
+                placeholder="DD/MM/AAAA"
+                maxLength={10}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
+                value={form.fechaEmisionIngresada}
+                onChange={manejarCambioFecha}
+                inputMode="numeric"
+                autoComplete="off"
+              />
+
             <div className="text-xs text-gray-500 mt-1">Esta información se usará para validar tu identidad.</div>
             {form.fechaEmisionIngresada && !validarFechaEmision() && (
               <div className="text-sm text-red-600 mt-1">La fecha ingresada no coincide con el registro oficial.</div>
@@ -378,15 +427,18 @@ export default function CompletarPerfil() {
             <label htmlFor="fechaExpRepreIngresada" className="font-semibold text-gray-700 block mb-1">
               Fecha de emisión de la cédula del representante legal
             </label>
-            <input
-              name="fechaExpRepreIngresada"
-              id="fechaExpRepreIngresada"
-              type="text"
-              placeholder="Ej: 29/10/2018"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
-              value={form.fechaExpRepreIngresada}
-              onChange={manejarCambio}
-            />
+              <input
+                name="fechaExpRepreIngresada"
+                id="fechaExpRepreIngresada"
+                type="text"
+                placeholder="DD/MM/AAAA"
+                maxLength={10}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
+                value={form.fechaExpRepreIngresada}
+                onChange={manejarCambioFecha}
+                inputMode="numeric"
+                autoComplete="off"
+              />
             <div className="text-xs text-gray-500 mt-1">
               Esta información se usará para validar la identidad del representante legal.
               {!fechaExpedicionRepre && (
@@ -436,9 +488,12 @@ export default function CompletarPerfil() {
             id="telefono"
             type="tel"
             placeholder="Teléfono"
+            maxLength={10}
             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
             value={form.telefono}
             onChange={manejarCambio}
+            inputMode="numeric"
+            autoComplete="off"
           />
         </div>
 
