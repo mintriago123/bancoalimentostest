@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import { validarCedulaEcuatoriana, validarRucEcuatoriano } from '@/lib/validaciones';
 
-// Función para extraer datos de cédula (DINA-RAP)
+// Extrae expedición y expiración para natural
 function extraerDatosDemograficos(apiResponse: any) {
   const entidad = apiResponse?.paquete?.entidades?.entidad?.[0];
   const fila = entidad?.filas?.fila?.[0];
@@ -20,10 +20,11 @@ function extraerDatosDemograficos(apiResponse: any) {
     fechaNacimiento: getCampo('fechaNacimiento'),
     lugarNacimiento: getCampo('lugarNacimiento'),
     fechaExpedicion: getCampo('fechaExpedicion') || getCampo('fecha_expedicion'),
+    fechaExpiracion: getCampo('fechaExpiracion') || getCampo('fecha_expiracion'),
   };
 }
 
-// Función para extraer datos de RUC (incluye fecha de expedición del representante legal)
+// Extrae expedición y expiración para jurídica
 function extraerDatosRuc(respuesta: any) {
   const s5383 = respuesta?.["Servicio 5383"];
   const s5387 = respuesta?.["Servicio 5387"];
@@ -34,6 +35,7 @@ function extraerDatosRuc(respuesta: any) {
     representante: s5387?.["Nombre Repre Legal"] || "",
     cedulaRepresentante: datosRepre?.["Cedula"] || "",
     fechaExpedicionRepresentante: datosRepre?.["Fecha Expedicion"] || "",
+    fechaExpiracionRepresentante: datosRepre?.["Fecha Expiracion"] || "",
   };
 }
 
@@ -51,8 +53,11 @@ export default function CompletarPerfil() {
     fechaEmisionIngresada: '',
     fechaExpRepreIngresada: '',
   });
-  const [fechaExpedicionReal, setFechaExpedicionReal] = useState<string>(''); // Para usuario natural
-  const [fechaExpedicionRepre, setFechaExpedicionRepre] = useState<string>(''); // Para representante legal
+
+  // Arrays de fechas válidas para natural y jurídica
+  const [fechasValidasNatural, setFechasValidasNatural] = useState<string[]>([]);
+  const [fechasValidasJuridica, setFechasValidasJuridica] = useState<string[]>([]);
+
   const [consultando, setConsultando] = useState(false);
   const [nombreBloqueado, setNombreBloqueado] = useState(false);
   const [identificacionValidada, setIdentificacionValidada] = useState(false);
@@ -61,37 +66,36 @@ export default function CompletarPerfil() {
   const [exito, setExito] = useState<string | null>(null);
 
   // Formateo automático y validación de fecha tipo DD/MM/AAAA
-// NUEVO: formateo automático y validación de rango de fecha DD/MM/AAAA
-const manejarCambioFecha = (e: React.ChangeEvent<HTMLInputElement>) => {
-  let value = e.target.value.replace(/\D/g, ""); // Solo números
-  if (value.length > 8) value = value.slice(0, 8);
+  const manejarCambioFecha = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, ""); // Solo números
+    if (value.length > 8) value = value.slice(0, 8);
 
-  // Validar días y meses en el input
-  let dia = value.slice(0, 2);
-  let mes = value.slice(2, 4);
-  let anio = value.slice(4, 8);
+    // Validar días y meses en el input
+    let dia = value.slice(0, 2);
+    let mes = value.slice(2, 4);
+    let anio = value.slice(4, 8);
 
-  if (dia) {
-    let nDia = parseInt(dia, 10);
-    if (nDia > 31) dia = "31";
-    if (nDia < 1 && dia.length === 2) dia = "01";
-  }
-  if (mes) {
-    let nMes = parseInt(mes, 10);
-    if (nMes > 12) mes = "12";
-    if (nMes < 1 && mes.length === 2) mes = "01";
-  }
+    if (dia) {
+      let nDia = parseInt(dia, 10);
+      if (nDia > 31) dia = "31";
+      if (nDia < 1 && dia.length === 2) dia = "01";
+    }
+    if (mes) {
+      let nMes = parseInt(mes, 10);
+      if (nMes > 12) mes = "12";
+      if (nMes < 1 && mes.length === 2) mes = "01";
+    }
 
-  let nuevaFecha = dia;
-  if (mes) nuevaFecha += "/" + mes;
-  if (anio) nuevaFecha += "/" + anio;
+    let nuevaFecha = dia;
+    if (mes) nuevaFecha += "/" + mes;
+    if (anio) nuevaFecha += "/" + anio;
 
-  setForm(prev => ({
-    ...prev,
-    [e.target.name]: nuevaFecha,
-  }));
-  setError(null);
-};
+    setForm(prev => ({
+      ...prev,
+      [e.target.name]: nuevaFecha,
+    }));
+    setError(null);
+  };
 
   // Validación de número de teléfono: debe ser de 10 dígitos numéricos
   const validarTelefono = (telefono: string) => {
@@ -142,9 +146,13 @@ const manejarCambioFecha = (e: React.ChangeEvent<HTMLInputElement>) => {
         });
         const datos = await respuesta.json();
         const datosDemograficos = extraerDatosDemograficos(datos);
+        // Guardar fechas válidas (expedición o expiración si existen)
+        setFechasValidasNatural([
+          datosDemograficos.fechaExpedicion,
+          datosDemograficos.fechaExpiracion,
+        ].filter(Boolean));
 
         if (respuesta.ok && datosDemograficos && datosDemograficos.nombre) {
-          setFechaExpedicionReal(datosDemograficos.fechaExpedicion || '');
           setForm(prev => ({
             ...prev,
             nombre: datosDemograficos.nombre,
@@ -153,13 +161,13 @@ const manejarCambioFecha = (e: React.ChangeEvent<HTMLInputElement>) => {
           }));
           setNombreBloqueado(true);
           setIdentificacionValidada(false);
-          setValidacionDocumento({ esValido: false, mensaje: "Por favor, ingresa la fecha de emisión de tu cédula para continuar." });
+          setValidacionDocumento({ esValido: false, mensaje: "Por favor, ingresa la fecha de emisión o expiración de tu cédula para continuar." });
           setExito(null);
         } else {
           setNombreBloqueado(false);
           setIdentificacionValidada(false);
           setValidacionDocumento({ esValido: false, mensaje: 'Puedes ingresar los datos manualmente.' });
-          setFechaExpedicionReal('');
+          setFechasValidasNatural([]);
         }
       } else {
         const url = `${process.env.NEXT_PUBLIC_SERVICIO_CONSULTAS_RUC}?ruc=${numero}`;
@@ -169,8 +177,10 @@ const manejarCambioFecha = (e: React.ChangeEvent<HTMLInputElement>) => {
         });
         const datos = await respuesta.json();
         const datosRuc = extraerDatosRuc(datos);
-
-        setFechaExpedicionRepre(datosRuc.fechaExpedicionRepresentante || "");
+        setFechasValidasJuridica([
+          datosRuc.fechaExpedicionRepresentante,
+          datosRuc.fechaExpiracionRepresentante,
+        ].filter(Boolean));
 
         if (respuesta.ok && datosRuc.razonSocial) {
           setForm(prev => ({
@@ -182,41 +192,44 @@ const manejarCambioFecha = (e: React.ChangeEvent<HTMLInputElement>) => {
           setIdentificacionValidada(false);
           setValidacionDocumento({
             esValido: false,
-            mensaje: "Por favor, ingresa la fecha de emisión de la cédula del representante legal para continuar."
+            mensaje: "Por favor, ingresa la fecha de emisión o expiración de la cédula del representante legal para continuar."
           });
           setExito(null);
         } else {
           setNombreBloqueado(false);
           setIdentificacionValidada(false);
           setValidacionDocumento({ esValido: false, mensaje: 'Puedes ingresar los datos manualmente.' });
-          setFechaExpedicionRepre('');
+          setFechasValidasJuridica([]);
         }
       }
     } catch {
       setNombreBloqueado(false);
       setIdentificacionValidada(false);
       setError('No se pudo consultar la identificación.');
-      setFechaExpedicionReal('');
-      setFechaExpedicionRepre('');
+      setFechasValidasNatural([]);
+      setFechasValidasJuridica([]);
     } finally {
       setConsultando(false);
     }
   };
 
-  // Validar fecha de emisión (natural)
-  const validarFechaEmision = () => {
-    if (!fechaExpedicionReal || !form.fechaEmisionIngresada) return false;
-    const normalizar = (fecha: string) =>
-      fecha.replace(/[-/]/g, '').trim().toLowerCase();
-    return normalizar(form.fechaEmisionIngresada) === normalizar(fechaExpedicionReal);
+  // Normaliza fecha
+  const normalizar = (fecha: string) => fecha.replace(/[-/]/g, '').trim().toLowerCase();
+
+  // Valida para natural: coincide con alguna de las fechas válidas
+  const validarFechaNatural = () => {
+    if (!fechasValidasNatural.length || !form.fechaEmisionIngresada) return false;
+    return fechasValidasNatural.some(
+      f => normalizar(form.fechaEmisionIngresada) === normalizar(f)
+    );
   };
 
-  // Validar fecha de emisión del representante (jurídica)
-  const validarFechaExpedicionRepre = () => {
-    if (!fechaExpedicionRepre || !form.fechaExpRepreIngresada) return false;
-    const normalizar = (fecha: string) =>
-      fecha.replace(/[-/]/g, '').trim().toLowerCase();
-    return normalizar(form.fechaExpRepreIngresada) === normalizar(fechaExpedicionRepre);
+  // Valida para jurídica: coincide con alguna de las fechas válidas del representante
+  const validarFechaJuridica = () => {
+    if (!fechasValidasJuridica.length || !form.fechaExpRepreIngresada) return false;
+    return fechasValidasJuridica.some(
+      f => normalizar(form.fechaExpRepreIngresada) === normalizar(f)
+    );
   };
 
   const manejarEnvio = async (e: React.FormEvent) => {
@@ -233,31 +246,30 @@ const manejarCambioFecha = (e: React.ChangeEvent<HTMLInputElement>) => {
       return;
     }
 
-    // Teléfono obligatorio y válido
     if (!form.telefono || !validarTelefono(form.telefono)) {
       setError("El número de teléfono es obligatorio y debe tener 10 dígitos.");
       return;
     }
 
-    // Validación natural
-    if (form.tipo_persona === 'Natural' && fechaExpedicionReal) {
+    // Validación natural usando ambas fechas posibles
+    if (form.tipo_persona === 'Natural' && fechasValidasNatural.length) {
       if (!form.fechaEmisionIngresada) {
-        setError("Debes ingresar la fecha de emisión de tu cédula.");
+        setError("Debes ingresar la fecha de emisión o expiración de tu cédula.");
         return;
       }
-      if (!validarFechaEmision()) {
-        setError("La fecha de emisión no coincide con la registrada.");
+      if (!validarFechaNatural()) {
+        setError("La fecha de emisión o expiración no coincide con la registrada.");
         return;
       }
     }
-    // Validación jurídica
-    if (form.tipo_persona === 'Juridica' && fechaExpedicionRepre) {
+    // Validación jurídica usando ambas fechas posibles
+    if (form.tipo_persona === 'Juridica' && fechasValidasJuridica.length) {
       if (!form.fechaExpRepreIngresada) {
-        setError("Debes ingresar la fecha de emisión de la cédula del representante legal.");
+        setError("Debes ingresar la fecha de emisión o expiración de la cédula del representante legal.");
         return;
       }
-      if (!validarFechaExpedicionRepre()) {
-        setError("La fecha de emisión del representante legal no coincide con la registrada.");
+      if (!validarFechaJuridica()) {
+        setError("La fecha de emisión o expiración del representante legal no coincide con la registrada.");
         return;
       }
     }
@@ -381,22 +393,24 @@ const manejarCambioFecha = (e: React.ChangeEvent<HTMLInputElement>) => {
               {consultando ? "..." : "Consultar"}
             </button>
           </div>
-          {validacionDocumento.mensaje && (
-            <div className={`mt-2 text-xs rounded-lg px-3 py-2 ${
-              validacionDocumento.esValido
-                ? "text-green-700 bg-green-100"
-                : "text-red-600 bg-red-100"
-            }`}>
-              {validacionDocumento.mensaje}
-            </div>
-          )}
+              {validacionDocumento.mensaje && (
+                <div className={`mt-2 text-xs rounded-lg px-3 py-2 ${
+                  validacionDocumento.mensaje.includes("Por favor, ingresa la fecha de emisión o expiración")
+                    ? "text-blue-700 bg-blue-100"
+                    : validacionDocumento.esValido
+                      ? "text-green-700 bg-green-100"
+                      : "text-red-600 bg-red-100"
+                }`}>
+                  {validacionDocumento.mensaje}
+                </div>
+              )}
         </div>
 
-        {/* FECHA DE EMISIÓN - NATURAL */}
-        {form.tipo_persona === 'Natural' && fechaExpedicionReal && (
+        {/* FECHA DE EMISIÓN / EXPIRACIÓN - NATURAL */}
+        {form.tipo_persona === 'Natural' && fechasValidasNatural.length > 0 && (
           <div>
             <label htmlFor="fechaEmisionIngresada" className="font-semibold text-gray-700 block mb-1">
-              Fecha de emisión de la cédula
+              Fecha de emisión o expiración de la cédula
             </label>
               <input
                 name="fechaEmisionIngresada"
@@ -411,21 +425,23 @@ const manejarCambioFecha = (e: React.ChangeEvent<HTMLInputElement>) => {
                 autoComplete="off"
               />
 
-            <div className="text-xs text-gray-500 mt-1">Esta información se usará para validar tu identidad.</div>
-            {form.fechaEmisionIngresada && !validarFechaEmision() && (
-              <div className="text-sm text-red-600 mt-1">La fecha ingresada no coincide con el registro oficial.</div>
+            <div className="text-xs text-gray-500 mt-1">
+              Puedes ingresar la fecha de emisión <b>o</b> expiración de tu cédula.
+            </div>
+            {form.fechaEmisionIngresada && !validarFechaNatural() && (
+              <div className="text-sm text-red-600 mt-1">La fecha ingresada no coincide con los registros oficiales.</div>
             )}
-            {form.fechaEmisionIngresada && validarFechaEmision() && (
-              <div className="text-sm text-green-700 mt-1">Fecha de emisión verificada correctamente.</div>
+            {form.fechaEmisionIngresada && validarFechaNatural() && (
+              <div className="text-sm text-green-700 mt-1">Fecha verificada correctamente.</div>
             )}
           </div>
         )}
 
-        {/* FECHA DE EMISIÓN REPRESENTANTE LEGAL - JURÍDICA SOLO DESPUÉS DE CONSULTA */}
-        {form.tipo_persona === 'Juridica' && nombreBloqueado && (
+        {/* FECHA DE EMISIÓN / EXPIRACIÓN REPRESENTANTE LEGAL - JURÍDICA SOLO DESPUÉS DE CONSULTA */}
+        {form.tipo_persona === 'Juridica' && nombreBloqueado && fechasValidasJuridica.length > 0 && (
           <div>
             <label htmlFor="fechaExpRepreIngresada" className="font-semibold text-gray-700 block mb-1">
-              Fecha de emisión de la cédula del representante legal
+              Fecha de emisión o expiración de la cédula del representante legal
             </label>
               <input
                 name="fechaExpRepreIngresada"
@@ -440,18 +456,18 @@ const manejarCambioFecha = (e: React.ChangeEvent<HTMLInputElement>) => {
                 autoComplete="off"
               />
             <div className="text-xs text-gray-500 mt-1">
-              Esta información se usará para validar la identidad del representante legal.
-              {!fechaExpedicionRepre && (
+              Puedes ingresar la fecha de emisión <b>o</b> expiración de la cédula del representante legal.
+              {fechasValidasJuridica.length === 0 && (
                 <span className="block text-red-500 mt-1">
                   (No se pudo obtener la fecha oficial, se guardará tu dato pero no se validará)
                 </span>
               )}
             </div>
-            {form.fechaExpRepreIngresada && fechaExpedicionRepre && !validarFechaExpedicionRepre() && (
-              <div className="text-sm text-red-600 mt-1">La fecha ingresada no coincide con el registro oficial.</div>
+            {form.fechaExpRepreIngresada && fechasValidasJuridica.length > 0 && !validarFechaJuridica() && (
+              <div className="text-sm text-red-600 mt-1">La fecha ingresada no coincide con los registros oficiales.</div>
             )}
-            {form.fechaExpRepreIngresada && fechaExpedicionRepre && validarFechaExpedicionRepre() && (
-              <div className="text-sm text-green-700 mt-1">Fecha de emisión verificada correctamente.</div>
+            {form.fechaExpRepreIngresada && fechasValidasJuridica.length > 0 && validarFechaJuridica() && (
+              <div className="text-sm text-green-700 mt-1">Fecha verificada correctamente.</div>
             )}
           </div>
         )}
