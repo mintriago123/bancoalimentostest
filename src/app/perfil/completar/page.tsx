@@ -161,7 +161,10 @@ export default function CompletarPerfil() {
           }));
           setNombreBloqueado(true);
           setIdentificacionValidada(false);
-          setValidacionDocumento({ esValido: false, mensaje: "Por favor, ingresa la fecha de emisión o expiración de tu cédula para continuar." });
+          setValidacionDocumento({
+            esValido: false,
+            mensaje: "Por favor, ingresa la fecha de emisión o expiración de tu cédula para continuar."
+          });
           setExito(null);
         } else {
           setNombreBloqueado(false);
@@ -339,7 +342,9 @@ export default function CompletarPerfil() {
 
         {/* Selector visual de tipo de persona */}
         <div>
-          <label className="font-semibold text-gray-700 block mb-2 text-center">Tipo de Persona</label>
+          <label className="font-semibold text-gray-700 block mb-2 text-center">
+            Tipo de Persona <span className="text-red-600">*</span>
+          </label>
           <div className="grid grid-cols-2 gap-4 mb-2">
             <button
               type="button"
@@ -371,7 +376,7 @@ export default function CompletarPerfil() {
         {/* Documento de identidad */}
         <div>
           <label htmlFor={form.tipo_persona === 'Natural' ? 'cedula' : 'ruc'} className="font-semibold text-gray-700 block mb-1">
-            {form.tipo_persona === 'Natural' ? 'Cédula' : 'RUC'}
+            {form.tipo_persona === 'Natural' ? 'Cédula' : 'RUC'} <span className="text-red-600">*</span>
           </label>
           <div className="flex gap-2">
             <input
@@ -393,24 +398,24 @@ export default function CompletarPerfil() {
               {consultando ? "..." : "Consultar"}
             </button>
           </div>
-              {validacionDocumento.mensaje && (
-                <div className={`mt-2 text-xs rounded-lg px-3 py-2 ${
-                  validacionDocumento.mensaje.includes("Por favor, ingresa la fecha de emisión o expiración")
-                    ? "text-blue-700 bg-blue-100"
-                    : validacionDocumento.esValido
-                      ? "text-green-700 bg-green-100"
-                      : "text-red-600 bg-red-100"
-                }`}>
-                  {validacionDocumento.mensaje}
-                </div>
-              )}
+          {validacionDocumento.mensaje && (
+            <div className={`mt-2 text-xs rounded-lg px-3 py-2 ${
+              validacionDocumento.mensaje.includes("Por favor, ingresa la fecha de emisión o expiración")
+                ? "text-blue-700 bg-blue-100"
+                : validacionDocumento.esValido
+                  ? "text-green-700 bg-green-100"
+                  : "text-red-600 bg-red-100"
+            }`}>
+              {validacionDocumento.mensaje}
+            </div>
+          )}
         </div>
 
         {/* FECHA DE EMISIÓN / EXPIRACIÓN - NATURAL */}
         {form.tipo_persona === 'Natural' && fechasValidasNatural.length > 0 && (
           <div>
             <label htmlFor="fechaEmisionIngresada" className="font-semibold text-gray-700 block mb-1">
-              Fecha de emisión o expiración de la cédula
+              Fecha de emisión o expiración de la cédula <span className="text-red-600">*</span>
             </label>
               <input
                 name="fechaEmisionIngresada"
@@ -441,7 +446,7 @@ export default function CompletarPerfil() {
         {form.tipo_persona === 'Juridica' && nombreBloqueado && fechasValidasJuridica.length > 0 && (
           <div>
             <label htmlFor="fechaExpRepreIngresada" className="font-semibold text-gray-700 block mb-1">
-              Fecha de emisión o expiración de la cédula del representante legal
+              Fecha de emisión o expiración de la cédula del representante legal <span className="text-red-600">*</span>
             </label>
               <input
                 name="fechaExpRepreIngresada"
@@ -473,7 +478,9 @@ export default function CompletarPerfil() {
         )}
 
         <div>
-          <label htmlFor="nombre" className="font-semibold text-gray-700 block mb-1">Nombre o Razón Social</label>
+          <label htmlFor="nombre" className="font-semibold text-gray-700 block mb-1">
+            Nombre o Razón Social <span className="text-red-600">*</span>
+          </label>
           <input
             name="nombre"
             id="nombre"
@@ -486,7 +493,9 @@ export default function CompletarPerfil() {
           />
         </div>
         <div>
-          <label htmlFor="direccion" className="font-semibold text-gray-700 block mb-1">Dirección</label>
+          <label htmlFor="direccion" className="font-semibold text-gray-700 block mb-1">
+            Dirección <span className="text-red-600">*</span>
+          </label>
           <input
             name="direccion"
             id="direccion"
@@ -498,7 +507,9 @@ export default function CompletarPerfil() {
           />
         </div>
         <div>
-          <label htmlFor="telefono" className="font-semibold text-gray-700 block mb-1">Teléfono</label>
+          <label htmlFor="telefono" className="font-semibold text-gray-700 block mb-1">
+            Teléfono <span className="text-red-600">*</span>
+          </label>
           <input
             name="telefono"
             id="telefono"
