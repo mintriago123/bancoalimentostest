@@ -63,7 +63,11 @@ export default function DashboardPage() {
                 className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors text-sm"
               >
                 {perfil?.nombre ?? user.user_metadata?.nombre ?? user.email}
-                <ChevronDownIcon className="w-4 h-4 ml-2" />
+                <ChevronDownIcon
+                  className={`w-4 h-4 ml-2 transform transition-transform duration-200 ${
+                    menuAbierto ? "rotate-0" : "rotate-270"
+                  }`}
+                />
               </button>
 
               {menuAbierto && (
