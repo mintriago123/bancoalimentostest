@@ -6,7 +6,9 @@ export const RUTAS_PUBLICAS = [
   '/auth/restablecer-contrasena',
   '/auth/verificar-email',
   '/api/consultar-identificacion',
-  'perfil/completar'
+  '/perfil/completar',
+  '/perfil/actualizar',
+  
 ] as const;
 
 // Clases de estilo reutilizables
