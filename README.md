@@ -97,6 +97,7 @@ banco-alimentos/
 │   │   ├── auth/              # Páginas de autenticación
 │   │   ├── dashboard/         # Panel de control
 │   │   ├── perfil/            # Páginas de perfil y completado de perfil 
+│   │   ├── user/              # Pagina de inicio de usuario y para creacion de soliccitudes y monitoreo de solicitud
 │   │   ├── components/        # Componentes reutilizables
 │   │   └── globals.css        # Estilos globales
 │   ├── lib/                   # Utilidades y configuraciones
