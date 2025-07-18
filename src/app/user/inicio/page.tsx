@@ -15,7 +15,7 @@ export default function InicioUsuario() {
         try {
           const { data, error } = await supabase
             .from('usuarios')
-            .select('id, nombre, cedula, correo, telefono, direccion')
+            .select('id, nombre, cedula, telefono, direccion')
             .eq('id', user.id)
             .single();
           if (error) throw new Error(error.message);

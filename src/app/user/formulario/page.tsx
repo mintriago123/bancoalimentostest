@@ -26,7 +26,7 @@ export default function FormularioSolicitante() {
       const fetchUserData = async () => {
         const { data, error } = await supabase
           .from('usuarios')
-          .select('id, nombre, correo, cedula, telefono')
+          .select('id, nombre, cedula, telefono')
           .eq('id', user.id)
           .single();
 
@@ -52,10 +52,12 @@ export default function FormularioSolicitante() {
         (error) => {
           console.error('Error al obtener ubicación:', error);
           setMensaje('No se pudo obtener la ubicación.');
+          setTimeout(() => setMensaje(''), 2000);
         }
       );
     } else {
       setMensaje('La geolocalización no está disponible en este navegador.');
+      setTimeout(() => setMensaje(''), 2000);
     }
   }, []);
 
@@ -67,25 +69,23 @@ export default function FormularioSolicitante() {
     if (!user || !userData) {
       setMensaje('Por favor, inicia sesión para enviar tu solicitud.');
       setLoading(false);
+      setTimeout(() => setMensaje(''), 2000);
       return;
     }
 
     if (!tipoAlimento || cantidad <= 0) {
       setMensaje('Por favor, ingresa el tipo de alimento y la cantidad.');
       setLoading(false);
+      setTimeout(() => setMensaje(''), 2000);
       return;
     }
 
     try {
       const { error } = await supabase
-        .from('solicitudes_alimentos')
+        .from('solicitudes')
         .insert([
           {
             usuario_id: user.id,
-            nombre: userData.nombre,
-            cedula: userData.cedula,
-            correo: userData.correo,
-            telefono: userData.telefono,
             tipo_alimento: tipoAlimento,
             cantidad,
             comentarios,
@@ -100,11 +100,14 @@ export default function FormularioSolicitante() {
       setTipoAlimento('');
       setCantidad(0);
       setComentarios('');
+      setTimeout(() => setMensaje(''), 2000);
     } catch (error) {
       if (error instanceof Error) {
         setMensaje(`Error al enviar la solicitud: ${error.message}`);
+        setTimeout(() => setMensaje(''), 2000);
       } else {
         setMensaje('Error al enviar la solicitud.');
+        setTimeout(() => setMensaje(''), 2000);
       }
     } finally {
       setLoading(false);
@@ -131,7 +134,7 @@ export default function FormularioSolicitante() {
                 onClick={() => setMenuAbierto(!menuAbierto)}
                 className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 text-sm"
               >
-                {perfil?.nombre ?? user?.user_metadata?.nombre ?? user?.email ?? "Usuario"}
+                {perfil?.nombre ?? user?.user_metadata?.nombre ?? "Usuario"}
                 <ChevronDownIcon
                   className={`w-4 h-4 ml-2 transform transition-transform duration-200 ${
                     menuAbierto ? "rotate-0" : "rotate-270"
@@ -160,7 +163,6 @@ export default function FormularioSolicitante() {
             {userData && (
               <div className="space-y-2 text-sm">
                 <p><strong>Nombre:</strong> {userData.nombre}</p>
-                <p><strong>Correo:</strong> {userData.correo}</p>
                 <p><strong>Cédula:</strong> {userData.cedula}</p>
                 <p><strong>Teléfono:</strong> {userData.telefono}</p>
               </div>

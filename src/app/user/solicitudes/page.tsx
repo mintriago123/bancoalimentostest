@@ -25,7 +25,7 @@ const SolicitudesPage = () => {
       const fetchSolicitudes = async () => {
         try {
           const { data, error } = await supabase
-            .from('solicitudes_alimentos')
+            .from('solicitudes')
             .select('id, tipo_alimento, cantidad, comentarios, estado, created_at')  // Seleccionamos las columnas necesarias
             .eq('usuario_id', user.id);  // Filtramos por el usuario autenticado
 
@@ -60,7 +60,7 @@ const SolicitudesPage = () => {
 
     try {
       const { error } = await supabase
-        .from('solicitudes_alimentos')
+        .from('solicitudes')
         .delete()
         .eq('id', id);  // Eliminamos la solicitud por su id
 
@@ -70,10 +70,10 @@ const SolicitudesPage = () => {
       setSolicitudes(solicitudes.filter(solicitud => solicitud.id !== id));
 
       setMensaje('Solicitud eliminada con éxito.');
-      setTimeout(() => setMensaje(''), 3000);  // Limpiar mensaje después de 3 segundos
+      setTimeout(() => setMensaje(''), 2000);  // Limpiar mensaje después de 2 segundos
     } catch (error) {
       setMensaje(`Error al eliminar la solicitud: ${error instanceof Error ? error.message : 'Desconocido'}`);
-      setTimeout(() => setMensaje(''), 3000);  // Limpiar mensaje después de 3 segundos
+      setTimeout(() => setMensaje(''), 2000);  // Limpiar mensaje después de 2 segundos
     }
   };
 
@@ -91,7 +91,7 @@ const SolicitudesPage = () => {
 
       // Realizamos la actualización en la base de datos
       const { data, error } = await supabase
-        .from('solicitudes_alimentos')
+        .from('solicitudes')
         .update({
           tipo_alimento: solicitudAEditar.tipo_alimento,
           cantidad: solicitudAEditar.cantidad,
