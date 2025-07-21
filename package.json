@@ -12,6 +12,7 @@
     "@heroicons/react": "^2.2.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.0",
+    "lucide-react": "^0.525.0",
     "next": "15.3.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
