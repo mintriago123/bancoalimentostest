@@ -24,8 +24,8 @@ export async function middleware(request: NextRequest) {
       return supabaseResponse;
     }
 
-    // Para rutas protegidas (como /dashboard), verificar autenticación
-    if (pathname.startsWith('/dashboard')) {
+    // Para rutas protegidas, verificar autenticación
+    if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/donante') || pathname.startsWith('/user')) {
       if (!user) {
         const url = new URL('/auth/iniciar-sesion', request.url);
         url.searchParams.set('callbackUrl', pathname);
@@ -33,10 +33,23 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // Para la página principal, redirigir al dashboard si está autenticado
+    // Para la página principal, redirigir según el rol del usuario
     if (pathname === '/') {
       if (user) {
-        return NextResponse.redirect(new URL('/dashboard', request.url));
+        // Consultar el rol del usuario para redirigir correctamente
+        const { data: perfil } = await supabase
+          .from('usuarios')
+          .select('rol')
+          .eq('id', user.id)
+          .single();
+
+        if (perfil?.rol === 'ADMINISTRADOR') {
+          return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+        } else if (perfil?.rol === 'DONANTE') {
+          return NextResponse.redirect(new URL('/donante/dashboard', request.url));
+        } else {
+          return NextResponse.redirect(new URL('/dashboard', request.url));
+        }
       }
     }
 

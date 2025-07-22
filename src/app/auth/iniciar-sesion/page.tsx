@@ -56,15 +56,19 @@ const manejarEnvio = async (event: FormEvent<HTMLFormElement>) => {
         await supabase.auth.signOut();
       } else {
         // Consultar perfil en la tabla personalizada
-        const { data: perfil, error: errorPerfil, status } = await supabase
+        const { data: perfil } = await supabase
           .from('usuarios')
-          .select('nombre, cedula, ruc')
+          .select('nombre, cedula, ruc, rol')
           .eq('id', data.user.id)
           .maybeSingle();
 
         // Si no existe el perfil (404 o perfil es null), o falta algún dato importante, redirige a completar
         if (!perfil || !perfil.nombre || (!perfil.cedula && !perfil.ruc)) {
           router.push('/perfil/completar');
+        } else if (perfil.rol === 'ADMINISTRADOR') {
+          router.push('/admin/dashboard');
+        } else if (perfil.rol === 'DONANTE') {
+          router.push('/donante/dashboard');
         } else {
           router.push('/dashboard');
         }
