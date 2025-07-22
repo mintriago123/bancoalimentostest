@@ -374,10 +374,10 @@ export default function AdminPerfilPage() {
             <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
               <h3 className="text-lg font-semibold text-blue-900 mb-4">Información del Sistema</h3>
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-blue-700">ID de Usuario:</span>
-                  <span className="font-mono text-blue-900 text-xs">{profile.id}</span>
-                </div>
+                {/* <div className="flex justify-between"> */}
+                  {/* <span className="text-blue-700">ID de Usuario:</span> */}
+                  {/* <span className="font-mono text-blue-900 text-xs">{profile.id}</span> */}
+                {/* </div> */}
                 <div className="flex justify-between">
                   <span className="text-blue-700">Rol del Sistema:</span>
                   <span className="font-medium text-blue-900">{profile.rol}</span>

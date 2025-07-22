@@ -107,7 +107,7 @@ const menuItems: MenuItem[] = [
   // Items para Solicitantes
   {
     name: 'Inicio',
-    href: '/dashboard',
+    href: '/user/dashboard',
     icon: HomeIcon,
     description: 'Panel principal',
     solicitanteOnly: true
@@ -127,10 +127,10 @@ const menuItems: MenuItem[] = [
     solicitanteOnly: true
   },
   {
-    name: 'Donaciones Recibidas',
-    href: '/user/donaciones',
-    icon: DocumentTextIcon,
-    description: 'Ver ayudas recibidas',
+    name: 'Configuración',
+    href: '/user/configuracion',
+    icon: Cog6ToothIcon,
+    description: 'Ajustes de la cuenta',
     solicitanteOnly: true
   }
 ];
@@ -190,11 +190,11 @@ export default function Sidebar({
   };
 
   const isActiveRoute = (href: string) => {
-    if (href === '/dashboard' && pathname === '/dashboard') return true;
+    if (href === '/user/dashboard' && pathname === '/user/dashboard') return true;
     if (href === '/admin/dashboard' && pathname === '/admin/dashboard') return true;
     if (href === '/donante/dashboard' && pathname === '/donante/dashboard') return true;
     return pathname.startsWith(href) && 
-           href !== '/dashboard' && 
+           href !== '/user/dashboard' && 
            href !== '/admin/dashboard' && 
            href !== '/donante/dashboard';
   };
@@ -325,8 +325,10 @@ export default function Sidebar({
                   onClick={() => {
                     if (isAdmin) {
                       router.push('/admin/perfil');
+                    } else if (isDonante) {
+                      router.push('/donante/perfil');
                     } else {
-                      router.push('/perfil/actualizar');
+                      router.push('/user/perfil');
                     }
                   }}
                   className="w-full flex items-center px-3 py-2 text-left rounded-md hover:bg-white hover:shadow-sm transition-all duration-200"
@@ -339,7 +341,7 @@ export default function Sidebar({
                     if (isAdmin) {
                       router.push('/admin/configuracion');
                     } else {
-                      router.push('/configuracion');
+                      router.push('/user/configuracion');
                     }
                   }}
                   className="w-full flex items-center px-3 py-2 text-left rounded-md hover:bg-white hover:shadow-sm transition-all duration-200"

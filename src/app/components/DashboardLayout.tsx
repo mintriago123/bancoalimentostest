@@ -66,7 +66,7 @@ export default function DashboardLayout({
     switch (userRole) {
       case 'ADMINISTRADOR': return '/admin/dashboard';
       case 'DONANTE': return '/donante/dashboard';
-      default: return '/dashboard';
+      default: return '/user/dashboard';
     }
   };
 

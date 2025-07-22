@@ -70,7 +70,7 @@ const manejarEnvio = async (event: FormEvent<HTMLFormElement>) => {
         } else if (perfil.rol === 'DONANTE') {
           router.push('/donante/dashboard');
         } else {
-          router.push('/dashboard');
+          router.push('/user/dashboard');
         }
       }
     }
