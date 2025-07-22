@@ -12,9 +12,9 @@ interface ReportData {
     SOLICITANTE: number;
   };
   solicitudesPorEstado: {
-    PENDIENTE: number;
-    APROBADA: number;
-    RECHAZADA: number;
+    pendiente: number;
+    aprobada: number;
+    rechazada: number;
   };
   usuariosPorTipo: {
     NATURAL: number;
@@ -27,7 +27,7 @@ export default function AdminReportes() {
   const [reportData, setReportData] = useState<ReportData>({
     totalUsuarios: 0,
     usuariosPorRol: { ADMINISTRADOR: 0, DONANTE: 0, SOLICITANTE: 0 },
-    solicitudesPorEstado: { PENDIENTE: 0, APROBADA: 0, RECHAZADA: 0 },
+    solicitudesPorEstado: { pendiente: 0, aprobada: 0, rechazada: 0 },
     usuariosPorTipo: { NATURAL: 0, JURIDICA: 0 }
   });
   const [cargando, setCargando] = useState(true);
@@ -60,7 +60,7 @@ export default function AdminReportes() {
         const solicitudesPorEstado = solicitudes?.reduce((acc, solicitud) => {
           acc[solicitud.estado as keyof typeof acc] = (acc[solicitud.estado as keyof typeof acc] || 0) + 1;
           return acc;
-        }, { PENDIENTE: 0, APROBADA: 0, RECHAZADA: 0 }) || { PENDIENTE: 0, APROBADA: 0, RECHAZADA: 0 };
+        }, { pendiente: 0, aprobada: 0, rechazada: 0 }) || { pendiente: 0, aprobada: 0, rechazada: 0 };
 
         setReportData({
           totalUsuarios: usuarios.length,
@@ -113,14 +113,14 @@ export default function AdminReportes() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Tasa Aprobación</h3>
               <p className="text-3xl font-bold text-green-600">
                 {getPercentage(
-                  reportData.solicitudesPorEstado.APROBADA,
-                  reportData.solicitudesPorEstado.APROBADA + reportData.solicitudesPorEstado.RECHAZADA
+                  reportData.solicitudesPorEstado.aprobada,
+                  reportData.solicitudesPorEstado.aprobada + reportData.solicitudesPorEstado.rechazada
                 )}%
               </p>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Pendientes</h3>
-              <p className="text-3xl font-bold text-yellow-600">{reportData.solicitudesPorEstado.PENDIENTE}</p>
+              <p className="text-3xl font-bold text-yellow-600">{reportData.solicitudesPorEstado.pendiente}</p>
             </div>
           </div>
 
@@ -171,13 +171,13 @@ export default function AdminReportes() {
                         className="bg-yellow-600 h-2 rounded-full"
                         style={{ 
                           width: `${getPercentage(
-                            reportData.solicitudesPorEstado.PENDIENTE,
+                            reportData.solicitudesPorEstado.pendiente,
                             Object.values(reportData.solicitudesPorEstado).reduce((a, b) => a + b, 0)
                           )}%` 
                         }}
                       ></div>
                     </div>
-                    <span className="text-sm font-bold text-yellow-600">{reportData.solicitudesPorEstado.PENDIENTE}</span>
+                    <span className="text-sm font-bold text-yellow-600">{reportData.solicitudesPorEstado.pendiente}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
@@ -188,13 +188,13 @@ export default function AdminReportes() {
                         className="bg-green-600 h-2 rounded-full"
                         style={{ 
                           width: `${getPercentage(
-                            reportData.solicitudesPorEstado.APROBADA,
+                            reportData.solicitudesPorEstado.aprobada,
                             Object.values(reportData.solicitudesPorEstado).reduce((a, b) => a + b, 0)
                           )}%` 
                         }}
                       ></div>
                     </div>
-                    <span className="text-sm font-bold text-green-600">{reportData.solicitudesPorEstado.APROBADA}</span>
+                    <span className="text-sm font-bold text-green-600">{reportData.solicitudesPorEstado.aprobada}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
@@ -205,13 +205,13 @@ export default function AdminReportes() {
                         className="bg-red-600 h-2 rounded-full"
                         style={{ 
                           width: `${getPercentage(
-                            reportData.solicitudesPorEstado.RECHAZADA,
+                            reportData.solicitudesPorEstado.rechazada,
                             Object.values(reportData.solicitudesPorEstado).reduce((a, b) => a + b, 0)
                           )}%` 
                         }}
                       ></div>
                     </div>
-                    <span className="text-sm font-bold text-red-600">{reportData.solicitudesPorEstado.RECHAZADA}</span>
+                    <span className="text-sm font-bold text-red-600">{reportData.solicitudesPorEstado.rechazada}</span>
                   </div>
                 </div>
               </div>
