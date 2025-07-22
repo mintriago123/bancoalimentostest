@@ -26,7 +26,7 @@ interface Solicitud {
   tipo_alimento: string;
   cantidad: number;
   comentarios?: string;
-  estado: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
+  estado: 'pendiente' | 'aprobada' | 'rechazada';
   created_at: string;
   latitud?: number;
   longitud?: number;
@@ -80,13 +80,10 @@ export default function SolicitudesPage() {
           created_at,
           latitud,
           longitud,
-          fecha_respuesta,
-          comentario_admin,
           usuarios:usuario_id (
             nombre,
             cedula,
             telefono,
-            email,
             direccion,
             tipo_persona
           )
@@ -120,9 +117,9 @@ export default function SolicitudesPage() {
     // Filtro por estado
     if (!filtroEstado.todos) {
       filtradas = filtradas.filter(s => {
-        if (filtroEstado.pendiente && s.estado === 'PENDIENTE') return true;
-        if (filtroEstado.aprobada && s.estado === 'APROBADA') return true;
-        if (filtroEstado.rechazada && s.estado === 'RECHAZADA') return true;
+        if (filtroEstado.pendiente && s.estado === 'pendiente') return true;
+        if (filtroEstado.aprobada && s.estado === 'aprobada') return true;
+        if (filtroEstado.rechazada && s.estado === 'rechazada') return true;
         return false;
       });
     }
@@ -138,14 +135,14 @@ export default function SolicitudesPage() {
     aplicarFiltros();
   }, [aplicarFiltros]);
 
-  const actualizarEstado = async (solicitudId: string, nuevoEstado: 'APROBADA' | 'RECHAZADA', comentario: string = '') => {
+  const actualizarEstado = async (solicitudId: string, nuevoEstado: 'aprobada' | 'rechazada', comentario: string = '') => {
     try {
       const { error } = await supabase
         .from('solicitudes')
         .update({ 
           estado: nuevoEstado,
-          fecha_respuesta: new Date().toISOString(),
-          comentario_admin: comentario || null
+          // fecha_respuesta: new Date().toISOString(),
+          // comentario_admin: comentario || null
         })
         .eq('id', solicitudId);
 
@@ -165,7 +162,7 @@ export default function SolicitudesPage() {
       const { error } = await supabase
         .from('solicitudes')
         .update({ 
-          estado: 'PENDIENTE',
+          estado: 'pendiente',
           fecha_respuesta: null,
           comentario_admin: null
         })
@@ -181,18 +178,18 @@ export default function SolicitudesPage() {
 
   const getEstadoColor = (estado: string) => {
     switch (estado) {
-      case 'PENDIENTE': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'APROBADA': return 'bg-green-100 text-green-800 border-green-200';
-      case 'RECHAZADA': return 'bg-red-100 text-red-800 border-red-200';
+      case 'pendiente': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'aprobada': return 'bg-green-100 text-green-800 border-green-200';
+      case 'rechazada': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
   const getEstadoIcon = (estado: string) => {
     switch (estado) {
-      case 'PENDIENTE': return <Clock className="w-4 h-4" />;
-      case 'APROBADA': return <CheckCircle className="w-4 h-4" />;
-      case 'RECHAZADA': return <XCircle className="w-4 h-4" />;
+      case 'pendiente': return <Clock className="w-4 h-4" />;
+      case 'aprobada': return <CheckCircle className="w-4 h-4" />;
+      case 'rechazada': return <XCircle className="w-4 h-4" />;
       default: return null;
     }
   };
@@ -232,9 +229,9 @@ export default function SolicitudesPage() {
 
   const getContadorPorEstado = () => {
     const contador = {
-      PENDIENTE: 0,
-      APROBADA: 0,
-      RECHAZADA: 0,
+      pendiente: 0,
+      aprobada: 0,
+      rechazada: 0,
       TOTAL: solicitudes.length
     };
 
@@ -264,15 +261,15 @@ export default function SolicitudesPage() {
               <div className="text-xs text-blue-600">Total</div>
             </div>
             <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-              <div className="text-2xl font-bold text-yellow-600">{contador.PENDIENTE}</div>
+              <div className="text-2xl font-bold text-yellow-600">{contador.pendiente}</div>
               <div className="text-xs text-yellow-600">Pendientes</div>
             </div>
             <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-              <div className="text-2xl font-bold text-green-600">{contador.APROBADA}</div>
+              <div className="text-2xl font-bold text-green-600">{contador.aprobada}</div>
               <div className="text-xs text-green-600">Aprobadas</div>
             </div>
             <div className="bg-red-50 p-3 rounded-lg border border-red-200">
-              <div className="text-2xl font-bold text-red-600">{contador.RECHAZADA}</div>
+              <div className="text-2xl font-bold text-red-600">{contador.rechazada}</div>
               <div className="text-xs text-red-600">Rechazadas</div>
             </div>
           </div>
@@ -412,18 +409,18 @@ export default function SolicitudesPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          
-                          {solicitud.estado === 'PENDIENTE' ? (
+
+                          {solicitud.estado === 'pendiente' ? (
                             <>
                               <button
-                                onClick={() => actualizarEstado(solicitud.id, 'APROBADA')}
+                                onClick={() => actualizarEstado(solicitud.id, 'aprobada')}
                                 className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg transition-colors"
                                 title="Aprobar"
                               >
                                 <CheckCircle className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => actualizarEstado(solicitud.id, 'RECHAZADA')}
+                                onClick={() => actualizarEstado(solicitud.id, 'rechazada')}
                                 className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition-colors"
                                 title="Rechazar"
                               >
@@ -574,7 +571,7 @@ export default function SolicitudesPage() {
                 )}
 
                 {/* Acciones */}
-                {solicitudSeleccionada.estado === 'PENDIENTE' && (
+                {solicitudSeleccionada.estado === 'pendiente' && (
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h4 className="font-semibold text-gray-900 mb-3">Gestionar Solicitud</h4>
                     <div className="space-y-3">
@@ -592,14 +589,14 @@ export default function SolicitudesPage() {
                       </div>
                       <div className="flex space-x-3">
                         <button
-                          onClick={() => actualizarEstado(solicitudSeleccionada.id, 'APROBADA', comentarioAdmin)}
+                          onClick={() => actualizarEstado(solicitudSeleccionada.id, 'aprobada', comentarioAdmin)}
                           className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
                         >
                           <CheckCircle className="w-4 h-4" />
                           <span>Aprobar Solicitud</span>
                         </button>
                         <button
-                          onClick={() => actualizarEstado(solicitudSeleccionada.id, 'RECHAZADA', comentarioAdmin)}
+                          onClick={() => actualizarEstado(solicitudSeleccionada.id, 'rechazada', comentarioAdmin)}
                           className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
                         >
                           <XCircle className="w-4 h-4" />
