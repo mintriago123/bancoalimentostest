@@ -34,17 +34,17 @@ export default function AdminDashboard() {
       const { count: solicitudesPendientes } = await supabase
         .from('solicitudes')
         .select('*', { count: 'exact', head: true })
-        .eq('estado', 'PENDIENTE');
+        .eq('estado', 'pendiente');
 
       const { count: solicitudesAprobadas } = await supabase
         .from('solicitudes')
         .select('*', { count: 'exact', head: true })
-        .eq('estado', 'APROBADA');
+        .eq('estado', 'aprobada');
 
       const { count: solicitudesRechazadas } = await supabase
         .from('solicitudes')
         .select('*', { count: 'exact', head: true })
-        .eq('estado', 'RECHAZADA');
+        .eq('estado', 'rechazada');
 
       setEstadisticas({
         totalUsuarios: totalUsuarios || 0,
