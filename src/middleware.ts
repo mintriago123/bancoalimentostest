@@ -20,6 +20,34 @@ export async function middleware(request: NextRequest) {
 
     const { pathname } = request.nextUrl;
 
+    // Si el usuario ya está logueado y trata de acceder a iniciar sesión o registrarse, redirigir al dashboard
+    if ((pathname === '/auth/iniciar-sesion' || pathname === '/auth/registrar') && isAuthenticated) {
+      const { data: perfil } = await supabase
+        .from('usuarios')
+        .select('estado, rol')
+        .eq('id', user.id)
+        .single();
+
+      if (perfil) {
+        const estadoUsuario = perfil.estado || 'activo';
+        
+        // Si el usuario está bloqueado o desactivado, cerrar sesión y permitir acceso a auth
+        if (estadoUsuario === 'bloqueado' || estadoUsuario === 'desactivado') {
+          await supabase.auth.signOut();
+          return supabaseResponse;
+        }
+
+        // Redirigir al dashboard según el rol
+        if (perfil.rol === 'ADMINISTRADOR') {
+          return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+        } else if (perfil.rol === 'DONANTE') {
+          return NextResponse.redirect(new URL('/donante/dashboard', request.url));
+        } else {
+          return NextResponse.redirect(new URL('/user/dashboard', request.url));
+        }
+      }
+    }
+
     // Verificar si la ruta actual es pública
     const esRutaPublica = RUTAS_PUBLICAS.some(ruta => pathname.startsWith(ruta));
 
@@ -56,13 +84,14 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // Para la página principal, redirigir según el rol del usuario
+    // Permitir acceso a la página principal de bienvenida
+    // Los usuarios logueados pueden acceder tanto a la página principal como a sus dashboards
     if (pathname === '/') {
+      // Si está autenticado, verificar el estado del usuario pero permitir acceso a la página de bienvenida
       if (isAuthenticated) {
-        // Consultar el rol y estado del usuario para redirigir correctamente
         const { data: perfil } = await supabase
           .from('usuarios')
-          .select('rol, estado')
+          .select('estado, rol')
           .eq('id', user.id)
           .single();
 
@@ -76,19 +105,11 @@ export async function middleware(request: NextRequest) {
             url.searchParams.set('error', estadoUsuario === 'bloqueado' ? 'blocked' : 'deactivated');
             return NextResponse.redirect(url);
           }
-
-          if (perfil.rol === 'ADMINISTRADOR') {
-            return NextResponse.redirect(new URL('/admin/dashboard', request.url));
-          } else if (perfil.rol === 'DONANTE') {
-            return NextResponse.redirect(new URL('/donante/dashboard', request.url));
-          } else {
-            return NextResponse.redirect(new URL('/user/dashboard', request.url));
-          }
         }
-      } else {
-        // Si no está autenticado, redirigir a iniciar sesión
-        return NextResponse.redirect(new URL('/auth/iniciar-sesion', request.url));
       }
+      
+      // Permitir acceso a la página de bienvenida sin redirecciones automáticas
+      return supabaseResponse;
     }
 
     return supabaseResponse;
