@@ -4,198 +4,264 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import DashboardLayout from '@/app/components/DashboardLayout';
 
-interface Estadisticas {
+interface ReportData {
   totalUsuarios: number;
-  solicitudesPendientes: number;
-  solicitudesAprobadas: number;
-  solicitudesRechazadas: number;
+  usuariosPorRol: {
+    ADMINISTRADOR: number;
+    DONANTE: number;
+    SOLICITANTE: number;
+  };
+  solicitudesPorEstado: {
+    pendiente: number;
+    aprobada: number;
+    rechazada: number;
+  };
+  usuariosPorTipo: {
+    NATURAL: number;
+    JURIDICA: number;
+  };
 }
 
-export default function AdminDashboard() {
+export default function AdminReportes() {
   const { supabase } = useSupabase();
-  const [estadisticas, setEstadisticas] = useState<Estadisticas>({
+  const [reportData, setReportData] = useState<ReportData>({
     totalUsuarios: 0,
-    solicitudesPendientes: 0,
-    solicitudesAprobadas: 0,
-    solicitudesRechazadas: 0,
+    usuariosPorRol: { ADMINISTRADOR: 0, DONANTE: 0, SOLICITANTE: 0 },
+    solicitudesPorEstado: { pendiente: 0, aprobada: 0, rechazada: 0 },
+    usuariosPorTipo: { NATURAL: 0, JURIDICA: 0 }
   });
-  const [cargandoEstadisticas, setCargandoEstadisticas] = useState(true);
+  const [cargando, setCargando] = useState(true);
 
-  const cargarEstadisticas = useCallback(async () => {
-    setCargandoEstadisticas(true);
+  const cargarReportes = useCallback(async () => {
+    setCargando(true);
     
     try {
-      // Contar usuarios
-      const { count: totalUsuarios } = await supabase
+      // Obtener datos de usuarios
+      const { data: usuarios } = await supabase
         .from('usuarios')
-        .select('*', { count: 'exact', head: true });
+        .select('rol, tipo_persona');
 
-      // Contar solicitudes por estado
-      const { count: solicitudesPendientes } = await supabase
+      // Obtener datos de solicitudes
+      const { data: solicitudes } = await supabase
         .from('solicitudes')
-        .select('*', { count: 'exact', head: true })
-        .eq('estado', 'pendiente');
+        .select('estado');
 
-      const { count: solicitudesAprobadas } = await supabase
-        .from('solicitudes')
-        .select('*', { count: 'exact', head: true })
-        .eq('estado', 'aprobada');
+      if (usuarios) {
+        const usuariosPorRol = usuarios.reduce(
+          (acc: { ADMINISTRADOR: number; DONANTE: number; SOLICITANTE: number }, usuario: { rol: string }) => {
+            acc[usuario.rol as keyof typeof acc] = (acc[usuario.rol as keyof typeof acc] || 0) + 1;
+            return acc;
+          },
+          { ADMINISTRADOR: 0, DONANTE: 0, SOLICITANTE: 0 }
+        );
 
-      const { count: solicitudesRechazadas } = await supabase
-        .from('solicitudes')
-        .select('*', { count: 'exact', head: true })
-        .eq('estado', 'rechazada');
+        const usuariosPorTipo = usuarios.reduce(
+          (
+            acc: { NATURAL: number; JURIDICA: number },
+            usuario: { tipo_persona: string }
+          ) => {
+            acc[usuario.tipo_persona as keyof typeof acc] = (acc[usuario.tipo_persona as keyof typeof acc] || 0) + 1;
+            return acc;
+          },
+          { NATURAL: 0, JURIDICA: 0 }
+        );
 
-      setEstadisticas({
-        totalUsuarios: totalUsuarios || 0,
-        solicitudesPendientes: solicitudesPendientes || 0,
-        solicitudesAprobadas: solicitudesAprobadas || 0,
-        solicitudesRechazadas: solicitudesRechazadas || 0,
-      });
+        const solicitudesPorEstado = solicitudes?.reduce(
+          (
+            acc: { pendiente: number; aprobada: number; rechazada: number },
+            solicitud: { estado: string }
+          ) => {
+            acc[solicitud.estado as keyof typeof acc] = (acc[solicitud.estado as keyof typeof acc] || 0) + 1;
+            return acc;
+          },
+          { pendiente: 0, aprobada: 0, rechazada: 0 }
+        ) || { pendiente: 0, aprobada: 0, rechazada: 0 };
+
+        setReportData({
+          totalUsuarios: usuarios.length,
+          usuariosPorRol,
+          solicitudesPorEstado,
+          usuariosPorTipo
+        });
+      }
     } catch (error) {
-      console.error('Error cargando estadísticas:', error);
+      console.error('Error cargando reportes:', error);
     } finally {
-      setCargandoEstadisticas(false);
+      setCargando(false);
     }
   }, [supabase]);
 
   useEffect(() => {
-    cargarEstadisticas();
-  }, [cargarEstadisticas]);
+    cargarReportes();
+  }, [cargarReportes]);
+
+  const getPercentage = (value: number, total: number) => {
+    return total > 0 ? Math.round((value / total) * 100) : 0;
+  };
 
   return (
     <DashboardLayout 
       requiredRole="ADMINISTRADOR"
-      title="Panel de Administración"
-      description="Panel de control del sistema de gestión del Banco de Alimentos"
+      title="Reportes del Sistema"
+      description="Análisis estadístico completo del Banco de Alimentos"
     >
-      {cargandoEstadisticas ? (
+      {cargando ? (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando estadísticas del sistema...</p>
+          <p className="mt-4 text-gray-600">Generando reportes...</p>
         </div>
       ) : (
-        <div className="space-y-8">
-          {/* Estadísticas principales */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="space-y-6">
+          {/* Resumen General */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="ml-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Usuarios Registrados</h3>
-                  <p className="text-3xl font-bold text-blue-600">{estadisticas.totalUsuarios}</p>
-                  <p className="text-sm text-gray-500">Total en el sistema</p>
-                </div>
-              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Usuarios</h3>
+              <p className="text-3xl font-bold text-blue-600">{reportData.totalUsuarios}</p>
             </div>
-
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="ml-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Solicitudes Pendientes</h3>
-                  <p className="text-3xl font-bold text-yellow-600">{estadisticas.solicitudesPendientes}</p>
-                  <p className="text-sm text-gray-500">Esperando revisión</p>
-                </div>
-              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Solicitudes Total</h3>
+              <p className="text-3xl font-bold text-purple-600">
+                {Object.values(reportData.solicitudesPorEstado).reduce((a, b) => a + b, 0)}
+              </p>
             </div>
-
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="ml-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Solicitudes Aprobadas</h3>
-                  <p className="text-3xl font-bold text-green-600">{estadisticas.solicitudesAprobadas}</p>
-                  <p className="text-sm text-gray-500">Aprobadas exitosamente</p>
-                </div>
-              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Tasa Aprobación</h3>
+              <p className="text-3xl font-bold text-green-600">
+                {getPercentage(
+                  reportData.solicitudesPorEstado.aprobada,
+                  reportData.solicitudesPorEstado.aprobada + reportData.solicitudesPorEstado.rechazada
+                )}%
+              </p>
             </div>
-
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Pendientes</h3>
+              <p className="text-3xl font-bold text-yellow-600">{reportData.solicitudesPorEstado.pendiente}</p>
+            </div>
+          </div>
+
+          {/* Distribución por Roles */}
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Distribución de Usuarios por Rol</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="w-24 h-24 mx-auto mb-3 bg-red-100 rounded-full flex items-center justify-center">
+                  <span className="text-2xl font-bold text-red-600">{reportData.usuariosPorRol.ADMINISTRADOR}</span>
                 </div>
-                <div className="ml-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Solicitudes Rechazadas</h3>
-                  <p className="text-3xl font-bold text-red-600">{estadisticas.solicitudesRechazadas}</p>
-                  <p className="text-sm text-gray-500">No aprobadas</p>
+                <p className="text-sm font-medium text-gray-900">Administradores</p>
+                <p className="text-xs text-gray-500">
+                  {getPercentage(reportData.usuariosPorRol.ADMINISTRADOR, reportData.totalUsuarios)}% del total
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="w-24 h-24 mx-auto mb-3 bg-green-100 rounded-full flex items-center justify-center">
+                  <span className="text-2xl font-bold text-green-600">{reportData.usuariosPorRol.DONANTE}</span>
                 </div>
+                <p className="text-sm font-medium text-gray-900">Donantes</p>
+                <p className="text-xs text-gray-500">
+                  {getPercentage(reportData.usuariosPorRol.DONANTE, reportData.totalUsuarios)}% del total
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="w-24 h-24 mx-auto mb-3 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-2xl font-bold text-blue-600">{reportData.usuariosPorRol.SOLICITANTE}</span>
+                </div>
+                <p className="text-sm font-medium text-gray-900">Solicitantes</p>
+                <p className="text-xs text-gray-500">
+                  {getPercentage(reportData.usuariosPorRol.SOLICITANTE, reportData.totalUsuarios)}% del total
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Sección de resumen */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6">Resumen del Sistema</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-medium text-gray-900 mb-3">Estado de Solicitudes</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Total de solicitudes:</span>
-                    <span className="text-sm font-medium">
-                      {estadisticas.solicitudesPendientes + estadisticas.solicitudesAprobadas + estadisticas.solicitudesRechazadas}
-                    </span>
+          {/* Estados de Solicitudes */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">Estado de Solicitudes</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Pendientes</span>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-yellow-600 h-2 rounded-full"
+                        style={{ 
+                          width: `${getPercentage(
+                            reportData.solicitudesPorEstado.pendiente,
+                            Object.values(reportData.solicitudesPorEstado).reduce((a, b) => a + b, 0)
+                          )}%` 
+                        }}
+                      ></div>
+                    </div>
+                    <span className="text-sm font-bold text-yellow-600">{reportData.solicitudesPorEstado.pendiente}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Procesadas:</span>
-                    <span className="text-sm font-medium">
-                      {estadisticas.solicitudesAprobadas + estadisticas.solicitudesRechazadas}
-                    </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Aprobadas</span>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-600 h-2 rounded-full"
+                        style={{ 
+                          width: `${getPercentage(
+                            reportData.solicitudesPorEstado.aprobada,
+                            Object.values(reportData.solicitudesPorEstado).reduce((a, b) => a + b, 0)
+                          )}%` 
+                        }}
+                      ></div>
+                    </div>
+                    <span className="text-sm font-bold text-green-600">{reportData.solicitudesPorEstado.aprobada}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Tasa de aprobación:</span>
-                    <span className="text-sm font-medium">
-                      {estadisticas.solicitudesAprobadas + estadisticas.solicitudesRechazadas > 0
-                        ? Math.round((estadisticas.solicitudesAprobadas / (estadisticas.solicitudesAprobadas + estadisticas.solicitudesRechazadas)) * 100)
-                        : 0}%
-                    </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Rechazadas</span>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-red-600 h-2 rounded-full"
+                        style={{ 
+                          width: `${getPercentage(
+                            reportData.solicitudesPorEstado.rechazada,
+                            Object.values(reportData.solicitudesPorEstado).reduce((a, b) => a + b, 0)
+                          )}%` 
+                        }}
+                      ></div>
+                    </div>
+                    <span className="text-sm font-bold text-red-600">{reportData.solicitudesPorEstado.rechazada}</span>
                   </div>
                 </div>
               </div>
-              
-              <div>
-                <h4 className="font-medium text-gray-900 mb-3">Acciones Recomendadas</h4>
-                <div className="space-y-2">
-                  {estadisticas.solicitudesPendientes > 0 && (
-                    <div className="flex items-center text-sm text-orange-600">
-                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                      Revisar {estadisticas.solicitudesPendientes} solicitudes pendientes
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">Tipo de Persona</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Personas Naturales</span>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full"
+                        style={{ 
+                          width: `${getPercentage(reportData.usuariosPorTipo.NATURAL, reportData.totalUsuarios)}%` 
+                        }}
+                      ></div>
                     </div>
-                  )}
-                  {estadisticas.solicitudesPendientes === 0 && (
-                    <div className="flex items-center text-sm text-green-600">
-                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      Todas las solicitudes están procesadas
+                    <span className="text-sm font-bold text-blue-600">{reportData.usuariosPorTipo.NATURAL}</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Personas Jurídicas</span>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-purple-600 h-2 rounded-full"
+                        style={{ 
+                          width: `${getPercentage(reportData.usuariosPorTipo.JURIDICA, reportData.totalUsuarios)}%` 
+                        }}
+                      ></div>
                     </div>
-                  )}
+                    <span className="text-sm font-bold text-purple-600">{reportData.usuariosPorTipo.JURIDICA}</span>
+                  </div>
                 </div>
               </div>
             </div>

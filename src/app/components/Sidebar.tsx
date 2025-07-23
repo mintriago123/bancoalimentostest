@@ -16,8 +16,7 @@ import {
   Cog6ToothIcon,
   PowerIcon,
   ChevronDownIcon,
-  ChevronUpIcon,
-  BuildingStorefrontIcon
+  ChevronUpIcon
 } from '@heroicons/react/24/outline';
 
 interface SidebarProps {
@@ -35,6 +34,13 @@ interface MenuItem {
   adminOnly?: boolean;
   donanteOnly?: boolean;
   solicitanteOnly?: boolean;
+  subItems?: SubMenuItem[];
+}
+
+interface SubMenuItem {
+  name: string;
+  href: string;
+  description?: string;
 }
 
 const menuItems: MenuItem[] = [
@@ -53,33 +59,65 @@ const menuItems: MenuItem[] = [
     description: 'Gestionar usuarios del sistema',
     adminOnly: true
   },
-  {
-    name: 'Solicitudes',
-    href: '/admin/solicitudes',
-    icon: DocumentTextIcon,
-    description: 'Ver todas las solicitudes',
-    adminOnly: true
-  },
-  {
-    name: 'Donaciones',
-    href: '/admin/donaciones',
-    icon: ClipboardDocumentListIcon,
-    description: 'Gestionar donaciones',
-    adminOnly: true
-  },
-  {
-    name: 'Inventario',
-    href: '/admin/inventario',
-    icon: BuildingStorefrontIcon,
-    description: 'Gestionar inventario y depósitos',
-    adminOnly: true
-  },
+  // {
+  //   name: 'Solicitudes',
+  //   href: '/admin/solicitudes',
+  //   icon: DocumentTextIcon,
+  //   description: 'Ver todas las solicitudes',
+  //   adminOnly: true
+  // },
+  // {
+  //   name: 'Donaciones',
+  //   href: '/admin/donaciones',
+  //   icon: ClipboardDocumentListIcon,
+  //   description: 'Gestionar donaciones',
+  //   adminOnly: true
+  // },
+  // {
+  //   name: 'Inventario',
+  //   href: '/admin/inventario',
+  //   icon: ChartBarIcon,
+  //   description: 'Gestionar inventario y depósitos',
+  //   adminOnly: true
+  // },
   {
     name: 'Reportes',
     href: '/admin/reportes',
     icon: ChartBarIcon,
     description: 'Estadísticas y análisis',
-    adminOnly: true
+    adminOnly: true,
+    subItems: [
+      // {
+      //   name: 'Dashboard de Reportes',
+      //   href: '/admin/reportes',
+      //   description: 'Panel principal de estadísticas'
+      // },
+      {
+        name: 'Reporte de Inventario',
+        href: '/admin/reportes/inventario',
+        description: 'Estado actual del inventario'
+      },
+      {
+        name: 'Reporte de Movimientos',
+        href: '/admin/reportes/movimientos',
+        description: 'Historial de entradas y salidas'
+      },
+           {
+        name: 'Reporte de Solicitudes',
+        href: '/admin/reportes/solicitudes',
+        description: 'Análisis de solicitudes recibidas'
+      }, 
+     {
+        name: 'Reporte de Donaciones',
+        href: '/admin/reportes/donaciones',
+        description: 'Análisis de donaciones recibidas'
+      }, 
+      {
+        name: 'Historial de Reportes',
+        href: '/admin/reportes/historial',
+        description: 'Reportes generados anteriormente'
+      }
+    ]
   },
   
   // Items para Donantes
@@ -152,6 +190,7 @@ export default function Sidebar({
   const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [openSubMenus, setOpenSubMenus] = useState<string[]>([]);
   const router = useRouter();
   const pathname = usePathname();
   const { supabase } = useSupabase();
@@ -205,6 +244,23 @@ export default function Sidebar({
            href !== '/user/dashboard' && 
            href !== '/admin/dashboard' && 
            href !== '/donante/dashboard';
+  };
+
+  const toggleSubMenu = (itemName: string) => {
+    setOpenSubMenus(prev => 
+      prev.includes(itemName) 
+        ? prev.filter(name => name !== itemName)
+        : [...prev, itemName]
+    );
+  };
+
+  const isSubMenuOpen = (itemName: string) => {
+    return openSubMenus.includes(itemName);
+  };
+
+  const hasActiveSubItem = (subItems?: SubMenuItem[]) => {
+    if (!subItems) return false;
+    return subItems.some(subItem => isActiveRoute(subItem.href));
   };
 
   const getActiveStyles = (isActive: boolean) => {
@@ -364,35 +420,89 @@ export default function Sidebar({
       </div>
 
       {/* Navegación */}
-      <nav className="flex-1 p-2">
+      <nav className="flex-1 p-2 overflow-y-auto">
         <ul className="space-y-1">
           {filteredMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = isActiveRoute(item.href);
+            const hasSubItems = item.subItems && item.subItems.length > 0;
+            const isSubMenuOpenState = isSubMenuOpen(item.name);
+            const hasActiveSubItemState = hasActiveSubItem(item.subItems);
+            const isItemActive = isActive || hasActiveSubItemState;
             
             return (
               <li key={item.name}>
-                <button
-                  onClick={() => router.push(item.href)}
-                  className={`w-full flex items-center px-3 py-2.5 text-left rounded-lg transition-all duration-200 group ${
-                    getActiveStyles(isActive)
-                  }`}
-                  title={isCollapsed ? item.name : undefined}
-                >
-                  <Icon className={`w-5 h-5 ${isCollapsed ? 'mx-auto' : 'mr-3'} ${
-                    getIconStyles(isActive)
-                  }`} />
-                  {!isCollapsed && (
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium">{item.name}</span>
-                      {item.description && (
-                        <p className="text-xs text-gray-500 mt-0.5 truncate">
-                          {item.description}
-                        </p>
-                      )}
+                {/* Item principal */}
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      if (hasSubItems && !isCollapsed) {
+                        toggleSubMenu(item.name);
+                      } else {
+                        router.push(item.href);
+                      }
+                    }}
+                    className={`w-full flex items-center px-3 py-2.5 text-left rounded-lg transition-all duration-200 group ${
+                      getActiveStyles(isItemActive)
+                    }`}
+                    title={isCollapsed ? item.name : undefined}
+                  >
+                    <Icon className={`w-5 h-5 ${isCollapsed ? 'mx-auto' : 'mr-3'} ${
+                      getIconStyles(isItemActive)
+                    }`} />
+                    {!isCollapsed && (
+                      <>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium">{item.name}</span>
+                          {item.description && (
+                            <p className="text-xs text-gray-500 mt-0.5 truncate">
+                              {item.description}
+                            </p>
+                          )}
+                        </div>
+                        {hasSubItems && (
+                          <div className="ml-2 transition-transform duration-200">
+                            {isSubMenuOpenState ? (
+                              <ChevronUpIcon className="w-4 h-4 text-gray-500" />
+                            ) : (
+                              <ChevronDownIcon className="w-4 h-4 text-gray-500" />
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </button>
+
+                  {/* Submenú */}
+                  {hasSubItems && !isCollapsed && isSubMenuOpenState && (
+                    <div className="mt-1 ml-8 space-y-1 border-l-2 border-gray-100 pl-3">
+                      {item.subItems!.map((subItem) => {
+                        const isSubActive = isActiveRoute(subItem.href);
+                        
+                        return (
+                          <button
+                            key={subItem.name}
+                            onClick={() => router.push(subItem.href)}
+                            className={`w-full flex items-start px-3 py-2 text-left rounded-md transition-all duration-200 group ${
+                              isSubActive 
+                                ? 'bg-gray-100 text-gray-900 border border-gray-200' 
+                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-medium">{subItem.name}</span>
+                              {subItem.description && (
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {subItem.description}
+                                </p>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
-                </button>
+                </div>
               </li>
             );
           })}
