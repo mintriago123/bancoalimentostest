@@ -163,8 +163,8 @@ export default function SolicitudesPage() {
         .from('solicitudes')
         .update({ 
           estado: 'pendiente',
-          fecha_respuesta: null,
-          comentario_admin: null
+          // fecha_respuesta: null,
+          // comentario_admin: null
         })
         .eq('id', solicitudId);
 
