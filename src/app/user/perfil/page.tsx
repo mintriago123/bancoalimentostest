@@ -227,13 +227,6 @@ export default function UserPerfilPage() {
     >
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
-          >
-            <ArrowLeftIcon className="w-5 h-5 mr-2" />
-            Volver
-          </button>
         </div>
         {message && (
           <div
@@ -252,51 +245,32 @@ export default function UserPerfilPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+
+        <div className="bg-white rounded-2xl shadow border border-gray-200 p-6 max-w-3xl mx-auto">
           <div className="text-center mb-6">
             <div className="relative inline-block">
               <div className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg mx-auto">
                 {getUserInitials(profile.nombre)}
               </div>
               <button
-                className="absolute bottom-0 right-0 bg-gray-600 text-white p-2 rounded-full hover:bg-gray-700 transition-colors"
+                className="absolute bottom-0 right-0 bg-gray-600 text-white p-1.5 rounded-full hover:bg-gray-700 transition"
                 title="Cambiar foto (Próximamente)"
               >
-                <CameraIcon className="w-5 h-5" />
+                <CameraIcon className="w-4 h-4" />
               </button>
             </div>
             <h2 className="mt-4 text-xl font-semibold text-gray-900">{profile.nombre}</h2>
             {/* <p className="text-gray-500 text-sm">{profile.email}</p> */}
           </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Nombre */}
-            {/* <div>
-              <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-2">
-                Nombre Completo *
-              </label>
-              <div className="relative">
-                <UserIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  id="nombre"
-                  name="nombre"
-                  value={formData.nombre}
-                  onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  placeholder="Tu nombre completo"
-                  required
-                />
-              </div>
-            </div> */}
-
-            {/* Email (solo lectura) */}
+              
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email 
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                Email
               </label>
               <div className="relative">
-                <AtSymbolIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <AtSymbolIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="email"
                   id="email"
@@ -306,14 +280,14 @@ export default function UserPerfilPage() {
                 />
               </div>
             </div>
-
-            {/* Identificación (solo lectura) */}
+              
+            {/* Cédula */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Identificación
               </label>
               <div className="relative">
-                <IdentificationIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <IdentificationIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
                   value={profile.cedula || 'No especificada'}
@@ -323,14 +297,14 @@ export default function UserPerfilPage() {
               </div>
               <p className="text-xs text-gray-500 mt-1">Cédula de identidad - No modificable</p>
             </div>
-
+              
             {/* Teléfono */}
             <div>
-              <label htmlFor="telefono" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="telefono" className="block text-sm font-medium text-gray-700 mb-1">
                 Teléfono
               </label>
               <div className="relative">
-                <PhoneIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <PhoneIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="tel"
                   id="telefono"
@@ -344,10 +318,10 @@ export default function UserPerfilPage() {
               </div>
               <p className="text-xs text-gray-500 mt-1">Ingresa un número de teléfono válido de 10 dígitos</p>
             </div>
-
+              
             {/* Dirección */}
             <div>
-              <label htmlFor="direccion" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="direccion" className="block text-sm font-medium text-gray-700 mb-1">
                 Dirección
               </label>
               <div className="relative">
@@ -363,13 +337,20 @@ export default function UserPerfilPage() {
                 />
               </div>
             </div>
-
-            {/* Botón de guardar */}
-            <div className="flex justify-end pt-6 border-t border-gray-200">
+              
+            {/* Pie: fechas y botón */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between pt-6 border-t border-gray-200 gap-4">
+              {/* Fechas */}
+              <div className="text-sm text-gray-500">
+                <p>Registrado: {formatDate(profile.created_at)}</p>
+                {profile.updated_at && <p>Última actualización: {formatDate(profile.updated_at)}</p>}
+              </div>
+              
+              {/* Botón */}
               <button
                 type="submit"
                 disabled={isSaving}
-                className="bg-red-600 text-white px-8 py-3 rounded-lg hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center"
+                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center text-sm font-medium"
               >
                 {isSaving ? (
                   <>
@@ -387,11 +368,8 @@ export default function UserPerfilPage() {
           </form>
         </div>
 
-        {/* Información adicional abajo */}
-        <div className="mt-8 text-sm text-gray-600 space-y-1">
-          <p>Registrado: {formatDate(profile.created_at)}</p>
-          {profile.updated_at && <p>Última actualización: {formatDate(profile.updated_at)}</p>}
-        </div>
+
+
       </div>
     </DashboardLayout>
   );
