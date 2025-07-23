@@ -13,7 +13,11 @@ import {
   Calendar,
   Shield,
   UserCheck,
-  Users
+  Users,
+  UserX,
+  Lock,
+  Unlock,
+  CheckCircle
 } from 'lucide-react';
 
 interface Usuario {
@@ -28,6 +32,7 @@ interface Usuario {
   representante?: string;
   email?: string;
   created_at?: string;
+  estado?: string;
 }
 
 interface FiltroRol {
@@ -65,7 +70,7 @@ export default function AdminUsuarios() {
     setCargando(true);
     const { data, error } = await supabase
       .from('usuarios')
-      .select('*')
+      .select('*, estado')
       .order('nombre', { ascending: true });
 
     if (!error && data) {
@@ -131,6 +136,46 @@ export default function AdminUsuarios() {
     }
   };
 
+  const cambiarEstadoUsuario = async (usuarioId: string, nuevoEstado: 'activo' | 'bloqueado' | 'desactivado') => {
+    try {
+      const { error } = await supabase
+        .from('usuarios')
+        .update({ estado: nuevoEstado })
+        .eq('id', usuarioId);
+
+      if (error) {
+        console.error('Error al cambiar estado:', error);
+        alert('Error al cambiar el estado del usuario');
+        return;
+      }
+
+      await cargarUsuarios();
+      
+      const mensajes = {
+        activo: 'Usuario activado exitosamente',
+        bloqueado: 'Usuario bloqueado exitosamente',
+        desactivado: 'Usuario desactivado exitosamente'
+      };
+      
+      alert(mensajes[nuevoEstado]);
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al procesar la solicitud');
+    }
+  };
+
+  const confirmarCambioEstado = (usuarioId: string, nuevoEstado: 'activo' | 'bloqueado' | 'desactivado', nombreUsuario: string) => {
+    const mensajes = {
+      activo: `¿Está seguro que desea activar al usuario "${nombreUsuario}"?`,
+      bloqueado: `¿Está seguro que desea bloquear al usuario "${nombreUsuario}"? El usuario no podrá acceder al sistema.`,
+      desactivado: `¿Está seguro que desea desactivar al usuario "${nombreUsuario}"? Esta acción puede ser reversible.`
+    };
+
+    if (window.confirm(mensajes[nuevoEstado])) {
+      cambiarEstadoUsuario(usuarioId, nuevoEstado);
+    }
+  };
+
   const cambiarFiltroRol = (filtro: keyof FiltroRol) => {
     if (filtro === 'todos') {
       setFiltroRol({
@@ -193,6 +238,33 @@ export default function AdminUsuarios() {
       month: 'short',
       day: 'numeric'
     });
+  };
+
+  const getEstadoColor = (estado?: string) => {
+    switch (estado) {
+      case 'activo': return 'bg-green-100 text-green-800 border-green-200';
+      case 'bloqueado': return 'bg-red-100 text-red-800 border-red-200';
+      case 'desactivado': return 'bg-gray-100 text-gray-800 border-gray-200';
+      default: return 'bg-green-100 text-green-800 border-green-200'; // Por defecto activo
+    }
+  };
+
+  const getEstadoIcon = (estado?: string) => {
+    switch (estado) {
+      case 'activo': return <CheckCircle className="w-4 h-4" />;
+      case 'bloqueado': return <Lock className="w-4 h-4" />;
+      case 'desactivado': return <UserX className="w-4 h-4" />;
+      default: return <CheckCircle className="w-4 h-4" />; // Por defecto activo
+    }
+  };
+
+  const getEstadoTexto = (estado?: string) => {
+    switch (estado) {
+      case 'activo': return 'Activo';
+      case 'bloqueado': return 'Bloqueado';
+      case 'desactivado': return 'Desactivado';
+      default: return 'Activo'; // Por defecto activo
+    }
   };
 
   const getContadorPorRol = () => {
@@ -345,6 +417,9 @@ export default function AdminUsuarios() {
                       Rol
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Estado
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Registro
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -421,6 +496,12 @@ export default function AdminUsuarios() {
                           <span className="ml-1">{usuario.rol}</span>
                         </span>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoColor(usuario.estado)}`}>
+                          {getEstadoIcon(usuario.estado)}
+                          <span className="ml-1">{getEstadoTexto(usuario.estado)}</span>
+                        </span>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center">
                           <Calendar className="w-4 h-4 mr-1 text-gray-400" />
@@ -428,34 +509,71 @@ export default function AdminUsuarios() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-1">
-                          {usuario.rol !== 'ADMINISTRADOR' && (
-                            <button
-                              onClick={() => cambiarRol(usuario.id, 'ADMINISTRADOR')}
-                              className="text-red-600 hover:text-red-500 px-2 py-1 rounded border border-red-200 hover:bg-red-50 text-xs transition-colors"
-                              title="Hacer Administrador"
-                            >
-                              Admin
-                            </button>
-                          )}
-                          {usuario.rol !== 'DONANTE' && (
-                            <button
-                              onClick={() => cambiarRol(usuario.id, 'DONANTE')}
-                              className="text-green-600 hover:text-green-500 px-2 py-1 rounded border border-green-200 hover:bg-green-50 text-xs transition-colors"
-                              title="Hacer Donante"
-                            >
-                              Donante
-                            </button>
-                          )}
-                          {usuario.rol !== 'SOLICITANTE' && (
-                            <button
-                              onClick={() => cambiarRol(usuario.id, 'SOLICITANTE')}
-                              className="text-blue-600 hover:text-blue-500 px-2 py-1 rounded border border-blue-200 hover:bg-blue-50 text-xs transition-colors"
-                              title="Hacer Solicitante"
-                            >
-                              Solicitante
-                            </button>
-                          )}
+                        <div className="space-y-2">
+                          {/* Botones de cambio de rol */}
+                          <div className="flex space-x-1">
+                            {usuario.rol !== 'ADMINISTRADOR' && (
+                              <button
+                                onClick={() => cambiarRol(usuario.id, 'ADMINISTRADOR')}
+                                className="text-red-600 hover:text-red-500 px-2 py-1 rounded border border-red-200 hover:bg-red-50 text-xs transition-colors"
+                                title="Hacer Administrador"
+                              >
+                                Admin
+                              </button>
+                            )}
+                            {usuario.rol !== 'DONANTE' && (
+                              <button
+                                onClick={() => cambiarRol(usuario.id, 'DONANTE')}
+                                className="text-green-600 hover:text-green-500 px-2 py-1 rounded border border-green-200 hover:bg-green-50 text-xs transition-colors"
+                                title="Hacer Donante"
+                              >
+                                Donante
+                              </button>
+                            )}
+                            {usuario.rol !== 'SOLICITANTE' && (
+                              <button
+                                onClick={() => cambiarRol(usuario.id, 'SOLICITANTE')}
+                                className="text-blue-600 hover:text-blue-500 px-2 py-1 rounded border border-blue-200 hover:bg-blue-50 text-xs transition-colors"
+                                title="Hacer Solicitante"
+                              >
+                                Solicitante
+                              </button>
+                            )}
+                          </div>
+                          
+                          {/* Botones de cambio de estado */}
+                          <div className="flex space-x-1">
+                            {(usuario.estado || 'activo') !== 'activo' && (
+                              <button
+                                onClick={() => confirmarCambioEstado(usuario.id, 'activo', usuario.nombre)}
+                                className="text-green-600 hover:text-green-500 px-2 py-1 rounded border border-green-200 hover:bg-green-50 text-xs transition-colors flex items-center"
+                                title="Activar Usuario"
+                              >
+                                <Unlock className="w-3 h-3 mr-1" />
+                                Activar
+                              </button>
+                            )}
+                            {(usuario.estado || 'activo') !== 'bloqueado' && (
+                              <button
+                                onClick={() => confirmarCambioEstado(usuario.id, 'bloqueado', usuario.nombre)}
+                                className="text-red-600 hover:text-red-500 px-2 py-1 rounded border border-red-200 hover:bg-red-50 text-xs transition-colors flex items-center"
+                                title="Bloquear Usuario"
+                              >
+                                <Lock className="w-3 h-3 mr-1" />
+                                Bloquear
+                              </button>
+                            )}
+                            {(usuario.estado || 'activo') !== 'desactivado' && (
+                              <button
+                                onClick={() => confirmarCambioEstado(usuario.id, 'desactivado', usuario.nombre)}
+                                className="text-gray-600 hover:text-gray-500 px-2 py-1 rounded border border-gray-200 hover:bg-gray-50 text-xs transition-colors flex items-center"
+                                title="Desactivar Usuario"
+                              >
+                                <UserX className="w-3 h-3 mr-1" />
+                                Desactivar
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>

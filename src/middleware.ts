@@ -35,24 +35,55 @@ export async function middleware(request: NextRequest) {
         url.searchParams.set('callbackUrl', pathname);
         return NextResponse.redirect(url);
       }
+
+      // Si está autenticado, verificar el estado del usuario
+      const { data: perfil } = await supabase
+        .from('usuarios')
+        .select('estado, rol')
+        .eq('id', user.id)
+        .single();
+
+      if (perfil) {
+        const estadoUsuario = perfil.estado || 'activo';
+        
+        // Si el usuario está bloqueado o desactivado, cerrar sesión y redirigir
+        if (estadoUsuario === 'bloqueado' || estadoUsuario === 'desactivado') {
+          await supabase.auth.signOut();
+          const url = new URL('/auth/iniciar-sesion', request.url);
+          url.searchParams.set('error', estadoUsuario === 'bloqueado' ? 'blocked' : 'deactivated');
+          return NextResponse.redirect(url);
+        }
+      }
     }
 
     // Para la página principal, redirigir según el rol del usuario
     if (pathname === '/') {
       if (isAuthenticated) {
-        // Consultar el rol del usuario para redirigir correctamente
+        // Consultar el rol y estado del usuario para redirigir correctamente
         const { data: perfil } = await supabase
           .from('usuarios')
-          .select('rol')
+          .select('rol, estado')
           .eq('id', user.id)
           .single();
 
-        if (perfil?.rol === 'ADMINISTRADOR') {
-          return NextResponse.redirect(new URL('/admin/dashboard', request.url));
-        } else if (perfil?.rol === 'DONANTE') {
-          return NextResponse.redirect(new URL('/donante/dashboard', request.url));
-        } else {
-          return NextResponse.redirect(new URL('/user/dashboard', request.url));
+        if (perfil) {
+          const estadoUsuario = perfil.estado || 'activo';
+          
+          // Si el usuario está bloqueado o desactivado, cerrar sesión y redirigir
+          if (estadoUsuario === 'bloqueado' || estadoUsuario === 'desactivado') {
+            await supabase.auth.signOut();
+            const url = new URL('/auth/iniciar-sesion', request.url);
+            url.searchParams.set('error', estadoUsuario === 'bloqueado' ? 'blocked' : 'deactivated');
+            return NextResponse.redirect(url);
+          }
+
+          if (perfil.rol === 'ADMINISTRADOR') {
+            return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+          } else if (perfil.rol === 'DONANTE') {
+            return NextResponse.redirect(new URL('/donante/dashboard', request.url));
+          } else {
+            return NextResponse.redirect(new URL('/user/dashboard', request.url));
+          }
         }
       } else {
         // Si no está autenticado, redirigir a iniciar sesión

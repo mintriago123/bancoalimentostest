@@ -41,7 +41,8 @@ export default function PaginaRegistroSimple() {
     if (data && data.user) {
       const { error: upsertError } = await supabase.from('usuarios').upsert({
         id: data.user.id,
-        rol: rolSeleccionado
+        rol: rolSeleccionado,
+        estado: 'activo'  // Establecer estado inicial como activo
       });
       if (upsertError) return setError("Error creando perfil: " + upsertError.message);
     }
