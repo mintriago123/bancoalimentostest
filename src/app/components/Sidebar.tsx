@@ -59,6 +59,13 @@ const menuItems: MenuItem[] = [
     description: 'Gestionar usuarios del sistema',
     adminOnly: true
   },
+  {
+    name: 'Catálogo de Alimentos', 
+    href: '/admin/catalogo',
+    icon: ClipboardDocumentListIcon,
+    description: 'Ver y gestionar el catálogo de alimentos',
+    adminOnly: true
+  },
   // {
   //   name: 'Solicitudes',
   //   href: '/admin/solicitudes',
