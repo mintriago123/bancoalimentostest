@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import { Iconos } from '@/app/components/ui/Iconos'; // asegúrate de que este path es el correcto
 
+
 type RolSeleccionado = 'DONANTE' | 'SOLICITANTE' | null;
 
 export default function PaginaRegistroSimple() {
