@@ -11,11 +11,15 @@ function FormularioIniciarSesion() {
   const searchParams = useSearchParams();
   const registroExitoso = searchParams.get('registro') === 'exitoso';
   const verificacionExitosa = searchParams.get('verificacion') === 'exitoso';
+  const errorParam = searchParams.get('error');
 
   const { supabase } = useSupabase();
 
   const [datosFormulario, setDatosFormulario] = useState({ email: '', password: '' });
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    errorParam === 'blocked' ? 'Tu cuenta ha sido bloqueada. Contacta al administrador.' :
+    errorParam === 'deactivated' ? 'Tu cuenta ha sido desactivada. Contacta al administrador.' : null
+  );
   const [mensajeExito, setMensajeExito] = useState<string | null>(
     registroExitoso ? '¡Registro exitoso! Ahora puedes iniciar sesión.' :
     verificacionExitosa ? '¡Correo verificado exitosamente! Ya puedes iniciar sesión.' : null
@@ -58,9 +62,26 @@ const manejarEnvio = async (event: FormEvent<HTMLFormElement>) => {
         // Consultar perfil en la tabla personalizada
         const { data: perfil } = await supabase
           .from('usuarios')
-          .select('nombre, cedula, ruc, rol')
+          .select('nombre, cedula, ruc, rol, estado')
           .eq('id', data.user.id)
           .maybeSingle();
+
+        // Verificar el estado del usuario
+        if (perfil) {
+          const estadoUsuario = perfil.estado || 'activo'; // Por defecto activo si no hay estado
+          
+          if (estadoUsuario === 'bloqueado') {
+            setError('Tu cuenta ha sido bloqueada. Contacta al administrador para más información.');
+            await supabase.auth.signOut();
+            return;
+          }
+          
+          if (estadoUsuario === 'desactivado') {
+            setError('Tu cuenta ha sido desactivada. Contacta al administrador para reactivarla.');
+            await supabase.auth.signOut();
+            return;
+          }
+        }
 
         // Si no existe el perfil (404 o perfil es null), o falta algún dato importante, redirige a completar
         if (!perfil || !perfil.nombre || (!perfil.cedula && !perfil.ruc)) {

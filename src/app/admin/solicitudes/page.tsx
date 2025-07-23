@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import DashboardLayout from '@/app/components/DashboardLayout';
 import { 
-  Eye, 
   CheckCircle, 
   XCircle, 
   Clock, 
@@ -49,6 +48,26 @@ interface FiltroEstado {
   rechazada: boolean;
 }
 
+interface InventarioDisponible {
+  id: string;
+  tipo_alimento: string;
+  cantidad_disponible: number;
+  deposito: string;
+  fecha_vencimiento?: string;
+}
+
+interface ProductoInventario {
+  id_producto: string;
+  nombre_producto: string;
+}
+
+interface ResultadoInventario {
+  cantidadRestante: number;
+  productosActualizados: number;
+  noStock?: boolean;
+  error?: boolean;
+}
+
 export default function SolicitudesPage() {
   const { supabase } = useSupabase();
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
@@ -58,6 +77,8 @@ export default function SolicitudesPage() {
   const [mostrarModal, setMostrarModal] = useState(false);
   const [comentarioAdmin, setComentarioAdmin] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const [inventarioDisponible, setInventarioDisponible] = useState<InventarioDisponible[]>([]);
+  const [cargandoInventario, setCargandoInventario] = useState(false);
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>({
     todos: true,
     pendiente: false,
@@ -135,8 +156,16 @@ export default function SolicitudesPage() {
     aplicarFiltros();
   }, [aplicarFiltros]);
 
-  const actualizarEstado = async (solicitudId: string, nuevoEstado: 'aprobada' | 'rechazada', comentario: string = '') => {
+  const actualizarEstado = async (solicitudId: string, nuevoEstado: 'aprobada' | 'rechazada') => {
     try {
+      // Obtener la solicitud actual para procesamiento
+      const solicitudActual = solicitudes.find(s => s.id === solicitudId);
+      if (!solicitudActual) {
+        alert('Solicitud no encontrada');
+        return;
+      }
+
+      // Actualizar estado en la base de datos
       const { error } = await supabase
         .from('solicitudes')
         .update({ 
@@ -147,33 +176,124 @@ export default function SolicitudesPage() {
         .eq('id', solicitudId);
 
       if (error) throw error;
+
+      let mensajeFinal = '';
+
+      // LÓGICA DE INTEGRACIÓN CON INVENTARIO
+      if (nuevoEstado === 'aprobada' && solicitudActual.estado === 'pendiente') {
+        const resultadoInventario = await descontarDelInventario(solicitudActual);
+        
+        if (resultadoInventario.error) {
+          mensajeFinal = `⚠️ Solicitud aprobada, pero hubo un error al actualizar el inventario.`;
+        } else if (resultadoInventario.noStock) {
+          mensajeFinal = `⚠️ Solicitud aprobada, pero no hay productos en inventario que coincidan con "${solicitudActual.tipo_alimento}".`;
+        } else if (resultadoInventario.cantidadRestante > 0) {
+          mensajeFinal = `⚠️ Solicitud aprobada parcialmente. Se descontaron ${solicitudActual.cantidad - resultadoInventario.cantidadRestante} unidades de ${solicitudActual.cantidad} solicitadas. Cantidad no satisfecha: ${resultadoInventario.cantidadRestante}`;
+        } else {
+          mensajeFinal = `✅ Solicitud aprobada exitosamente y descontada del inventario completamente.`;
+        }
+      } else {
+        mensajeFinal = `Solicitud ${nuevoEstado} exitosamente`;
+      }
       
       await cargarSolicitudes();
       setMostrarModal(false);
       setSolicitudSeleccionada(null);
       setComentarioAdmin('');
+
+      // Mostrar mensaje consolidado
+      alert(mensajeFinal);
+      
     } catch (error) {
       console.error('Error al actualizar estado:', error);
+      alert(`Error al actualizar estado: ${error}`);
     }
   };
 
-  const revertirAPendiente = async (solicitudId: string) => {
+  // Nueva función para descontar del inventario
+  const descontarDelInventario = async (solicitud: Solicitud): Promise<ResultadoInventario> => {
     try {
-      const { error } = await supabase
-        .from('solicitudes')
-        .update({ 
-          estado: 'pendiente',
-          // fecha_respuesta: null,
-          // comentario_admin: null
-        })
-        .eq('id', solicitudId);
+      console.log('Descontando solicitud del inventario:', solicitud);
 
-      if (error) throw error;
-      
-      await cargarSolicitudes();
+      const productosCoincidentes = await buscarProductosCoincidentes(solicitud.tipo_alimento);
+      if (!productosCoincidentes || productosCoincidentes.length === 0) {
+        console.warn(`No se encontraron productos que coincidan con: ${solicitud.tipo_alimento}`);
+        return { cantidadRestante: solicitud.cantidad, productosActualizados: 0, noStock: true };
+      }
+
+      const resultado = await procesarDescuentoInventario(productosCoincidentes, solicitud);
+      return resultado;
+
     } catch (error) {
-      console.error('Error al revertir estado:', error);
+      console.error('Error descontando del inventario:', error);
+      return { cantidadRestante: solicitud.cantidad, productosActualizados: 0, error: true };
     }
+  };
+
+  const buscarProductosCoincidentes = async (tipoAlimento: string) => {
+    const { data: productosCoincidentes, error: errorBusqueda } = await supabase
+      .from('productos_donados')
+      .select('id_producto, nombre_producto')
+      .ilike('nombre_producto', `%${tipoAlimento}%`);
+
+    if (errorBusqueda) {
+      throw errorBusqueda;
+    }
+
+    return productosCoincidentes;
+  };
+
+  const procesarDescuentoInventario = async (productosCoincidentes: ProductoInventario[], solicitud: Solicitud) => {
+    let cantidadRestante = solicitud.cantidad;
+    let productosActualizados = 0;
+
+    for (const producto of productosCoincidentes) {
+      if (cantidadRestante <= 0) break;
+
+      const resultado = await descontarDeProducto(producto, cantidadRestante);
+      cantidadRestante = resultado.cantidadRestante;
+      productosActualizados += resultado.productosActualizados;
+    }
+
+    return { cantidadRestante, productosActualizados };
+  };
+
+  const descontarDeProducto = async (producto: ProductoInventario, cantidadRestante: number) => {
+    const { data: inventarioItems, error: errorInventario } = await supabase
+      .from('inventario')
+      .select('id_inventario, cantidad_disponible, id_deposito')
+      .eq('id_producto', producto.id_producto)
+      .gt('cantidad_disponible', 0)
+      .order('fecha_actualizacion', { ascending: true });
+
+    if (errorInventario || !inventarioItems || inventarioItems.length === 0) {
+      console.log(`No hay stock disponible para producto: ${producto.nombre_producto}`);
+      return { cantidadRestante, productosActualizados: 0 };
+    }
+
+    let productosActualizados = 0;
+    for (const item of inventarioItems) {
+      if (cantidadRestante <= 0) break;
+
+      const cantidadADescontar = Math.min(cantidadRestante, item.cantidad_disponible);
+      const nuevaCantidad = item.cantidad_disponible - cantidadADescontar;
+
+      const { error: errorActualizacion } = await supabase
+        .from('inventario')
+        .update({
+          cantidad_disponible: nuevaCantidad,
+          fecha_actualizacion: new Date().toISOString()
+        })
+        .eq('id_inventario', item.id_inventario);
+
+      if (!errorActualizacion) {
+        cantidadRestante -= cantidadADescontar;
+        productosActualizados++;
+        console.log(`Descontado: ${cantidadADescontar} de ${producto.nombre_producto} (Restante en stock: ${nuevaCantidad})`);
+      }
+    }
+
+    return { cantidadRestante, productosActualizados };
   };
 
   const getEstadoColor = (estado: string) => {
@@ -215,6 +335,147 @@ export default function SolicitudesPage() {
     setSolicitudSeleccionada(solicitud);
     setComentarioAdmin(solicitud.comentario_admin || '');
     setMostrarModal(true);
+    cargarInventarioDisponible(solicitud.tipo_alimento);
+  };
+
+  const cargarInventarioDisponible = async (tipoAlimento: string) => {
+    try {
+      setCargandoInventario(true);
+      const { data, error } = await supabase
+        .from('inventario')
+        .select(`
+          id_inventario,
+          cantidad_disponible,
+          fecha_actualizacion,
+          productos_donados!inner(
+            nombre_producto
+          ),
+          depositos!inner(
+            nombre
+          )
+        `)
+        .ilike('productos_donados.nombre_producto', `%${tipoAlimento}%`)
+        .gt('cantidad_disponible', 0)
+        .order('fecha_actualizacion', { ascending: true, nullsFirst: false });
+
+      if (error) throw error;
+
+      const inventarioFormateado = data.map(item => ({
+        id: item.id_inventario,
+        tipo_alimento: Array.isArray(item.productos_donados) 
+          ? item.productos_donados[0]?.nombre_producto || 'Producto desconocido'
+          : 'Producto desconocido',
+        cantidad_disponible: item.cantidad_disponible,
+        deposito: Array.isArray(item.depositos) 
+          ? item.depositos[0]?.nombre || 'Depósito desconocido'
+          : 'Depósito desconocido',
+        fecha_vencimiento: item.fecha_actualizacion // Usando fecha_actualizacion como referencia
+      }));
+
+      setInventarioDisponible(inventarioFormateado);
+    } catch (error) {
+      console.error('Error al cargar inventario:', error);
+      setInventarioDisponible([]);
+    } finally {
+      setCargandoInventario(false);
+    }
+  };
+
+  const revertirAPendiente = async (solicitudId: string) => {
+    try {
+      const { error } = await supabase
+        .from('solicitudes')
+        .update({ estado: 'pendiente' })
+        .eq('id', solicitudId);
+
+      if (error) throw error;
+
+      setSolicitudes(prev => prev.map(s => 
+        s.id === solicitudId ? { ...s, estado: 'pendiente' } : s
+      ));
+      alert('Solicitud revertida a pendiente exitosamente');
+    } catch (error) {
+      console.error('Error al revertir solicitud:', error);
+      alert('Error al revertir la solicitud');
+    }
+  };
+
+  const renderBotonesAcciones = (solicitud: Solicitud) => {
+    const handleAbrirModal = () => abrirModalDetalle(solicitud);
+    const handleAprobar = () => actualizarEstado(solicitud.id, 'aprobada');
+    const handleRechazar = () => actualizarEstado(solicitud.id, 'rechazada');
+    const handleRevertir = () => revertirAPendiente(solicitud.id);
+
+    if (solicitud.estado === 'pendiente') {
+      return (
+        <>
+          <button
+            onClick={handleAbrirModal}
+            className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors"
+            title="Ver detalles"
+          >
+            <FileText className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleAprobar}
+            className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg transition-colors"
+            title="Aprobar (se descontará del inventario)"
+          >
+            <CheckCircle className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleRechazar}
+            className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition-colors"
+            title="Rechazar"
+          >
+            <XCircle className="w-4 h-4" />
+          </button>
+        </>
+      );
+    }
+
+    if (solicitud.estado === 'aprobada') {
+      return (
+        <>
+          <button
+            onClick={handleAbrirModal}
+            className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors"
+            title="Ver detalles"
+          >
+            <FileText className="w-4 h-4" />
+          </button>
+          <span className="text-green-600 px-2 py-1 rounded border border-green-200 bg-green-50 text-xs">
+            ✓ Descontado de inventario
+          </span>
+          <button
+            onClick={handleRevertir}
+            className="bg-yellow-600 hover:bg-yellow-700 text-white p-2 rounded-lg transition-colors"
+            title="Revertir a pendiente"
+          >
+            <Clock className="w-4 h-4" />
+          </button>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <button
+          onClick={handleAbrirModal}
+          className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors"
+          title="Ver detalles"
+        >
+          <FileText className="w-4 h-4" />
+        </button>
+        <button
+          onClick={handleRevertir}
+          className="bg-yellow-600 hover:bg-yellow-700 text-white p-2 rounded-lg transition-colors"
+          title="Revertir a pendiente"
+        >
+          <Clock className="w-4 h-4" />
+        </button>
+      </>
+    );
   };
 
   const formatearFecha = (fecha: string) => {
@@ -402,40 +663,7 @@ export default function SolicitudesPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex space-x-2">
-                          <button
-                            onClick={() => abrirModalDetalle(solicitud)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors"
-                            title="Ver detalles"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-
-                          {solicitud.estado === 'pendiente' ? (
-                            <>
-                              <button
-                                onClick={() => actualizarEstado(solicitud.id, 'aprobada')}
-                                className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg transition-colors"
-                                title="Aprobar"
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => actualizarEstado(solicitud.id, 'rechazada')}
-                                className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition-colors"
-                                title="Rechazar"
-                              >
-                                <XCircle className="w-4 h-4" />
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              onClick={() => revertirAPendiente(solicitud.id)}
-                              className="bg-yellow-600 hover:bg-yellow-700 text-white p-2 rounded-lg transition-colors"
-                              title="Revertir a pendiente"
-                            >
-                              <Clock className="w-4 h-4" />
-                            </button>
-                          )}
+                          {renderBotonesAcciones(solicitud)}
                         </div>
                       </td>
                     </tr>
@@ -552,6 +780,89 @@ export default function SolicitudesPage() {
                   )}
                 </div>
 
+                {/* Disponibilidad en Inventario */}
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Disponibilidad en Inventario
+                  </h4>
+                  
+                  {cargandoInventario ? (
+                    <div className="text-center py-4">
+                      <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-red-600"></div>
+                      <p className="text-sm text-gray-600 mt-2">Consultando inventario...</p>
+                    </div>
+                  ) : (
+                    <>
+                      {inventarioDisponible.length > 0 ? (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {inventarioDisponible.map((item) => (
+                              <div key={item.id} className="bg-white p-3 rounded border">
+                                <div className="text-sm">
+                                  <div className="font-medium text-gray-900">{item.tipo_alimento}</div>
+                                  <div className="text-gray-600">Depósito: {item.deposito}</div>
+                                  <div className={`font-semibold ${
+                                    item.cantidad_disponible >= solicitudSeleccionada.cantidad 
+                                      ? 'text-green-600' 
+                                      : 'text-orange-600'
+                                  }`}>
+                                    Disponible: {item.cantidad_disponible} unidades
+                                  </div>
+                                  {item.fecha_vencimiento && (
+                                    <div className="text-xs text-gray-500">
+                                      Vence: {new Date(item.fecha_vencimiento).toLocaleDateString('es-ES')}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          <div className="mt-4 p-3 bg-white rounded border">
+                            <div className="text-sm">
+                              <div className="font-medium text-gray-900">Resumen</div>
+                              <div className="mt-1">
+                                <span className="text-gray-600">Cantidad solicitada: </span>
+                                <span className="font-semibold">{solicitudSeleccionada.cantidad} unidades</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Total disponible: </span>
+                                <span className={`font-semibold ${
+                                  inventarioDisponible.reduce((total, item) => total + item.cantidad_disponible, 0) >= solicitudSeleccionada.cantidad
+                                    ? 'text-green-600'
+                                    : 'text-red-600'
+                                }`}>
+                                  {inventarioDisponible.reduce((total, item) => total + item.cantidad_disponible, 0)} unidades
+                                </span>
+                              </div>
+                              <div className="mt-2">
+                                {inventarioDisponible.reduce((total, item) => total + item.cantidad_disponible, 0) >= solicitudSeleccionada.cantidad ? (
+                                  <div className="flex items-center text-green-600 text-sm">
+                                    <CheckCircle className="w-4 h-4 mr-1" />
+                                    ✅ Suficiente stock disponible
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center text-red-600 text-sm">
+                                    <XCircle className="w-4 h-4 mr-1" />
+                                    ⚠️ Stock insuficiente ({inventarioDisponible.reduce((total, item) => total + item.cantidad_disponible, 0)} de {solicitudSeleccionada.cantidad} disponibles)
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4">
+                          <XCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-600">No hay stock disponible de &quot;{solicitudSeleccionada.tipo_alimento}&quot; en el inventario</p>
+                          <p className="text-xs text-gray-500 mt-1">La solicitud no puede ser satisfecha en este momento</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
                 {/* Ubicación */}
                 {solicitudSeleccionada.latitud && solicitudSeleccionada.longitud && (
                   <div className="bg-green-50 p-4 rounded-lg">
@@ -576,10 +887,11 @@ export default function SolicitudesPage() {
                     <h4 className="font-semibold text-gray-900 mb-3">Gestionar Solicitud</h4>
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label htmlFor="comentario-admin" className="block text-sm font-medium text-gray-700 mb-2">
                           Comentario administrativo (opcional)
                         </label>
                         <textarea
+                          id="comentario-admin"
                           value={comentarioAdmin}
                           onChange={(e) => setComentarioAdmin(e.target.value)}
                           placeholder="Agregar comentarios sobre la decisión..."
@@ -589,14 +901,14 @@ export default function SolicitudesPage() {
                       </div>
                       <div className="flex space-x-3">
                         <button
-                          onClick={() => actualizarEstado(solicitudSeleccionada.id, 'aprobada', comentarioAdmin)}
+                          onClick={() => actualizarEstado(solicitudSeleccionada.id, 'aprobada')}
                           className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
                         >
                           <CheckCircle className="w-4 h-4" />
                           <span>Aprobar Solicitud</span>
                         </button>
                         <button
-                          onClick={() => actualizarEstado(solicitudSeleccionada.id, 'rechazada', comentarioAdmin)}
+                          onClick={() => actualizarEstado(solicitudSeleccionada.id, 'rechazada')}
                           className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
                         >
                           <XCircle className="w-4 h-4" />

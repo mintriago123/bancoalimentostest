@@ -16,7 +16,8 @@ import {
   Cog6ToothIcon,
   PowerIcon,
   ChevronDownIcon,
-  ChevronUpIcon
+  ChevronUpIcon,
+  BuildingStorefrontIcon
 } from '@heroicons/react/24/outline';
 
 interface SidebarProps {
@@ -64,6 +65,13 @@ const menuItems: MenuItem[] = [
     href: '/admin/donaciones',
     icon: ClipboardDocumentListIcon,
     description: 'Gestionar donaciones',
+    adminOnly: true
+  },
+  {
+    name: 'Inventario',
+    href: '/admin/inventario',
+    icon: BuildingStorefrontIcon,
+    description: 'Gestionar inventario y depósitos',
     adminOnly: true
   },
   {
