@@ -393,7 +393,7 @@ export default function CompletarPerfil() {
       setError("No se pudo guardar el perfil. " + updateError.message);
     } else {
       setExito("¡Perfil guardado correctamente!");
-      router.push("/");
+      router.push("/auth/iniciar-sesion"); // Redirigir a iniciar sesión
     }
   };
 
