@@ -179,9 +179,12 @@ export default function SolicitudesPage() {
 
       let mensajeFinal = '';
 
-      // LÓGICA DE INTEGRACIÓN CON INVENTARIO
+      // LÓGICA DE INTEGRACIÓN CON INVENTARIO Y MOVIMIENTOS
       if (nuevoEstado === 'aprobada' && solicitudActual.estado === 'pendiente') {
         const resultadoInventario = await descontarDelInventario(solicitudActual);
+        
+        // REGISTRAR MOVIMIENTO CUANDO SE APRUEBA LA SOLICITUD
+        await registrarMovimientoSolicitud(solicitudActual, resultadoInventario);
         
         if (resultadoInventario.error) {
           mensajeFinal = `⚠️ Solicitud aprobada, pero hubo un error al actualizar el inventario.`;
@@ -294,6 +297,67 @@ export default function SolicitudesPage() {
     }
 
     return { cantidadRestante, productosActualizados };
+  };
+
+  // Nueva función para registrar movimientos de solicitudes aprobadas
+  const registrarMovimientoSolicitud = async (solicitud: Solicitud, resultadoInventario: ResultadoInventario) => {
+    try {
+      console.log('Registrando movimiento de solicitud aprobada:', solicitud);
+
+      // Obtener información del administrador actual (quien aprueba)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.warn('No se pudo obtener el usuario administrador para el movimiento');
+        return;
+      }
+
+      // 1. Crear cabecera del movimiento
+      const { data: movimientoCabecera, error: errorCabecera } = await supabase
+        .from('movimiento_inventario_cabecera')
+        .insert({
+          fecha_movimiento: new Date().toISOString(),
+          id_donante: user.id, // El admin que aprueba la solicitud
+          id_solicitante: solicitud.usuario_id,
+          estado_movimiento: 'completado',
+          observaciones: `Solicitud aprobada - ${solicitud.tipo_alimento} (${solicitud.cantidad} unidades)`
+        })
+        .select('id_movimiento')
+        .single();
+
+      if (errorCabecera) {
+        console.error('Error creando cabecera de movimiento:', errorCabecera);
+        return;
+      }
+
+      // 2. Buscar productos que coincidan para crear los detalles
+      const productosCoincidentes = await buscarProductosCoincidentes(solicitud.tipo_alimento);
+      
+      if (productosCoincidentes && productosCoincidentes.length > 0) {
+        // Crear detalle del movimiento para cada producto afectado
+        const cantidadEntregada = solicitud.cantidad - (resultadoInventario.cantidadRestante || 0);
+        
+        for (const producto of productosCoincidentes) {
+          const { error: errorDetalle } = await supabase
+            .from('movimiento_inventario_detalle')
+            .insert({
+              id_movimiento: movimientoCabecera.id_movimiento,
+              id_producto: producto.id_producto,
+              cantidad: cantidadEntregada / productosCoincidentes.length, // Distribuir proporcionalmente
+              tipo_transaccion: 'egreso',
+              rol_usuario: 'beneficiario',
+              observacion_detalle: `Entrega por solicitud aprobada - ${solicitud.tipo_alimento}`
+            });
+
+          if (errorDetalle) {
+            console.error('Error creando detalle de movimiento:', errorDetalle);
+          }
+        }
+      }
+
+      console.log('Movimiento registrado exitosamente');
+    } catch (error) {
+      console.error('Error registrando movimiento de solicitud:', error);
+    }
   };
 
   const getEstadoColor = (estado: string) => {

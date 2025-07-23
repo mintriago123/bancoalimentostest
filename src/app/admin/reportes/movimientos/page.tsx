@@ -41,79 +41,123 @@ export default function MovementsReport() {
   const loadReport = async () => {
     setLoading(true);
     try {
-      // Obtener datos reales de donaciones (ingresos) y solicitudes aprobadas (egresos)
+      // Obtener datos reales de movimientos registrados en el sistema
       const movementsData: MovementItem[] = [];
 
-      // 1. Obtener donaciones como movimientos de ingreso
+      // 1. Obtener movimientos registrados en las tablas de movimiento_inventario
+      const { data: movimientosRegistrados, error: errorMovimientos } = await supabase
+        .from('movimiento_inventario_cabecera')
+        .select(`
+          id_movimiento,
+          fecha_movimiento,
+          estado_movimiento,
+          observaciones,
+          donante:usuarios!id_donante(nombre, rol),
+          solicitante:usuarios!id_solicitante(nombre, rol),
+          movimiento_inventario_detalle!inner(
+            cantidad,
+            tipo_transaccion,
+            rol_usuario,
+            observacion_detalle,
+            productos_donados!inner(
+              nombre_producto,
+              unidad_medida
+            )
+          )
+        `)
+        .order('fecha_movimiento', { ascending: false });
+
+      if (!errorMovimientos && movimientosRegistrados) {
+        movimientosRegistrados.forEach((movimiento: any) => {
+          movimiento.movimiento_inventario_detalle.forEach((detalle: any, index: number) => {
+            const esIngreso = detalle.tipo_transaccion === 'ingreso';
+            const usuarioResponsable = esIngreso 
+              ? movimiento.donante?.nombre || 'Usuario desconocido'
+              : movimiento.solicitante?.nombre || 'Usuario desconocido';
+            const rolUsuario = esIngreso 
+              ? movimiento.donante?.rol || 'DONANTE'
+              : movimiento.solicitante?.rol || 'BENEFICIARIO';
+
+            movementsData.push({
+              id: `m-${movimiento.id_movimiento}-${index}`,
+              fecha_movimiento: movimiento.fecha_movimiento,
+              tipo_movimiento: detalle.tipo_transaccion === 'ingreso' ? 'ingreso' : 'egreso',
+              nombre_producto: detalle.productos_donados?.nombre_producto || 'Producto sin nombre',
+              unidad_medida: detalle.productos_donados?.unidad_medida || 'unidad',
+              cantidad: detalle.cantidad || 0,
+              usuario_responsable: usuarioResponsable,
+              rol_usuario: rolUsuario,
+              origen_movimiento: esIngreso ? 'Donación Registrada' : 'Solicitud Aprobada',
+              observaciones: detalle.observacion_detalle || movimiento.observaciones || 'Sin observaciones'
+            });
+          });
+        });
+      }
+
+      // 2. FALLBACK: Obtener donaciones como movimientos de ingreso (para datos no migrados)
       const { data: donaciones, error: errorDonaciones } = await supabase
         .from('donaciones')
         .select(`
           id,
           creado_en,
-          nombre_producto,
-          unidad_medida,
+          tipo_producto,
+          unidad_simbolo,
           cantidad,
           observaciones,
           estado,
-          usuarios!inner(nombre, rol)
+          usuarios:user_id(nombre, rol)
         `)
+        .eq('estado', 'Entregada')
         .order('creado_en', { ascending: false });
 
       if (!errorDonaciones && donaciones) {
-        const ingresos: MovementItem[] = donaciones.map((donacion: any) => ({
-          id: `d-${donacion.id}`,
-          fecha_movimiento: donacion.creado_en,
-          tipo_movimiento: 'ingreso' as const,
-          nombre_producto: donacion.nombre_producto || 'Producto sin nombre',
-          unidad_medida: donacion.unidad_medida || 'unidad',
-          cantidad: donacion.cantidad || 0,
-          usuario_responsable: donacion.usuarios?.nombre || 'Usuario desconocido',
-          rol_usuario: donacion.usuarios?.rol || 'DONANTE',
-          origen_movimiento: 'Donación',
-          observaciones: donacion.observaciones || `Donación - Estado: ${donacion.estado}`
-        }));
+        const ingresos: MovementItem[] = donaciones
+          .filter(donacion => !movementsData.some(m => m.id === `d-${donacion.id}`)) // Evitar duplicados
+          .map((donacion: any) => ({
+            id: `d-${donacion.id}`,
+            fecha_movimiento: donacion.creado_en,
+            tipo_movimiento: 'ingreso' as const,
+            nombre_producto: donacion.tipo_producto || 'Producto sin nombre',
+            unidad_medida: donacion.unidad_simbolo || 'unidad',
+            cantidad: donacion.cantidad || 0,
+            usuario_responsable: donacion.usuarios?.nombre || 'Usuario desconocido',
+            rol_usuario: donacion.usuarios?.rol || 'DONANTE',
+            origen_movimiento: 'Donación (Legado)',
+            observaciones: donacion.observaciones || `Donación - Estado: ${donacion.estado}`
+          }));
         movementsData.push(...ingresos);
       }
 
-      // 2. Obtener solicitudes aprobadas como movimientos de egreso
+      // 3. FALLBACK: Obtener solicitudes aprobadas como movimientos de egreso (para datos no migrados)
       const { data: solicitudes, error: errorSolicitudes } = await supabase
         .from('solicitudes')
         .select(`
           id,
           created_at,
-          productos_solicitados,
+          tipo_alimento,
+          cantidad,
+          comentarios,
           estado,
-          observaciones,
-          usuarios!inner(nombre, rol)
+          usuarios:usuario_id(nombre, rol)
         `)
         .eq('estado', 'aprobada')
         .order('created_at', { ascending: false });
 
       if (!errorSolicitudes && solicitudes) {
-        const egresos: MovementItem[] = [];
-        
-        solicitudes.forEach((solicitud: any) => {
-          try {
-            const productos = JSON.parse(solicitud.productos_solicitados || '[]');
-            productos.forEach((producto: any, index: number) => {
-              egresos.push({
-                id: `s-${solicitud.id}-${index}`,
-                fecha_movimiento: solicitud.created_at,
-                tipo_movimiento: 'egreso' as const,
-                nombre_producto: producto.nombre || 'Producto sin nombre',
-                unidad_medida: producto.unidad || 'unidad',
-                cantidad: producto.cantidad || 0,
-                usuario_responsable: solicitud.usuarios?.nombre || 'Usuario desconocido',
-                rol_usuario: solicitud.usuarios?.rol || 'SOLICITANTE',
-                origen_movimiento: 'Solicitud Aprobada',
-                observaciones: solicitud.observaciones || 'Entrega de solicitud aprobada'
-              });
-            });
-          } catch (error) {
-            console.error('Error procesando productos de solicitud:', error);
-          }
-        });
-        
+        const egresos: MovementItem[] = solicitudes
+          .filter(solicitud => !movementsData.some(m => m.id === `s-${solicitud.id}`)) // Evitar duplicados
+          .map((solicitud: any) => ({
+            id: `s-${solicitud.id}`,
+            fecha_movimiento: solicitud.created_at,
+            tipo_movimiento: 'egreso' as const,
+            nombre_producto: solicitud.tipo_alimento || 'Producto sin nombre',
+            unidad_medida: 'unidad',
+            cantidad: solicitud.cantidad || 0,
+            usuario_responsable: solicitud.usuarios?.nombre || 'Usuario desconocido',
+            rol_usuario: solicitud.usuarios?.rol || 'BENEFICIARIO',
+            origen_movimiento: 'Solicitud Aprobada (Legado)',
+            observaciones: solicitud.comentarios || 'Entrega de solicitud aprobada'
+          }));
         movementsData.push(...egresos);
       }
 

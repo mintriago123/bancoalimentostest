@@ -273,9 +273,14 @@ export default function AdminDonaciones() {
         return;
       }
 
-      // LÓGICA DE INTEGRACIÓN CON INVENTARIO
+      // LÓGICA DE INTEGRACIÓN CON INVENTARIO Y MOVIMIENTOS
       if (nuevoEstado === 'Entregada' && donacionActual.estado === 'Recogida') {
-        await integrarConInventario(donacionActual);
+        const productoId = await integrarConInventario(donacionActual);
+        
+        // REGISTRAR MOVIMIENTO CUANDO SE ENTREGA LA DONACIÓN
+        if (productoId) {
+          await registrarMovimientoDonacion(donacionActual, productoId);
+        }
       }
 
       // Recargar datos solo si la actualización fue exitosa
@@ -291,7 +296,7 @@ export default function AdminDonaciones() {
   };
 
   // Nueva función para integrar con inventario
-  const integrarConInventario = async (donacion: Donacion) => {
+  const integrarConInventario = async (donacion: Donacion): Promise<number | null> => {
     try {
       console.log('Integrando donación con inventario:', donacion);
 
@@ -299,9 +304,11 @@ export default function AdminDonaciones() {
       const depositoId = await obtenerOCrearDeposito();
       await actualizarInventario(productoId, depositoId, donacion);
 
+      return productoId; // Retornar el ID del producto para registrar movimiento
     } catch (error) {
       console.error('Error integrando con inventario:', error);
       alert(`Advertencia: Donación marcada como entregada, pero hubo un error al actualizar el inventario: ${error}`);
+      return null;
     }
   };
 
@@ -416,6 +423,58 @@ export default function AdminDonaciones() {
       }
       
       console.log(`Nuevo item agregado al inventario: ${donacion.cantidad} ${donacion.unidad_simbolo} de ${donacion.tipo_producto}`);
+    }
+  };
+
+  // Nueva función para registrar movimientos de donaciones entregadas
+  const registrarMovimientoDonacion = async (donacion: Donacion, productoId: number) => {
+    try {
+      console.log('Registrando movimiento de donación entregada:', donacion);
+
+      // Obtener información del administrador actual (quien entrega)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.warn('No se pudo obtener el usuario administrador para el movimiento');
+        return;
+      }
+
+      // 1. Crear cabecera del movimiento
+      const { data: movimientoCabecera, error: errorCabecera } = await supabase
+        .from('movimiento_inventario_cabecera')
+        .insert({
+          fecha_movimiento: new Date().toISOString(),
+          id_donante: donacion.user_id, // El donante original
+          id_solicitante: user.id, // El admin que recibe la donación
+          estado_movimiento: 'donado',
+          observaciones: `Donación entregada - ${donacion.tipo_producto} (${donacion.cantidad} ${donacion.unidad_simbolo})`
+        })
+        .select('id_movimiento')
+        .single();
+
+      if (errorCabecera) {
+        console.error('Error creando cabecera de movimiento:', errorCabecera);
+        return;
+      }
+
+      // 2. Crear detalle del movimiento
+      const { error: errorDetalle } = await supabase
+        .from('movimiento_inventario_detalle')
+        .insert({
+          id_movimiento: movimientoCabecera.id_movimiento,
+          id_producto: productoId,
+          cantidad: donacion.cantidad,
+          tipo_transaccion: 'ingreso',
+          rol_usuario: 'donante',
+          observacion_detalle: `Ingreso por donación entregada - ${donacion.tipo_producto}`
+        });
+
+      if (errorDetalle) {
+        console.error('Error creando detalle de movimiento:', errorDetalle);
+      } else {
+        console.log('Movimiento de donación registrado exitosamente');
+      }
+    } catch (error) {
+      console.error('Error registrando movimiento de donación:', error);
     }
   };
 

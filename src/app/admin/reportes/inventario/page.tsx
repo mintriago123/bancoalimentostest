@@ -56,19 +56,52 @@ export default function AdminInventario() {
   const cargarInventario = useCallback(async () => {
     setCargando(true);
     
-    const { data, error } = await supabase
-      .from('inventario')
-      .select(`
-        *,
-        deposito:depositos(nombre, descripcion),
-        producto:productos_donados(nombre_producto, descripcion, unidad_medida, fecha_caducidad, fecha_donacion)
-      `)
-      .order('fecha_actualizacion', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('inventario')
+        .select(`
+          *,
+          depositos!inventario_id_deposito_fkey(
+            nombre,
+            descripcion
+          ),
+          productos_donados!inventario_id_producto_fkey(
+            nombre_producto,
+            descripcion,
+            unidad_medida,
+            fecha_caducidad,
+            fecha_donacion
+          )
+        `)
+        .order('fecha_actualizacion', { ascending: false });
 
-    if (!error && data) {
-      setInventario(data);
+      if (error) {
+        console.error('Error cargando inventario:', error);
+        alert(`Error cargando inventario: ${error.message}`);
+        setInventario([]);
+      } else if (data) {
+        // Mapear los datos para que coincidan con la interfaz esperada
+        const inventarioMapeado = data.map(item => ({
+          ...item,
+          deposito: Array.isArray(item.depositos) ? item.depositos[0] : item.depositos || { nombre: 'Sin depósito', descripcion: '' },
+          producto: Array.isArray(item.productos_donados) ? item.productos_donados[0] : item.productos_donados || { 
+            nombre_producto: 'Sin nombre', 
+            descripcion: '', 
+            unidad_medida: '',
+            fecha_caducidad: '',
+            fecha_donacion: ''
+          }
+        }));
+        setInventario(inventarioMapeado);
+      } else {
+        setInventario([]);
+      }
+    } catch (error) {
+      console.error('Error inesperado:', error);
+      setInventario([]);
+    } finally {
+      setCargando(false);
     }
-    setCargando(false);
   }, [supabase]);
 
   const cargarDepositos = useCallback(async () => {
@@ -119,6 +152,59 @@ export default function AdminInventario() {
   useEffect(() => {
     cargarInventario();
     cargarDepositos();
+    
+    // Debug: Verificar estructura de las tablas
+    const verificarEstructura = async () => {
+      try {
+        console.log('=== VERIFICANDO ESTRUCTURA DE TABLAS ===');
+        
+        // Verificar tabla inventario
+        const { data: inventarioTest, error: errorInventario } = await supabase
+          .from('inventario')
+          .select('*')
+          .limit(1);
+        
+        console.log('Estructura de inventario:', inventarioTest);
+        if (errorInventario) console.error('Error en inventario:', errorInventario);
+        
+        // Verificar tabla depositos
+        const { data: depositosTest, error: errorDepositos } = await supabase
+          .from('depositos')
+          .select('*')
+          .limit(1);
+        
+        console.log('Estructura de depositos:', depositosTest);
+        if (errorDepositos) console.error('Error en depositos:', errorDepositos);
+        
+        // Verificar tabla productos_donados
+        const { data: productosTest, error: errorProductos } = await supabase
+          .from('productos_donados')
+          .select('*')
+          .limit(1);
+        
+        console.log('Estructura de productos_donados:', productosTest);
+        if (errorProductos) console.error('Error en productos_donados:', errorProductos);
+        
+        // Verificar JOIN completo
+        const { data: joinTest, error: errorJoin } = await supabase
+          .from('inventario')
+          .select(`
+            id_inventario,
+            cantidad_disponible,
+            depositos!inventario_id_deposito_fkey(nombre),
+            productos_donados!inventario_id_producto_fkey(nombre_producto)
+          `)
+          .limit(1);
+        
+        console.log('Test de JOIN:', joinTest);
+        if (errorJoin) console.error('Error en JOIN:', errorJoin);
+        
+      } catch (error) {
+        console.error('Error verificando estructura:', error);
+      }
+    };
+    
+    verificarEstructura();
   }, [cargarInventario, cargarDepositos]);
 
   useEffect(() => {
@@ -128,16 +214,98 @@ export default function AdminInventario() {
   const actualizarCantidad = async (idInventario: string, nuevaCantidad: number) => {
     if (nuevaCantidad < 0) return;
 
-    const { error } = await supabase
-      .from('inventario')
-      .update({ 
-        cantidad_disponible: nuevaCantidad,
-        fecha_actualizacion: new Date().toISOString()
-      })
-      .eq('id_inventario', idInventario);
+    try {
+      // Obtener el item actual para calcular la diferencia
+      const itemActual = inventario.find(item => item.id_inventario === idInventario);
+      if (!itemActual) {
+        alert('Item de inventario no encontrado');
+        return;
+      }
 
-    if (!error) {
+      const cantidadAnterior = itemActual.cantidad_disponible;
+      const diferencia = nuevaCantidad - cantidadAnterior;
+
+      // Actualizar la cantidad en inventario
+      const { error } = await supabase
+        .from('inventario')
+        .update({ 
+          cantidad_disponible: nuevaCantidad,
+          fecha_actualizacion: new Date().toISOString()
+        })
+        .eq('id_inventario', idInventario);
+
+      if (error) {
+        console.error('Error actualizando inventario:', error);
+        alert(`Error actualizando inventario: ${error.message}`);
+        return;
+      }
+
+      // Registrar el movimiento si hay diferencia
+      if (diferencia !== 0) {
+        await registrarMovimientoAjuste(itemActual, diferencia);
+      }
+
+      // Recargar inventario
       await cargarInventario();
+      
+    } catch (error) {
+      console.error('Error inesperado:', error);
+      alert(`Error inesperado: ${error}`);
+    }
+  };
+
+  // Nueva función para registrar movimientos de ajustes manuales
+  const registrarMovimientoAjuste = async (item: Inventario, diferencia: number) => {
+    try {
+      console.log('Registrando ajuste de inventario:', { item, diferencia });
+
+      // Obtener información del usuario actual (administrador)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.warn('No se pudo obtener el usuario para el movimiento de ajuste');
+        return;
+      }
+
+      // 1. Crear cabecera del movimiento
+      const { data: movimientoCabecera, error: errorCabecera } = await supabase
+        .from('movimiento_inventario_cabecera')
+        .insert({
+          fecha_movimiento: new Date().toISOString(),
+          id_donante: user.id, // Admin que hace el ajuste
+          id_solicitante: user.id, // Mismo admin
+          estado_movimiento: 'completado',
+          observaciones: `Ajuste manual de inventario - ${item.producto.nombre_producto} (${diferencia > 0 ? '+' : ''}${diferencia} unidades)`
+        })
+        .select('id_movimiento')
+        .single();
+
+      if (errorCabecera) {
+        console.error('Error creando cabecera de movimiento de ajuste:', errorCabecera);
+        return;
+      }
+
+      // 2. Crear detalle del movimiento
+      const tipoTransaccion = diferencia > 0 ? 'ingreso' : 'egreso';
+      const cantidadAbsoluta = Math.abs(diferencia);
+
+      const { error: errorDetalle } = await supabase
+        .from('movimiento_inventario_detalle')
+        .insert({
+          id_movimiento: movimientoCabecera.id_movimiento,
+          id_producto: item.id_producto,
+          cantidad: cantidadAbsoluta,
+          tipo_transaccion: tipoTransaccion,
+          rol_usuario: 'distribuidor',
+          observacion_detalle: `Ajuste manual de inventario - ${tipoTransaccion === 'ingreso' ? 'Incremento' : 'Reducción'} de ${cantidadAbsoluta} unidades`
+        });
+
+      if (errorDetalle) {
+        console.error('Error creando detalle de movimiento de ajuste:', errorDetalle);
+      } else {
+        console.log('Movimiento de ajuste registrado exitosamente');
+      }
+    } catch (error) {
+      console.error('Error registrando movimiento de ajuste:', error);
     }
   };
 
