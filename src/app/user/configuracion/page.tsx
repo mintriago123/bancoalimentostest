@@ -85,7 +85,10 @@ export default function UserConfiguracionPage() {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout
+      title="Configuración de Usuario"
+      description="Gestiona tus preferencias y seguridad"
+    >
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 flex items-center mb-4">
           <UserIcon className="w-7 h-7 mr-2 text-red-600" />

@@ -222,7 +222,9 @@ export default function UserPerfilPage() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout
+      title="Perfil de Usuario"
+    >
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <button
@@ -232,13 +234,7 @@ export default function UserPerfilPage() {
             <ArrowLeftIcon className="w-5 h-5 mr-2" />
             Volver
           </button>
-
-          <h1 className="text-3xl font-bold text-gray-900">Mi Perfil</h1>
-          <p className="text-gray-600 mt-2">
-            Aquí puedes actualizar tu información personal y de contacto
-          </p>
         </div>
-
         {message && (
           <div
             className={`mb-6 p-4 rounded-lg flex items-center ${
@@ -270,12 +266,12 @@ export default function UserPerfilPage() {
               </button>
             </div>
             <h2 className="mt-4 text-xl font-semibold text-gray-900">{profile.nombre}</h2>
-            <p className="text-gray-500 text-sm">{profile.email}</p>
+            {/* <p className="text-gray-500 text-sm">{profile.email}</p> */}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Nombre */}
-            <div>
+            {/* <div>
               <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-2">
                 Nombre Completo *
               </label>
@@ -292,12 +288,12 @@ export default function UserPerfilPage() {
                   required
                 />
               </div>
-            </div>
+            </div> */}
 
             {/* Email (solo lectura) */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email (Solo lectura)
+                Email 
               </label>
               <div className="relative">
                 <AtSymbolIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -314,7 +310,7 @@ export default function UserPerfilPage() {
             {/* Identificación (solo lectura) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Identificación (Solo lectura)
+                Identificación
               </label>
               <div className="relative">
                 <IdentificationIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
