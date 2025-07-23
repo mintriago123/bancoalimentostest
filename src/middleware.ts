@@ -12,7 +12,11 @@ export async function middleware(request: NextRequest) {
 
     const {
       data: { user },
+      error
     } = await supabase.auth.getUser();
+
+    // Si hay error al obtener el usuario, asumir que no está autenticado
+    const isAuthenticated = user && !error;
 
     const { pathname } = request.nextUrl;
 
@@ -26,7 +30,7 @@ export async function middleware(request: NextRequest) {
 
     // Para rutas protegidas, verificar autenticación
     if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/donante') || pathname.startsWith('/user')) {
-      if (!user) {
+      if (!isAuthenticated) {
         const url = new URL('/auth/iniciar-sesion', request.url);
         url.searchParams.set('callbackUrl', pathname);
         return NextResponse.redirect(url);
@@ -35,7 +39,7 @@ export async function middleware(request: NextRequest) {
 
     // Para la página principal, redirigir según el rol del usuario
     if (pathname === '/') {
-      if (user) {
+      if (isAuthenticated) {
         // Consultar el rol del usuario para redirigir correctamente
         const { data: perfil } = await supabase
           .from('usuarios')
@@ -50,6 +54,9 @@ export async function middleware(request: NextRequest) {
         } else {
           return NextResponse.redirect(new URL('/user/dashboard', request.url));
         }
+      } else {
+        // Si no está autenticado, redirigir a iniciar sesión
+        return NextResponse.redirect(new URL('/auth/iniciar-sesion', request.url));
       }
     }
 

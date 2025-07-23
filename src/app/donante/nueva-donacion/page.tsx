@@ -42,7 +42,7 @@ interface UserProfile {
 }
 
 export default function NuevaDonacionPage() {
-  const { supabase, user: currentUser } = useSupabase();
+  const { supabase, user: currentUser, isLoading: authLoading } = useSupabase();
 
   const [pasoActual, setPasoActual] = useState(1);
   const totalPasos = 3;
@@ -87,12 +87,14 @@ export default function NuevaDonacionPage() {
 
   // Cargar datos al montar el componente
   useEffect(() => {
-    cargarAlimentos();
-    cargarUnidades();
-    if (currentUser !== undefined) {
-      cargarPerfilUsuario(currentUser);
+    if (!authLoading) {
+      cargarAlimentos();
+      cargarUnidades();
+      if (currentUser !== undefined) {
+        cargarPerfilUsuario(currentUser);
+      }
     }
-  }, [currentUser]);
+  }, [currentUser, authLoading]);
 
   // Función para cargar el perfil del usuario
   const cargarPerfilUsuario = async (user: typeof currentUser) => {
@@ -374,6 +376,17 @@ export default function NuevaDonacionPage() {
 
   // Obtener categorías únicas para productos personalizados
   const categoriasUnicas = [...new Set(alimentos.map(a => a.categoria))].sort();
+
+  // Mostrar loader mientras se autentica
+  if (authLoading) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const renderPaso = () => {
     switch (pasoActual) {

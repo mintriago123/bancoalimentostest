@@ -52,7 +52,7 @@ export default function DashboardLayout({
   description 
 }: DashboardLayoutProps) {
   const router = useRouter();
-  const { supabase, user } = useSupabase();
+  const { supabase, user, isLoading: authLoading } = useSupabase();
   const [perfil, setPerfil] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -76,6 +76,10 @@ export default function DashboardLayout({
   };
 
   useEffect(() => {
+    if (authLoading) {
+      return; // Esperar a que termine la carga de autenticación
+    }
+
     if (!user) {
       router.push('/auth/iniciar-sesion');
       return;
@@ -111,9 +115,9 @@ export default function DashboardLayout({
     };
 
     loadUserProfile();
-  }, [user, router, supabase, requiredRole]);
+  }, [user, router, supabase, requiredRole, authLoading]);
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
