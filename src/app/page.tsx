@@ -172,7 +172,7 @@ export default function HomePage() {
             <div className="text-center p-6 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg bg-white">
               <div className="relative mb-4">
                 <Image
-                  src="/Mayk.png"
+                  src="/Mayk.jpg"
                   width={120}
                   height={120}
                   alt="Maykel Menendez"
