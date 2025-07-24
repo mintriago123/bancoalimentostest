@@ -100,27 +100,27 @@ const menuItems: MenuItem[] = [
       //   description: 'Panel principal de estadísticas'
       // },
       {
-        name: 'Reporte de Inventario',
+        name: 'Inventario',
         href: '/admin/reportes/inventario',
         description: 'Estado actual del inventario'
       },
       {
-        name: 'Reporte de Movimientos',
+        name: 'Movimientos',
         href: '/admin/reportes/movimientos',
         description: 'Historial de entradas y salidas'
       },
            {
-        name: 'Reporte de Solicitudes',
+        name: 'Solicitudes',
         href: '/admin/reportes/solicitudes',
         description: 'Análisis de solicitudes recibidas'
-      }, 
-     {
-        name: 'Reporte de Donaciones',
+      },
+      {
+        name: 'Donaciones',
         href: '/admin/reportes/donaciones',
         description: 'Análisis de donaciones recibidas'
       }, 
       {
-        name: 'Historial de Reportes',
+        name: 'Historial',
         href: '/admin/reportes/historial',
         description: 'Reportes generados anteriormente'
       }
