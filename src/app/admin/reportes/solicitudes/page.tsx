@@ -104,6 +104,8 @@ export default function SolicitudesPage() {
           created_at,
           latitud,
           longitud,
+          fecha_respuesta,
+          comentario_admin,
           usuarios:usuario_id (
             nombre,
             cedula,
@@ -160,7 +162,7 @@ export default function SolicitudesPage() {
     aplicarFiltros();
   }, [aplicarFiltros]);
 
-  const actualizarEstado = async (solicitudId: string, nuevoEstado: 'aprobada' | 'rechazada' | 'entregada') => {
+  const actualizarEstado = async (solicitudId: string, nuevoEstado: 'aprobada' | 'rechazada' | 'entregada', comentario?: string) => {
     try {
       // Obtener la solicitud actual para procesamiento
       const solicitudActual = solicitudes.find(s => s.id === solicitudId);
@@ -169,14 +171,27 @@ export default function SolicitudesPage() {
         return;
       }
 
+      // Validaciones de transiciones de estado
+      if (!validarTransicionEstado(solicitudActual.estado, nuevoEstado)) {
+        alert(`No se puede cambiar el estado de "${solicitudActual.estado}" a "${nuevoEstado}"`);
+        return;
+      }
+
+      // Preparar datos de actualización
+      const datosActualizacion: any = {
+        estado: nuevoEstado,
+        fecha_respuesta: new Date().toISOString()
+      };
+
+      // Agregar comentario admin si se proporciona
+      if (comentario && comentario.trim()) {
+        datosActualizacion.comentario_admin = comentario.trim();
+      }
+
       // Actualizar estado en la base de datos
       const { error } = await supabase
         .from('solicitudes')
-        .update({ 
-          estado: nuevoEstado,
-          // fecha_respuesta: new Date().toISOString(),
-          // comentario_admin: comentario || null
-        })
+        .update(datosActualizacion)
         .eq('id', solicitudId);
 
       if (error) throw error;
@@ -199,6 +214,15 @@ export default function SolicitudesPage() {
         } else {
           mensajeFinal = `✅ Solicitud aprobada exitosamente y descontada del inventario completamente.`;
         }
+      } else if (nuevoEstado === 'entregada' && solicitudActual.estado === 'aprobada') {
+        // Registrar la entrega en el sistema
+        await registrarEntregaSolicitud(solicitudActual);
+        mensajeFinal = `✅ Solicitud marcada como entregada exitosamente.`;
+      } else if (nuevoEstado === 'rechazada') {
+        mensajeFinal = `❌ Solicitud rechazada.`;
+        if (comentario) {
+          mensajeFinal += ` Motivo: ${comentario}`;
+        }
       } else {
         mensajeFinal = `Solicitud ${nuevoEstado} exitosamente`;
       }
@@ -213,7 +237,8 @@ export default function SolicitudesPage() {
       
     } catch (error) {
       console.error('Error al actualizar estado:', error);
-      alert(`Error al actualizar estado: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      alert(`Error al actualizar estado: ${errorMessage}`);
     }
   };
 
@@ -364,6 +389,66 @@ export default function SolicitudesPage() {
     }
   };
 
+  // Función para validar transiciones de estado
+  const validarTransicionEstado = (estadoActual: string, nuevoEstado: string): boolean => {
+    const transicionesValidas: Record<string, string[]> = {
+      'pendiente': ['aprobada', 'rechazada'],
+      'aprobada': ['entregada', 'pendiente'], // Permitir revertir aprobadas a pendiente
+      'rechazada': ['pendiente'], // Permitir revertir rechazadas
+      'entregada': ['aprobada'] // Permitir revertir entregadas a aprobadas en casos especiales
+    };
+
+    return transicionesValidas[estadoActual]?.includes(nuevoEstado) || false;
+  };
+
+  // Función para registrar la entrega de una solicitud
+  const registrarEntregaSolicitud = async (solicitud: Solicitud) => {
+    try {
+      console.log('Registrando entrega de solicitud:', solicitud);
+
+      // Obtener información del administrador actual
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.warn('No se pudo obtener el usuario administrador para la entrega');
+        return;
+      }
+
+      // Buscar el movimiento relacionado con esta solicitud
+      const { data: movimientoExistente, error: errorBusqueda } = await supabase
+        .from('movimiento_inventario_cabecera')
+        .select('id_movimiento')
+        .eq('id_solicitante', solicitud.usuario_id)
+        .eq('estado_movimiento', 'completado')
+        .ilike('observaciones', `%${solicitud.tipo_alimento}%`)
+        .order('fecha_movimiento', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (errorBusqueda || !movimientoExistente) {
+        console.warn('No se encontró movimiento relacionado con la solicitud');
+        return;
+      }
+
+      // Actualizar el movimiento para marcar la entrega
+      const { error: errorActualizacion } = await supabase
+        .from('movimiento_inventario_cabecera')
+        .update({
+          observaciones: `${solicitud.tipo_alimento} (${solicitud.cantidad} unidades) - ENTREGADO`,
+          fecha_actualizacion: new Date().toISOString()
+        })
+        .eq('id_movimiento', movimientoExistente.id_movimiento);
+
+      if (errorActualizacion) {
+        console.error('Error actualizando movimiento para entrega:', errorActualizacion);
+        return;
+      }
+
+      console.log('Entrega registrada exitosamente');
+    } catch (error) {
+      console.error('Error registrando entrega de solicitud:', error);
+    }
+  };
+
   const getEstadoColor = (estado: string) => {
     switch (estado) {
       case 'pendiente': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
@@ -454,20 +539,40 @@ export default function SolicitudesPage() {
 
   const revertirAPendiente = async (solicitudId: string) => {
     try {
+      // Obtener la solicitud actual
+      const solicitudActual = solicitudes.find(s => s.id === solicitudId);
+      if (!solicitudActual) {
+        alert('Solicitud no encontrada');
+        return;
+      }
+
+      // Validar que se puede revertir
+      if (!validarTransicionEstado(solicitudActual.estado, 'pendiente')) {
+        alert(`No se puede revertir una solicitud con estado "${solicitudActual.estado}" a pendiente`);
+        return;
+      }
+
+      // Confirmar la acción
+      const confirmar = window.confirm(`¿Estás seguro de que quieres revertir esta solicitud a pendiente?\n\nNOTA: Si la solicitud estaba aprobada, el inventario NO se restaurará automáticamente.`);
+      if (!confirmar) return;
+
       const { error } = await supabase
         .from('solicitudes')
-        .update({ estado: 'pendiente' })
+        .update({ 
+          estado: 'pendiente',
+          fecha_respuesta: new Date().toISOString(),
+          comentario_admin: `Revertida a pendiente el ${new Date().toLocaleDateString('es-ES')}`
+        })
         .eq('id', solicitudId);
 
       if (error) throw error;
 
-      setSolicitudes(prev => prev.map(s => 
-        s.id === solicitudId ? { ...s, estado: 'pendiente' } : s
-      ));
+      await cargarSolicitudes(); // Recargar para obtener datos actualizados
       alert('Solicitud revertida a pendiente exitosamente');
     } catch (error) {
       console.error('Error al revertir solicitud:', error);
-      alert('Error al revertir la solicitud');
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      alert(`Error al revertir la solicitud: ${errorMessage}`);
     }
   };
 
@@ -476,7 +581,7 @@ export default function SolicitudesPage() {
     const handleAprobar = () => actualizarEstado(solicitud.id, 'aprobada');
     const handleRechazar = () => actualizarEstado(solicitud.id, 'rechazada');
     const handleEntregar = () => actualizarEstado(solicitud.id, 'entregada');
-    const handleRevertir = () => revertirAPendiente(solicitud.id);
+    const handleRevertir = () => revertirAPendiente(solicitud.id) ;
 
     if (solicitud.estado === 'pendiente') {
       return (
@@ -541,12 +646,25 @@ export default function SolicitudesPage() {
     if (solicitud.estado === 'entregada') {
       return (
         <>
+          <span className="text-blue-600 px-2 py-1 rounded border border-blue-200 bg-blue-50 text-xs">
+            ✓ Entregado
+          </span>
           <button
             onClick={handleAbrirModal}
             className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors"
             title="Ver detalles"
           >
             <FileText className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => {
+              const confirmar = window.confirm('¿Revertir esta solicitud de "entregada" a "aprobada"?\n\nEsto puede ser útil si hubo un error en el registro de entrega.');
+              if (confirmar) actualizarEstado(solicitud.id, 'aprobada', 'Revertida desde entregada por corrección administrativa');
+            }}
+            className="bg-orange-600 hover:bg-orange-700 text-white p-2 rounded-lg transition-colors"
+            title="Revertir a aprobada"
+          >
+            <Clock className="w-4 h-4" />
           </button>
         </>
       );
@@ -874,7 +992,7 @@ export default function SolicitudesPage() {
                   </div>
                 </div>
 
-                {/* Comentarios */}
+                {/* Comentarios y Historial */}
                 <div className="space-y-4">
                   {solicitudSeleccionada.comentarios && (
                     <div className="bg-blue-50 p-4 rounded-lg">
@@ -886,10 +1004,27 @@ export default function SolicitudesPage() {
                     </div>
                   )}
 
-                  {solicitudSeleccionada.comentario_admin && (
-                    <div className="bg-red-50 p-4 rounded-lg">
-                      <h4 className="font-semibold text-gray-900 mb-2">Comentario Administrativo Anterior</h4>
-                      <p className="text-sm text-gray-700">{solicitudSeleccionada.comentario_admin}</p>
+                  {/* Historial Administrativo */}
+                  {(solicitudSeleccionada.comentario_admin || solicitudSeleccionada.fecha_respuesta) && (
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                        <FileText className="w-4 h-4 mr-2" />
+                        Historial Administrativo
+                      </h4>
+                      <div className="space-y-2 text-sm">
+                        {solicitudSeleccionada.fecha_respuesta && (
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span className="text-gray-600">Última actualización:</span>
+                            <span className="font-medium">{formatearFecha(solicitudSeleccionada.fecha_respuesta)}</span>
+                          </div>
+                        )}
+                        {solicitudSeleccionada.comentario_admin && (
+                          <div className="mt-2 p-3 bg-white rounded border-l-4 border-blue-500">
+                            <p className="text-gray-700 italic">&quot;{solicitudSeleccionada.comentario_admin}&quot;</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1016,7 +1151,7 @@ export default function SolicitudesPage() {
                 
                       <div className="flex flex-wrap gap-3">
                         <button
-                          onClick={() => actualizarEstado(solicitudSeleccionada.id, 'aprobada')}
+                          onClick={() => actualizarEstado(solicitudSeleccionada.id, 'aprobada', comentarioAdmin)}
                           className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
                         >
                           <CheckCircle className="w-4 h-4" />
@@ -1024,7 +1159,7 @@ export default function SolicitudesPage() {
                         </button>
                 
                         <button
-                          onClick={() => actualizarEstado(solicitudSeleccionada.id, 'rechazada')}
+                          onClick={() => actualizarEstado(solicitudSeleccionada.id, 'rechazada', comentarioAdmin)}
                           className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
                         >
                           <XCircle className="w-4 h-4" />
@@ -1053,7 +1188,7 @@ export default function SolicitudesPage() {
                 
                       <div className="flex flex-wrap gap-3">
                         <button
-                          onClick={() => actualizarEstado(solicitudSeleccionada.id, 'entregada')}
+                          onClick={() => actualizarEstado(solicitudSeleccionada.id, 'entregada', `Entrega completada el ${new Date().toLocaleDateString('es-ES')}`)}
                           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
                         >
                           <Truck className="w-4 h-4" />
