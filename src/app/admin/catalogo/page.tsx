@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import DashboardLayout from '@/app/components/DashboardLayout';
-import { Plus, Package, Tag, Save, XCircle, Search, Filter, Info } from 'lucide-react'; // Iconos de Lucide React
+import { Plus, Package, Tag, Save, XCircle, Search, Filter, Info, Edit, Trash2, Eye, MoreVertical } from 'lucide-react'; // Iconos de Lucide React
 
 // Define las categorías locales predefinidas, incluyendo 'Otros' y 'Agregar Nueva Categoría'
 const CATEGORIAS_LOCALES = [
@@ -51,6 +51,18 @@ export default function RegistrarAlimentoPage() {
   const [cargandoAlimentos, setCargandoAlimentos] = useState(true);
   const [filtroBusqueda, setFiltroBusqueda] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('');
+
+  // Estados para modales de detalles, edición y eliminación
+  const [mostrarModalDetalles, setMostrarModalDetalles] = useState(false);
+  const [mostrarModalEditar, setMostrarModalEditar] = useState(false);
+  const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
+  const [alimentoSeleccionado, setAlimentoSeleccionado] = useState<Alimento | null>(null);
+  
+  // Estados para edición
+  const [nombreEditado, setNombreEditado] = useState('');
+  const [categoriaEditada, setCategoriaEditada] = useState('');
+  const [nuevaCategoriaEditada, setNuevaCategoriaEditada] = useState('');
+  const [mostrarCampoNuevaCategoriaEditada, setMostrarCampoNuevaCategoriaEditada] = useState(false);
 
   // Efecto para cargar los alimentos existentes al montar el componente o cuando Supabase esté listo
   useEffect(() => {
@@ -178,6 +190,148 @@ export default function RegistrarAlimentoPage() {
     }
   };
 
+  // Función para abrir el modal de detalles
+  const abrirModalDetalles = (alimento: Alimento) => {
+    setAlimentoSeleccionado(alimento);
+    setMostrarModalDetalles(true);
+  };
+
+  // Función para abrir el modal de edición
+  const abrirModalEditar = (alimento: Alimento) => {
+    setAlimentoSeleccionado(alimento);
+    setNombreEditado(alimento.nombre);
+    setCategoriaEditada(alimento.categoria);
+    setNuevaCategoriaEditada('');
+    setMostrarCampoNuevaCategoriaEditada(false);
+    setMostrarModalEditar(true);
+    setMensaje(null);
+    setTipoMensaje(null);
+  };
+
+  // Función para manejar el cambio de categoría en edición
+  const manejarCambioCategoriaEditada = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedValue = e.target.value;
+    setCategoriaEditada(selectedValue);
+    setMensaje(null);
+
+    if (selectedValue === 'Agregar Nueva Categoría' || selectedValue === 'Otros') {
+      setMostrarCampoNuevaCategoriaEditada(true);
+      setNuevaCategoriaEditada('');
+    } else {
+      setMostrarCampoNuevaCategoriaEditada(false);
+      setNuevaCategoriaEditada('');
+    }
+  };
+
+  // Función para guardar los cambios de edición
+  const guardarEdicion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!alimentoSeleccionado) return;
+
+    setMensaje(null);
+    setTipoMensaje(null);
+
+    let categoriaFinal = categoriaEditada;
+
+    // Validaciones del formulario
+    if (!nombreEditado.trim()) {
+      setMensaje('El nombre del alimento es obligatorio.');
+      setTipoMensaje('error');
+      return;
+    }
+
+    if (!categoriaEditada) {
+      setMensaje('Debes seleccionar una categoría.');
+      setTipoMensaje('error');
+      return;
+    }
+
+    // Si se seleccionó "Otros" o "Agregar Nueva Categoría", usar el valor del campo de texto
+    if (categoriaEditada === 'Agregar Nueva Categoría' || categoriaEditada === 'Otros') {
+      if (!nuevaCategoriaEditada.trim()) {
+        setMensaje('Debes ingresar el nombre de la nueva categoría o especificar la categoría para "Otros".');
+        setTipoMensaje('error');
+        return;
+      }
+      categoriaFinal = nuevaCategoriaEditada.trim();
+    }
+
+    setCargando(true);
+    try {
+      // Verificar si ya existe otro alimento con el mismo nombre (excluyendo el actual)
+      const { data: existingFood, error: existingError } = await supabase
+        .from('alimentos')
+        .select('id')
+        .ilike('nombre', nombreEditado.trim())
+        .neq('id', alimentoSeleccionado.id)
+        .single();
+
+      if (existingError && existingError.code !== 'PGRST116') {
+        throw existingError;
+      }
+
+      if (existingFood) {
+        setMensaje(`Ya existe otro alimento con el nombre "${nombreEditado.trim()}".`);
+        setTipoMensaje('error');
+        return;
+      }
+
+      // Actualizar el alimento
+      const { error } = await supabase
+        .from('alimentos')
+        .update({
+          nombre: nombreEditado.trim(),
+          categoria: categoriaFinal,
+        })
+        .eq('id', alimentoSeleccionado.id);
+
+      if (error) throw error;
+
+      setMensaje('¡Alimento actualizado exitosamente!');
+      setTipoMensaje('success');
+      setMostrarModalEditar(false);
+      cargarAlimentos(); // Recargar la lista
+    } catch (err: any) {
+      console.error('Error al actualizar alimento:', err.message);
+      setMensaje('Error al actualizar el alimento: ' + err.message);
+      setTipoMensaje('error');
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  // Función para abrir el modal de eliminación
+  const abrirModalEliminar = (alimento: Alimento) => {
+    setAlimentoSeleccionado(alimento);
+    setMostrarModalEliminar(true);
+  };
+
+  // Función para eliminar el alimento
+  const eliminarAlimento = async () => {
+    if (!alimentoSeleccionado) return;
+
+    setCargando(true);
+    try {
+      const { error } = await supabase
+        .from('alimentos')
+        .delete()
+        .eq('id', alimentoSeleccionado.id);
+
+      if (error) throw error;
+
+      setMensaje('¡Alimento eliminado exitosamente!');
+      setTipoMensaje('success');
+      setMostrarModalEliminar(false);
+      cargarAlimentos(); // Recargar la lista
+    } catch (err: any) {
+      console.error('Error al eliminar alimento:', err.message);
+      setMensaje('Error al eliminar el alimento: ' + err.message);
+      setTipoMensaje('error');
+    } finally {
+      setCargando(false);
+    }
+  };
+
   // Filtrar la lista de alimentos existentes según los criterios de búsqueda y categoría
   const alimentosFiltrados = alimentosExistentes.filter(alimento => {
     const matchesSearch = filtroBusqueda ?
@@ -289,17 +443,44 @@ export default function RegistrarAlimentoPage() {
                 {alimentosFiltrados.map((alimento) => (
                   <div key={alimento.id} className="bg-white rounded-xl shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
                     <div className="flex justify-between items-start mb-3">
-                      <h3 className="text-xl font-semibold text-gray-900">{alimento.nombre}</h3>
-                      <span className="bg-green-100 text-green-800 text-xs font-medium px-3 py-1 rounded-full">
+                      <h3 className="text-xl font-semibold text-gray-900 flex-1 pr-2">{alimento.nombre}</h3>
+                      <span className="bg-green-100 text-green-800 text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
                         Disponible
                       </span>
                     </div>
                     <p className="text-gray-600 text-sm mb-4">
                       Categoría: <span className="font-medium text-gray-800">{alimento.categoria}</span>
                     </p>
-                    <div className="flex items-center text-gray-500 text-sm">
-                      <Info className="w-4 h-4 mr-1" />
-                      <span>ID: {alimento.id}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-gray-500 text-sm">
+                        <Info className="w-4 h-4 mr-1" />
+                        <span>ID: {alimento.id}</span>
+                      </div>
+                      
+                      {/* Botones de acción */}
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => abrirModalDetalles(alimento)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Ver detalles"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => abrirModalEditar(alimento)}
+                          className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+                          title="Editar"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => abrirModalEliminar(alimento)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -403,6 +584,231 @@ export default function RegistrarAlimentoPage() {
                   )}
                 </button>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal para Ver Detalles del Alimento */}
+        {mostrarModalDetalles && alimentoSeleccionado && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative">
+              <button
+                onClick={() => setMostrarModalDetalles(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <XCircle className="w-7 h-7" />
+              </button>
+              <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center flex items-center justify-center">
+                <Eye className="w-6 h-6 mr-2 text-blue-600" />
+                Detalles del Alimento
+              </h3>
+
+              <div className="space-y-4">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-gray-600 mb-1">ID</label>
+                  <p className="text-lg font-semibold text-gray-900">{alimentoSeleccionado.id}</p>
+                </div>
+                
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Nombre</label>
+                  <p className="text-lg font-semibold text-gray-900">{alimentoSeleccionado.nombre}</p>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Categoría</label>
+                  <p className="text-lg font-semibold text-gray-900">{alimentoSeleccionado.categoria}</p>
+                </div>
+
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <Info className="w-5 h-5 text-blue-600 mr-2" />
+                    <span className="text-sm text-blue-800 font-medium">Estado: Disponible para donaciones</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-center space-x-3">
+                <button
+                  onClick={() => {
+                    setMostrarModalDetalles(false);
+                    abrirModalEditar(alimentoSeleccionado);
+                  }}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center"
+                >
+                  <Edit className="w-4 h-4 mr-2" /> Editar
+                </button>
+                <button
+                  onClick={() => setMostrarModalDetalles(false)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal para Editar Alimento */}
+        {mostrarModalEditar && alimentoSeleccionado && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative">
+              <button
+                onClick={() => {
+                  setMostrarModalEditar(false);
+                  setMensaje(null);
+                  setTipoMensaje(null);
+                }}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <XCircle className="w-7 h-7" />
+              </button>
+              <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center flex items-center justify-center">
+                <Edit className="w-6 h-6 mr-2 text-yellow-600" />
+                Editar Alimento
+              </h3>
+
+              <form onSubmit={guardarEdicion} className="space-y-5">
+                <div>
+                  <label htmlFor="nombreEditado" className="block text-sm font-medium text-gray-700 mb-2">Nombre del Alimento *</label>
+                  <input
+                    type="text"
+                    id="nombreEditado"
+                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-yellow-500 focus:outline-none transition-colors"
+                    value={nombreEditado}
+                    onChange={(e) => { setNombreEditado(e.target.value); setMensaje(null); }}
+                    placeholder="Ej: Manzanas, Arroz, Leche"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="categoriaEditada" className="block text-sm font-medium text-gray-700 mb-2">Categoría *</label>
+                  <select
+                    id="categoriaEditada"
+                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-yellow-500 focus:outline-none transition-colors"
+                    value={categoriaEditada}
+                    onChange={manejarCambioCategoriaEditada}
+                    required
+                  >
+                    <option value="">Selecciona una categoría</option>
+                    {CATEGORIAS_LOCALES.map((cat) => (
+                      <option key={cat.id} value={cat.nombre}>
+                        {cat.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {mostrarCampoNuevaCategoriaEditada && (
+                  <div>
+                    <label htmlFor="nuevaCategoriaEditada" className="block text-sm font-medium text-gray-700 mb-2">
+                      {categoriaEditada === 'Otros' ? 'Especifica la categoría' : 'Nombre de la Nueva Categoría *'}
+                    </label>
+                    <input
+                      type="text"
+                      id="nuevaCategoriaEditada"
+                      className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-yellow-500 focus:outline-none transition-colors"
+                      value={nuevaCategoriaEditada}
+                      onChange={(e) => { setNuevaCategoriaEditada(e.target.value); setMensaje(null); }}
+                      placeholder={categoriaEditada === 'Otros' ? 'Ej: Comida para mascotas' : 'Ej: Productos Gourmet'}
+                      required
+                    />
+                  </div>
+                )}
+
+                {mensaje && (
+                  <div className={`p-3 rounded-lg text-sm ${
+                    tipoMensaje === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {mensaje}
+                  </div>
+                )}
+
+                <div className="flex space-x-3">
+                  <button
+                    type="submit"
+                    disabled={cargando}
+                    className={`flex-1 flex items-center justify-center px-6 py-3 bg-yellow-600 text-white rounded-lg shadow-md hover:bg-yellow-700 transition-colors font-semibold ${
+                      cargando ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {cargando ? 'Guardando...' : (
+                      <>
+                        <Save className="w-5 h-5 mr-2" /> Guardar Cambios
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMostrarModalEditar(false);
+                      setMensaje(null);
+                      setTipoMensaje(null);
+                    }}
+                    className="px-4 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal para Confirmar Eliminación */}
+        {mostrarModalEliminar && alimentoSeleccionado && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative">
+              <button
+                onClick={() => setMostrarModalEliminar(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <XCircle className="w-7 h-7" />
+              </button>
+              <h3 className="text-2xl font-bold text-red-800 mb-6 text-center flex items-center justify-center">
+                <Trash2 className="w-6 h-6 mr-2 text-red-600" />
+                Eliminar Alimento
+              </h3>
+
+              <div className="mb-6">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <p className="text-red-800 text-center">
+                    <strong>¿Estás seguro de que deseas eliminar este alimento?</strong>
+                  </p>
+                  <p className="text-red-600 text-sm text-center mt-2">
+                    Esta acción no se puede deshacer.
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Alimento a eliminar:</p>
+                  <p className="font-bold text-gray-900">{alimentoSeleccionado.nombre}</p>
+                  <p className="text-sm text-gray-600">Categoría: {alimentoSeleccionado.categoria}</p>
+                  <p className="text-sm text-gray-600">ID: {alimentoSeleccionado.id}</p>
+                </div>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={eliminarAlimento}
+                  disabled={cargando}
+                  className={`flex-1 flex items-center justify-center px-6 py-3 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 transition-colors font-semibold ${
+                    cargando ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {cargando ? 'Eliminando...' : (
+                    <>
+                      <Trash2 className="w-5 h-5 mr-2" /> Sí, Eliminar
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setMostrarModalEliminar(false)}
+                  className="px-4 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
         )}
