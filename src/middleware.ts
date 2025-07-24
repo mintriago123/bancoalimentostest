@@ -56,7 +56,7 @@ export async function middleware(request: NextRequest) {
       return supabaseResponse;
     }
 
-    // Para rutas protegidas, verificar autenticación
+    // Para rutas protegidas, verificar autenticación y autorización
     if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/donante') || pathname.startsWith('/user')) {
       if (!isAuthenticated) {
         const url = new URL('/auth/iniciar-sesion', request.url);
@@ -64,7 +64,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(url);
       }
 
-      // Si está autenticado, verificar el estado del usuario
+      // Si está autenticado, verificar el estado del usuario y autorización
       const { data: perfil } = await supabase
         .from('usuarios')
         .select('estado, rol')
@@ -73,6 +73,7 @@ export async function middleware(request: NextRequest) {
 
       if (perfil) {
         const estadoUsuario = perfil.estado || 'activo';
+        const rolUsuario = perfil.rol;
         
         // Si el usuario está bloqueado o desactivado, cerrar sesión y redirigir
         if (estadoUsuario === 'bloqueado' || estadoUsuario === 'desactivado') {
@@ -80,6 +81,45 @@ export async function middleware(request: NextRequest) {
           const url = new URL('/auth/iniciar-sesion', request.url);
           url.searchParams.set('error', estadoUsuario === 'bloqueado' ? 'blocked' : 'deactivated');
           return NextResponse.redirect(url);
+        }
+
+        // Verificar autorización por rol
+        if (pathname.startsWith('/admin') && rolUsuario !== 'ADMINISTRADOR') {
+          // Redirigir al dashboard correspondiente según el rol
+          if (rolUsuario === 'DONANTE') {
+            return NextResponse.redirect(new URL('/donante/dashboard', request.url));
+          } else {
+            return NextResponse.redirect(new URL('/user/dashboard', request.url));
+          }
+        }
+
+        if (pathname.startsWith('/donante') && rolUsuario !== 'DONANTE') {
+          // Redirigir al dashboard correspondiente según el rol
+          if (rolUsuario === 'ADMINISTRADOR') {
+            return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+          } else {
+            return NextResponse.redirect(new URL('/user/dashboard', request.url));
+          }
+        }
+
+        if (pathname.startsWith('/user') && rolUsuario !== 'SOLICITANTE') {
+          // Redirigir al dashboard correspondiente según el rol
+          if (rolUsuario === 'ADMINISTRADOR') {
+            return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+          } else if (rolUsuario === 'DONANTE') {
+            return NextResponse.redirect(new URL('/donante/dashboard', request.url));
+          }
+        }
+
+        // Verificar acceso a /dashboard genérico - redirigir al dashboard específico del rol
+        if (pathname === '/dashboard') {
+          if (rolUsuario === 'ADMINISTRADOR') {
+            return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+          } else if (rolUsuario === 'DONANTE') {
+            return NextResponse.redirect(new URL('/donante/dashboard', request.url));
+          } else {
+            return NextResponse.redirect(new URL('/user/dashboard', request.url));
+          }
         }
       }
     }
