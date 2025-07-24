@@ -180,13 +180,13 @@ const menuItems: MenuItem[] = [
     description: 'Crear nueva solicitud',
     solicitanteOnly: true
   },
-  {
-    name: 'Configuración',
-    href: '/user/configuracion',
-    icon: Cog6ToothIcon,
-    description: 'Ajustes de la cuenta',
-    solicitanteOnly: true
-  }
+  // {
+  //   name: 'Configuración',
+  //   href: '/user/configuracion',
+  //   icon: Cog6ToothIcon,
+  //   description: 'Ajustes de la cuenta',
+  //   solicitanteOnly: true
+  // }
 ];
 
 export default function Sidebar({ 
