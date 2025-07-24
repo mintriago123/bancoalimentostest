@@ -181,6 +181,18 @@ export default function HomePage() {
               </div>
               <h3 className="text-lg font-bold text-gray-900">Maykel Menendez</h3>
             </div>
+            <div className="text-center p-6 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg bg-white">
+              <div className="relative mb-4">
+                <Image
+                  src="/LizzardiM.jpg"
+                  width={120}
+                  height={120}
+                  alt="Lizzardi Milazzo"
+                  className="mx-auto rounded-full border-4 border-blue-100"
+                />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Lizzardi Milazzo</h3>
+            </div>
               <div className="text-center p-6 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg bg-white">
               <div className="relative mb-4">
                 <Image
@@ -205,6 +217,18 @@ export default function HomePage() {
                 />
               </div>
               <h3 className="text-lg font-bold text-gray-900">Emilio Cardenas</h3>
+            </div>
+            <div className="text-center p-6 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg bg-white">
+              <div className="relative mb-4">
+                <Image
+                  src="/William.png"
+                  width={120}
+                  height={120}
+                  alt="William Cabrera Palacios"
+                  className="mx-auto rounded-full border-4 border-blue-100"
+                />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">William Cabrera Palacios</h3>
             </div>
        <div className="text-center p-6 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg bg-white">
               <div className="relative mb-4">
