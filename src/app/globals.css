@@ -220,3 +220,44 @@
   width: 100% !important;
   height: 100% !important;
 }
+
+
+
+/* Estilos adicionales para mejorar la estética */
+.bg-blue-25 {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+.smooth-scroll {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb #f9fafb;
+}
+
+.smooth-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.smooth-scroll::-webkit-scrollbar-track {
+  background: #f9fafb;
+}
+
+.smooth-scroll::-webkit-scrollbar-thumb {
+  background-color: #e5e7eb;
+  border-radius: 3px;
+}
+
+/* Transiciones suaves */
+.transition-all-150 {
+  transition: all 150ms ease-in-out;
+}
+
+/* Sombras mejoradas */
+.shadow-xl {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Bordes redondeados */
+.rounded-xl {
+  border-radius: 0.75rem;
+}

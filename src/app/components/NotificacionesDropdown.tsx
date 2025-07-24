@@ -24,7 +24,6 @@ export default function NotificacionesDropdown({ isCollapsed = false }: Notifica
     eliminarNotificacion
   } = useNotificaciones();
 
-  // Cerrar dropdown al hacer click fuera
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -43,12 +42,10 @@ export default function NotificacionesDropdown({ isCollapsed = false }: Notifica
     leida: boolean;
     url_accion?: string;
   }) => {
-    // Marcar como leída si no lo está
     if (!notificacion.leida) {
       await marcarComoLeida(notificacion.id);
     }
 
-    // Redireccionar si tiene URL de acción
     if (notificacion.url_accion) {
       router.push(notificacion.url_accion);
     }
@@ -123,81 +120,81 @@ export default function NotificacionesDropdown({ isCollapsed = false }: Notifica
 
     return (
       <div className="divide-y divide-gray-100">
-        {notificaciones.slice(0, 10).map((notificacion) => (
-          <button
-            key={notificacion.id}
-            onClick={() => handleNotificacionClick(notificacion)}
-            className={`w-full p-4 hover:bg-gray-50 text-left transition-colors ${
-              !notificacion.leida ? 'bg-blue-25' : ''
-            }`}
-          >
-            <div className="flex items-start space-x-3">
-              {/* Icono de tipo */}
-              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm ${
-                obtenerColorTipo(notificacion.tipo)
-              }`}>
-                {obtenerIconoTipo(notificacion.tipo)}
-              </div>
+  {notificaciones.slice(0, 10).map((notificacion) => (
+    <div
+      key={notificacion.id}
+      className={`w-full p-4 hover:bg-gray-50 text-left transition-colors duration-150 ${
+        !notificacion.leida ? 'bg-blue-25 border-l-4 border-blue-500' : 'border-l-4 border-transparent'
+      }`}
+    >
+      {/* Área clickeable principal */}
+      <div 
+        className="cursor-pointer"
+        onClick={() => handleNotificacionClick(notificacion)}
+      >
+        <div className="flex items-start space-x-3">
+          <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm border ${
+            obtenerColorTipo(notificacion.tipo)
+          }`}>
+            {obtenerIconoTipo(notificacion.tipo)}
+          </div>
 
-              {/* Contenido */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className={`text-sm font-medium ${
-                    !notificacion.leida ? 'text-gray-900' : 'text-gray-700'
-                  }`}>
-                    {notificacion.titulo}
-                  </p>
-                  
-                  {/* Indicador de no leída */}
-                  {!notificacion.leida && (
-                    <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
-                  )}
-                </div>
-                
-                <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                  {notificacion.mensaje}
-                </p>
-                
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-gray-500">
-                    {formatearFecha(notificacion.fecha_creacion)}
-                  </span>
-                  
-                  {/* Acciones */}
-                  <div className="flex items-center space-x-1">
-                    {!notificacion.leida && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          marcarComoLeida(notificacion.id);
-                        }}
-                        className="p-1 text-gray-400 hover:text-blue-600 rounded"
-                        title="Marcar como leída"
-                      >
-                        <EyeIcon className="h-4 w-4" />
-                      </button>
-                    )}
-                    
-                    <button
-                      onClick={(e) => handleEliminarNotificacion(e, notificacion.id)}
-                      className="p-1 text-gray-400 hover:text-red-600 rounded"
-                      title="Eliminar notificación"
-                    >
-                      <XMarkIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <p className={`text-sm font-medium ${
+                !notificacion.leida ? 'text-gray-900' : 'text-gray-700'
+              }`}>
+                {notificacion.titulo}
+              </p>
+              {!notificacion.leida && (
+                <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
+              )}
             </div>
-          </button>
-        ))}
+            
+            <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+              {notificacion.mensaje}
+            </p>
+          </div>
+        </div>
       </div>
+
+      {/* Acciones (botones separados) */}
+      <div className="flex items-center justify-between mt-2">
+        <span className="text-xs text-gray-500">
+          {formatearFecha(notificacion.fecha_creacion)}
+        </span>
+        
+        <div className="flex items-center space-x-1">
+          {!notificacion.leida && (
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                await marcarComoLeida(notificacion.id);
+              }}
+              className="p-1 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors duration-150"
+              title="Marcar como leída"
+            >
+              <EyeIcon className="h-4 w-4" />
+            </button>
+          )}
+          
+          <button
+            onClick={(e) => handleEliminarNotificacion(e, notificacion.id)}
+            className="p-1 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors duration-150"
+            title="Eliminar notificación"
+          >
+            <XMarkIcon className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  ))}
+</div>
     );
   };
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Botón de notificaciones */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`relative p-2 rounded-lg transition-colors duration-200 ${
@@ -213,12 +210,9 @@ export default function NotificacionesDropdown({ isCollapsed = false }: Notifica
           ) : (
             <BellIcon className="h-5 w-5" />
           )}
-          
           {!isCollapsed && (
             <span className="ml-3 text-sm font-medium">Notificaciones</span>
           )}
-          
-          {/* Badge de conteo */}
           {conteoNoLeidas > 0 && (
             <span className={`absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full ${
               isCollapsed ? 'min-w-[1.25rem] h-5' : 'min-w-[1.5rem] h-6'
@@ -229,13 +223,11 @@ export default function NotificacionesDropdown({ isCollapsed = false }: Notifica
         </div>
       </button>
 
-      {/* Dropdown */}
       {isOpen && (
         <>
-          {/* Overlay para cerrar al hacer click fuera en móviles */}
           <button
             type="button"
-            className="fixed inset-0 z-40 md:hidden bg-transparent"
+            className="fixed inset-0 z-40 md:hidden bg-black bg-opacity-10 backdrop-blur-sm"
             onClick={() => setIsOpen(false)}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
@@ -245,59 +237,52 @@ export default function NotificacionesDropdown({ isCollapsed = false }: Notifica
             aria-label="Cerrar notificaciones"
           />
           
-          <div className={`absolute z-50 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 ${
+          <div className={`absolute z-50 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 ${
             isCollapsed 
               ? 'left-full ml-2 w-80 md:w-96' 
               : 'left-0 w-80 md:w-96'
-          } max-h-[80vh] md:max-h-96`}>
-          {/* Header */}
-          <div className="px-4 py-3 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Notificaciones
-              </h3>
+          } max-h-[80vh] md:max-h-96 overflow-hidden`}>
+            <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Notificaciones</h3>
+                {conteoNoLeidas > 0 && (
+                  <button
+                    onClick={handleMarcarTodasLeidas}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors duration-150"
+                  >
+                    Marcar todas como leídas
+                  </button>
+                )}
+              </div>
               {conteoNoLeidas > 0 && (
-                <button
-                  onClick={handleMarcarTodasLeidas}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  Marcar todas como leídas
-                </button>
+                <p className="text-sm text-gray-500 mt-1">{conteoNoLeidas} sin leer</p>
               )}
             </div>
-            {conteoNoLeidas > 0 && (
-              <p className="text-sm text-gray-500 mt-1">
-                {conteoNoLeidas} sin leer
-              </p>
-            )}
-          </div>
 
-          {/* Lista de notificaciones */}
-          <div className="max-h-96 overflow-y-auto">
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                <span className="ml-2 text-sm text-gray-600">Cargando...</span>
-              </div>
-            ) : (
-              renderNotificaciones()
-            )}
-          </div>
-
-          {/* Footer */}
-          {notificaciones.length > 10 && (
-            <div className="px-4 py-3 border-t border-gray-200 text-center">
-              <button
-                onClick={() => {
-                  router.push('/notificaciones');
-                  setIsOpen(false);
-                }}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Ver todas las notificaciones
-              </button>
+            <div className="max-h-[calc(96vh-120px)] md:max-h-[calc(384px-120px)] overflow-y-auto smooth-scroll">
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-sm text-gray-600">Cargando...</span>
+                </div>
+              ) : (
+                renderNotificaciones()
+              )}
             </div>
-          )}
+
+            {notificaciones.length > 10 && (
+              <div className="px-4 py-3 border-t border-gray-100 text-center bg-gray-50 hover:bg-gray-100 transition-colors duration-150">
+                <button
+                  onClick={() => {
+                    router.push('/notificaciones');
+                    setIsOpen(false);
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Ver todas las notificaciones
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}
