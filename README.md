@@ -18,12 +18,37 @@
   - Ruta pública para completar el perfil si faltan datos obligatorios.
   - El formulario de perfil ahora solicita y valida la fecha de emisión de la cédula tanto para personas naturales como para representantes legales de personas jurídicas. Se previene el envío si la fecha no coincide con los registros oficiales, mostrando retroalimentación clara al usuario.
   ![Ruta /perfil/completar ](images/image.png)
+- /perfil/actualizar
+  - Nueva ruta para que los usuarios puedan actualizar su información de contacto (dirección y teléfono).
+  - Interfaz intuitiva con campos de solo lectura para datos inmutables (nombre, cédula/RUC) y campos editables para información actualizable.
+  - Validaciones en tiempo real para número de teléfono (10 dígitos requeridos).
+  - Navegación mejorada con menú desplegable que incluye acceso directo a solicitudes y creación de solicitudes.
 
 
 ## Esquema de Base de Datos
 - Valida RUC de manera más precisa.
 - Valida la fecha de emisión de cédula para personas naturales y representantes legales.
 ![Esquema de Base de Datos](images/supabase-schema-bfjmwjvzsywhmyruerxi.png)
+
+## Sistema de Inventario y Movimientos
+
+### Registro Automático de Movimientos
+El sistema ahora registra automáticamente todos los movimientos de inventario en las tablas `movimiento_inventario_cabecera` y `movimiento_inventario_detalle`:
+
+- **Aprobación de Solicitudes:** Registra egresos automáticamente cuando se aprueban solicitudes de alimentos
+- **Entrega de Donaciones:** Registra ingresos automáticamente cuando se marcan donaciones como entregadas
+- **Ajustes Manuales:** Los administradores pueden ajustar cantidades y se registran automáticamente como movimientos
+
+### Trazabilidad Completa
+- Cada movimiento incluye usuario responsable, fecha/hora exacta y observaciones detalladas
+- Diferenciación por tipos de transacción: 'ingreso', 'egreso', 'baja'
+- Roles de usuario: 'donante', 'beneficiario', 'distribuidor'
+- Estados de movimiento: 'pendiente', 'completado', 'donado'
+
+### Reportes Mejorados
+- Sistema de prioridades: movimientos registrados → donaciones entregadas → solicitudes aprobadas
+- Prevención de duplicados en reportes
+- Log detallado para debugging y verificación de consultas
 
 ## Cambios Recientes Destacados
 
@@ -34,6 +59,10 @@
 - **Validación de fecha de emisión de cédula:** El formulario de perfil solicita y valida la fecha de emisión de la cédula tanto para personas naturales como para representantes legales de personas jurídicas. El sistema previene el envío si la fecha no coincide con la información oficial y muestra retroalimentación clara al usuario.
 - **Rutas públicas para perfil:** Los usuarios pueden completar su perfil desde rutas accesibles públicamente.
 - **Mejor navegación:** Se agregaron accesos rápidos y navegación mejorada en la landing page para facilitar el flujo de usuario.
+- **Sistema de Registro de Movimientos de Inventario:** Nueva funcionalidad que registra automáticamente todos los movimientos de inventario (ingresos y egresos) cuando se aprueban solicitudes o se entregan donaciones. Incluye trazabilidad completa con usuario responsable, fechas, cantidades y observaciones detalladas.
+- **Actualización de Perfil de Usuario:** Nueva ruta `/perfil/actualizar` que permite a los usuarios modificar su información de contacto (dirección y teléfono) con validaciones en tiempo real y navegación mejorada.
+- **Verificación de Inventario Mejorada:** Corrección en consultas de base de datos con sintaxis correcta de JOINs en Supabase, manejo robusto de errores y registro automático de ajustes manuales en el sistema de movimientos.
+- **Reportes de Movimientos Actualizados:** El sistema de reportes ahora prioriza los movimientos registrados en las nuevas tablas especializadas, con fallback a datos legados y prevención de duplicados.
 
 ## Tecnologías Utilizadas
 
@@ -97,7 +126,12 @@ banco-alimentos/
 │   │   ├── auth/              # Páginas de autenticación
 │   │   ├── dashboard/         # Panel de control
 │   │   ├── perfil/            # Páginas de perfil y completado de perfil 
+│   │   │   ├── completar/     # Completar perfil (datos obligatorios)
+│   │   │   └── actualizar/    # Actualizar información de contacto
 │   │   ├── user/              # Pagina de inicio de usuario y para creacion de soliccitudes y monitoreo de solicitud
+│   │   ├── admin/             # Páginas de administración
+│   │   │   ├── reportes/      # Sistema de reportes con movimientos de inventario
+│   │   │   └── catalogo/      # Gestión de catálogo de alimentos
 │   │   ├── components/        # Componentes reutilizables
 │   │   └── globals.css        # Estilos globales
 │   ├── lib/                   # Utilidades y configuraciones
