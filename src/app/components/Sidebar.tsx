@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSupabase } from '@/app/components/SupabaseProvider';
+import NotificacionesDropdown from '@/app/components/NotificacionesDropdown';
 import { 
   ChevronLeftIcon, 
   ChevronRightIcon,
@@ -424,6 +425,11 @@ export default function Sidebar({
             )}
           </div>
         )}
+      </div>
+
+      {/* Sección de Notificaciones */}
+      <div className="px-4 py-2 border-b border-gray-100 bg-white">
+        <NotificacionesDropdown isCollapsed={isCollapsed} />
       </div>
 
       {/* Navegación */}
