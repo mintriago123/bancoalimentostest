@@ -8,9 +8,10 @@ import { useRouter } from 'next/navigation';
 
 interface NotificacionesDropdownProps {
   readonly isCollapsed?: boolean;
+  readonly roleColor?: 'red' | 'green' | 'blue';
 }
 
-export default function NotificacionesDropdown({ isCollapsed = false }: NotificacionesDropdownProps) {
+export default function NotificacionesDropdown({ isCollapsed = false, roleColor = 'blue' }: NotificacionesDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -124,12 +125,19 @@ export default function NotificacionesDropdown({ isCollapsed = false }: Notifica
     return (
       <div className="divide-y divide-gray-100">
         {notificaciones.slice(0, 10).map((notificacion) => (
-          <button
+          <div
             key={notificacion.id}
-            onClick={() => handleNotificacionClick(notificacion)}
-            className={`w-full p-4 hover:bg-gray-50 text-left transition-colors ${
+            className={`w-full p-4 hover:bg-gray-50 text-left transition-colors cursor-pointer ${
               !notificacion.leida ? 'bg-blue-25' : ''
             }`}
+            tabIndex={0}
+            role="button"
+            onClick={() => handleNotificacionClick(notificacion)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                handleNotificacionClick(notificacion);
+              }
+            }}
           >
             <div className="flex items-start space-x-3">
               {/* Icono de tipo */}
@@ -154,45 +162,23 @@ export default function NotificacionesDropdown({ isCollapsed = false }: Notifica
                   )}
                 </div>
                 
-                <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                  {notificacion.mensaje}
-                </p>
-                
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-gray-500">
-                    {formatearFecha(notificacion.fecha_creacion)}
-                  </span>
-                  
-                  {/* Acciones */}
-                  <div className="flex items-center space-x-1">
-                    {!notificacion.leida && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          marcarComoLeida(notificacion.id);
-                        }}
-                        className="p-1 text-gray-400 hover:text-blue-600 rounded"
-                        title="Marcar como leída"
-                      >
-                        <EyeIcon className="h-4 w-4" />
-                      </button>
-                    )}
-                    
-                    <button
-                      onClick={(e) => handleEliminarNotificacion(e, notificacion.id)}
-                      className="p-1 text-gray-400 hover:text-red-600 rounded"
-                      title="Eliminar notificación"
-                    >
-                      <XMarkIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
+                <p className="text-xs text-gray-500 mt-1">{notificacion.mensaje}</p>
+                <p className="text-xs text-gray-400 mt-1">{formatearFecha(notificacion.fecha_creacion)}</p>
               </div>
             </div>
-          </button>
+          </div>
         ))}
       </div>
     );
+  };
+
+  // Utilidad para obtener la clase de color principal
+  const getRoleTextColor = () => {
+    switch (roleColor) {
+      case 'red': return 'text-red-600 hover:text-red-800';
+      case 'green': return 'text-green-600 hover:text-green-800';
+      default: return 'text-blue-600 hover:text-blue-800';
+    }
   };
 
   return (
@@ -202,7 +188,11 @@ export default function NotificacionesDropdown({ isCollapsed = false }: Notifica
         onClick={() => setIsOpen(!isOpen)}
         className={`relative p-2 rounded-lg transition-colors duration-200 ${
           isOpen
-            ? 'bg-blue-100 text-blue-600'
+            ? roleColor === 'red'
+              ? 'bg-red-100 text-red-600'
+              : roleColor === 'green'
+              ? 'bg-green-100 text-green-600'
+              : 'bg-blue-100 text-blue-600'
             : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
         } ${isCollapsed ? 'w-10 h-10' : 'w-full'}`}
         aria-label="Notificaciones"
@@ -220,7 +210,13 @@ export default function NotificacionesDropdown({ isCollapsed = false }: Notifica
           
           {/* Badge de conteo */}
           {conteoNoLeidas > 0 && (
-            <span className={`absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full ${
+            <span className={`absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 ${
+              roleColor === 'red'
+                ? 'bg-red-600'
+                : roleColor === 'green'
+                ? 'bg-green-600'
+                : 'bg-blue-600'
+            } rounded-full ${
               isCollapsed ? 'min-w-[1.25rem] h-5' : 'min-w-[1.5rem] h-6'
             }`}>
               {conteoNoLeidas > 99 ? '99+' : conteoNoLeidas}
@@ -259,7 +255,7 @@ export default function NotificacionesDropdown({ isCollapsed = false }: Notifica
               {conteoNoLeidas > 0 && (
                 <button
                   onClick={handleMarcarTodasLeidas}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  className={`text-sm ${getRoleTextColor()} font-medium`}
                 >
                   Marcar todas como leídas
                 </button>
@@ -292,7 +288,7 @@ export default function NotificacionesDropdown({ isCollapsed = false }: Notifica
                   router.push('/notificaciones');
                   setIsOpen(false);
                 }}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                className={`text-sm ${getRoleTextColor()} font-medium`}
               >
                 Ver todas las notificaciones
               </button>

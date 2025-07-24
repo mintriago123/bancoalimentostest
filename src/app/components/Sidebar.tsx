@@ -342,7 +342,9 @@ export default function Sidebar({
                   <h2 className="text-sm font-semibold text-gray-900 truncate">
                     {userName}
                   </h2>
-                  <p className={`text-xs font-medium ${getRoleColor().split(' ')[1]}`}>
+                  <p className={`text-xs font-medium ${
+                    isAdmin ? 'text-red-600' : isDonante ? 'text-green-600' : 'text-blue-600'
+                  }`}>
                     {getRoleLabel()}
                   </p>
                 </div>
@@ -429,7 +431,9 @@ export default function Sidebar({
 
       {/* Sección de Notificaciones */}
       <div className="px-4 py-2 border-b border-gray-100 bg-white">
-        <NotificacionesDropdown isCollapsed={isCollapsed} />
+  <NotificacionesDropdown isCollapsed={isCollapsed} roleColor={
+    isAdmin ? 'red' : isDonante ? 'green' : 'blue'
+  } />
       </div>
 
       {/* Navegación */}
