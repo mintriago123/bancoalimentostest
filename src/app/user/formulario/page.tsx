@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSupabase } from "@/app/components/SupabaseProvider";
 import DashboardLayout from "@/app/components/DashboardLayout";
+import MapboxMap from "@/app/components/MapboxMap";
 import {
   MapPin,
   Calendar,
@@ -149,6 +150,14 @@ export default function FormularioSolicitante() {
     }
   };
 
+  // Función para manejar el cambio de ubicación desde el mapa
+  const manejarCambioUbicacion = (lat: number, lng: number) => {
+    setUbicacionSeleccionada({
+      latitud: lat,
+      longitud: lng,
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -246,12 +255,16 @@ export default function FormularioSolicitante() {
                     {ubicacionSeleccionada.latitud.toFixed(5)}, Lng{" "}
                     {ubicacionSeleccionada.longitud.toFixed(5)}
                   </p>
+                  <p className="text-xs mt-1 text-green-600">
+                    💡 Puedes ajustar la ubicación haciendo clic en el mapa o arrastrando el marcador
+                  </p>
                 </div>
-                <iframe
+                <MapboxMap
+                  latitude={ubicacionSeleccionada.latitud}
+                  longitude={ubicacionSeleccionada.longitud}
+                  onLocationChange={manejarCambioUbicacion}
                   className="w-full h-48 rounded-lg border border-green-200"
-                  src={`https://maps.google.com/maps?q=${ubicacionSeleccionada.latitud},${ubicacionSeleccionada.longitud}&z=15&output=embed`}
-                  title="Ubicación"
-                ></iframe>
+                />
               </div>
             )}
 

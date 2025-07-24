@@ -183,3 +183,40 @@
 /* RESTANTE DEL CÓDIGO PERMANECE IGUAL */
 /* =================================================================== */
 /* ... (el resto de tu código CSS existente se mantiene igual) ... */
+
+/* =================================================================== */
+/* ESTILOS PARA MAPBOX */
+/* =================================================================== */
+.mapboxgl-map {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.mapboxgl-ctrl-group {
+  border-radius: 0.375rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.mapboxgl-ctrl-group button {
+  border-radius: 0.375rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.mapboxgl-ctrl-group button:hover {
+  background-color: var(--color-primary-50);
+}
+
+.mapboxgl-marker {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* Asegurar que el contenedor del mapa tenga el tamaño correcto */
+.mapboxgl-canvas-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.mapboxgl-canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
