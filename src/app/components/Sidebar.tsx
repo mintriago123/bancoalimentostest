@@ -414,6 +414,8 @@ export default function Sidebar({
                   onClick={() => {
                     if (isAdmin) {
                       router.push('/admin/configuracion');
+                    } else if (isDonante) {
+                      router.push('/donante/configuracion');
                     } else {
                       router.push('/user/configuracion');
                     }
