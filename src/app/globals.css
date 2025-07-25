@@ -261,3 +261,53 @@
 .rounded-xl {
   border-radius: 0.75rem;
 }
+
+
+/* Colores de fondo suaves para notificaciones no leídas */
+.bg-red-25 {
+  background-color: rgba(254, 242, 242, 0.5); /* red-50 más suave */
+}
+
+.bg-green-25 {
+  background-color: rgba(240, 253, 244, 0.5); /* green-50 más suave */
+}
+
+.bg-blue-25 {
+  background-color: rgba(239, 246, 255, 0.5); /* blue-50 más suave */
+}
+
+/* Scroll suave personalizado */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Scrollbar personalizada */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 4px;
+}
+
+.scrollbar-track-gray-100::-webkit-scrollbar-track {
+  background-color: #f3f4f6;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background-color: #f3f4f6;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
