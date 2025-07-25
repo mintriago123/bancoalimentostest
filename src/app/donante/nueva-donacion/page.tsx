@@ -287,33 +287,57 @@ export default function NuevaDonacionPage() {
 
   // Cálculo de impacto estimado
   const calcularImpacto = () => {
-    const cantidad = parseInt(formulario.cantidad) || 0;
+    const cantidad = parseFloat(formulario.cantidad) || 0;
     const unidadSeleccionada = getUnidadSeleccionada();
     let personasAlimentadas = 0;
     let comidaEquivalente = '';
+    let factorMultiplicador = 1;
 
     if (unidadSeleccionada) {
       const simbolo = unidadSeleccionada.simbolo.toLowerCase();
 
       if (simbolo.includes('kg')) {
-        personasAlimentadas = Math.floor(cantidad * 2);
-        comidaEquivalente = `${cantidad * 3} porciones aproximadamente`;
-      } else if (simbolo.includes('l')) {
-        personasAlimentadas = Math.floor(cantidad * 1.5);
+        factorMultiplicador = 2;
+        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
+        comidaEquivalente = `${Math.round(cantidad * 3)} porciones aproximadamente`;
+      } else if (simbolo.includes('l') || simbolo.includes('lt')) {
+        factorMultiplicador = 1.5;
+        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
         comidaEquivalente = `${cantidad} litros de bebida`;
       } else if (simbolo.includes('caja')) {
-        personasAlimentadas = Math.floor(cantidad * 4);
+        factorMultiplicador = 4;
+        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
         comidaEquivalente = `${cantidad} cajas de alimentos`;
-      } else if (simbolo.includes('und') || simbolo.includes('pza')) {
-        personasAlimentadas = Math.floor(cantidad * 0.5);
+      } else if (simbolo.includes('und') || simbolo.includes('pza') || simbolo.includes('unidad')) {
+        factorMultiplicador = 0.5;
+        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
         comidaEquivalente = `${cantidad} unidades`;
+      } else if (simbolo.includes('g') && !simbolo.includes('kg')) {
+        // Para gramos
+        const cantidadEnKg = cantidad / 1000;
+        factorMultiplicador = 2;
+        personasAlimentadas = Math.floor(cantidadEnKg * factorMultiplicador);
+        comidaEquivalente = `${Math.round(cantidadEnKg * 3)} porciones aproximadamente`;
+      } else if (simbolo.includes('ml') && !simbolo.includes('l')) {
+        // Para mililitros
+        const cantidadEnL = cantidad / 1000;
+        factorMultiplicador = 1.5;
+        personasAlimentadas = Math.floor(cantidadEnL * factorMultiplicador);
+        comidaEquivalente = `${cantidadEnL.toFixed(1)} litros de bebida`;
       } else {
-        personasAlimentadas = Math.floor(cantidad * 1);
+        // Para otras unidades no específicas
+        factorMultiplicador = 1;
+        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
         comidaEquivalente = `${cantidad} ${unidadSeleccionada.nombre}`;
+      }
+
+      // Asegurar que siempre haya al menos una persona si hay cantidad
+      if (cantidad > 0 && personasAlimentadas === 0) {
+        personasAlimentadas = 1;
       }
     }
 
-    return { personasAlimentadas, comidaEquivalente };
+    return { personasAlimentadas, comidaEquivalente, factorMultiplicador };
   };
 
   const manejarCambio = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -348,7 +372,7 @@ export default function NuevaDonacionPage() {
             return false;
           }
         }
-        if (parseInt(formulario.cantidad) <= 0) {
+        if (parseFloat(formulario.cantidad) <= 0) {
           setMensaje('La cantidad debe ser mayor a 0.');
           return false;
         }
@@ -636,9 +660,10 @@ export default function NuevaDonacionPage() {
                     value={formulario.cantidad}
                     onChange={manejarCambio}
                     placeholder="0"
-                    min="1"
+                    min="0.1"
                     step="0.1"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Ingresa la cantidad disponible</p>
                 </div>
 
                 <div>
@@ -660,6 +685,7 @@ export default function NuevaDonacionPage() {
                       ))
                     )}
                   </select>
+                  <p className="text-xs text-gray-500 mt-1">La unidad afecta el cálculo de impacto</p>
                 </div>
               </div>
 
@@ -675,16 +701,74 @@ export default function NuevaDonacionPage() {
                 />
               </div>
 
-              {/* Mostrar cálculo de impacto si hay datos */}
+              {/* Tabla de equivalencias - siempre visible como referencia */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-medium text-blue-800 mb-3 flex items-center">
+                  <Info className="w-5 h-5 mr-2" />
+                  Tabla de Equivalencias de Impacto
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <h5 className="font-semibold text-blue-700 mb-2">Por Kilogramo (kg):</h5>
+                    <ul className="text-blue-600 space-y-1">
+                      <li>• 1 kg = ~2 personas alimentadas</li>
+                      <li>• 1 kg = ~3 porciones</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-blue-700 mb-2">Por Litro (l):</h5>
+                    <ul className="text-blue-600 space-y-1">
+                      <li>• 1 l = ~1.5 personas</li>
+                      <li>• Bebidas y líquidos</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-blue-700 mb-2">Por Caja:</h5>
+                    <ul className="text-blue-600 space-y-1">
+                      <li>• 1 caja = ~4 personas</li>
+                      <li>• Alimentos empaquetados</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-blue-700 mb-2">Por Unidad:</h5>
+                    <ul className="text-blue-600 space-y-1">
+                      <li>• 1 unidad = ~0.5 personas</li>
+                      <li>• Productos individuales</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mostrar cálculo de impacto personalizado si hay datos */}
               {formulario.cantidad && formulario.unidad_id && (
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <h4 className="font-medium text-purple-800 mb-2 flex items-center">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+                  <h4 className="font-medium text-purple-800 mb-3 flex items-center">
                     <Heart className="w-5 h-5 mr-2" />
                     Impacto Estimado de tu Donación
                   </h4>
-                  <div className="text-sm text-purple-700">
-                    <p>• Personas que podrían alimentarse: <strong>~{calcularImpacto().personasAlimentadas}</strong></p>
-                    <p>• Equivalente: <strong>{calcularImpacto().comidaEquivalente}</strong></p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-white bg-opacity-60 rounded-lg p-3">
+                      <div className="text-2xl font-bold text-purple-700">
+                        ~{calcularImpacto().personasAlimentadas}
+                      </div>
+                      <div className="text-sm text-purple-600">
+                        personas podrían alimentarse
+                      </div>
+                    </div>
+                    <div className="bg-white bg-opacity-60 rounded-lg p-3">
+                      <div className="text-lg font-semibold text-purple-700">
+                        {calcularImpacto().comidaEquivalente}
+                      </div>
+                      <div className="text-sm text-purple-600">
+                        equivalencia alimentaria
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-xs text-purple-600 bg-white bg-opacity-40 rounded p-2">
+                    <div className="flex items-center">
+                      <Info className="w-3 h-3 mr-1" />
+                      *Estimación basada en promedios generales. El impacto real puede variar según el tipo de alimento y las necesidades específicas.
+                    </div>
                   </div>
                 </div>
               )}
@@ -803,37 +887,36 @@ export default function NuevaDonacionPage() {
   return (
     <DashboardLayout>
       <div className="flex flex-col min-h-screen bg-gray-50">
-        <header className="bg-white shadow-sm p-4 sticky top-0 z-10">
-          <div className="max-w-4xl mx-auto flex justify-between items-center">
-            <h1 className="text-3xl font-extrabold text-blue-700">Nueva Donación</h1>
-            <nav className="hidden md:flex space-x-4">
-              {Array.from({ length: totalPasos }).map((_, index) => (
-                <div
-                  key={index + 1}
-                  className={`flex items-center space-x-2 text-sm font-medium ${
-                    pasoActual >= index + 1 ? 'text-blue-600' : 'text-gray-400'
-                  }`}
-                >
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      pasoActual >= index + 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
-                    }`}
-                  >
-                    {pasoActual > index + 1 ? <Check className="w-5 h-5" /> : index + 1}
-                  </div>
-                  <span className="hidden lg:block">
-                    {index === 0 && 'Producto'}
-                    {index === 1 && 'Logística'}
-                    {index === 2 && 'Confirmación'}
-                  </span>
-                </div>
-              ))}
-            </nav>
-          </div>
-        </header>
-
         <main className="flex-grow flex items-center justify-center p-4">
           <div className="bg-white shadow-xl rounded-2xl p-8 max-w-2xl w-full">
+            {/* Título y navegación de pasos en la misma línea */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-blue-700">Nueva Donación</h1>
+              <nav className="flex justify-center sm:justify-end space-x-2 sm:space-x-4">
+                {Array.from({ length: totalPasos }).map((_, index) => (
+                  <div
+                    key={index + 1}
+                    className={`flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm font-medium ${
+                      pasoActual >= index + 1 ? 'text-blue-600' : 'text-gray-400'
+                    }`}
+                  >
+                    <div
+                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm ${
+                        pasoActual >= index + 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+                      }`}
+                    >
+                      {pasoActual > index + 1 ? <Check className="w-3 h-3 sm:w-5 sm:h-5" /> : index + 1}
+                    </div>
+                    <span className="hidden sm:block">
+                      {index === 0 && 'Producto'}
+                      {index === 1 && 'Logística'}
+                      {index === 2 && 'Confirmación'}
+                    </span>
+                  </div>
+                ))}
+              </nav>
+            </div>
+
             {mensaje && (
               <div className={`p-4 mb-6 rounded-lg text-white ${
                 mensaje.includes('exitosa') ? 'bg-green-500' : 'bg-red-500'
