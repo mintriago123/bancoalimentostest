@@ -120,11 +120,11 @@ const menuItems: MenuItem[] = [
         href: '/admin/reportes/donaciones',
         description: 'Análisis de donaciones recibidas'
       }, 
-      {
-        name: 'Historial de Reportes',
-        href: '/admin/reportes/historial',
-        description: 'Reportes generados anteriormente'
-      }
+      // {
+      //   name: 'Historial de Reportes',
+      //   href: '/admin/reportes/historial',
+      //   description: 'Reportes generados anteriormente'
+      // }
     ]
   },
   
@@ -150,13 +150,13 @@ const menuItems: MenuItem[] = [
     description: 'Registrar nueva donación',
     donanteOnly: true
   },
-  {
-    name: 'Solicitudes Activas',
-    href: '/donante/solicitudes',
-    icon: DocumentTextIcon,
-    description: 'Ver solicitudes de ayuda',
-    donanteOnly: true
-  },
+  // {
+  //   name: 'Solicitudes Activas',
+  //   href: '/donante/solicitudes',
+  //   icon: DocumentTextIcon,
+  //   description: 'Ver solicitudes de ayuda',
+  //   donanteOnly: true
+  // },
   
   // Items para Solicitantes
   {
