@@ -153,7 +153,7 @@ export default function ContribuyentesPage() {
               <div className="relative mb-4 group">
                 <div className="w-32 h-32 mx-auto rounded-full border-4 border-blue-50 p-1 group-hover:border-blue-100 transition-colors duration-300">
                   <Image
-                    src="/Willian.png"
+                    src="/William.jpg"
                     width={120}
                     height={120}
                     alt="Willian Cabrera"
@@ -171,6 +171,132 @@ export default function ContribuyentesPage() {
               <div className="flex justify-center space-x-3">
                 <Link
                   href="https://github.com/4NDR3S-01"
+                  className="inline-flex items-center px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors duration-300 text-sm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Github className="w-4 h-4 mr-1" />
+                  GitHub
+                </Link>
+                <Link
+                  href="#"
+                  className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 text-sm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Linkedin className="w-4 h-4 mr-1" />
+                  LinkedIn
+                </Link>
+              </div>
+            </div>
+
+            {/* Anderson Santiana*/}
+            <div className="text-center p-6 hover:shadow-lg transition-all duration-300 rounded-xl border border-gray-100 bg-white group relative overflow-hidden hover:-translate-y-1">
+              <div className="relative mb-4 group">
+                <div className="w-32 h-32 mx-auto rounded-full border-4 border-blue-50 p-1 group-hover:border-blue-100 transition-colors duration-300">
+                  <Image
+                    src="/AndersonS.jpg"
+                    width={120}
+                    height={120}
+                    alt="Anderson Santiana"
+                    className="w-full h-full rounded-full object-cover group-hover:opacity-90 transition-opacity duration-300"
+                  />
+                </div>
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4">
+                  <p className="text-sm text-gray-700 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
+                    Desarrollador full stack con experiencia en múltiples tecnologías.
+                  </p>
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-1">Anderson Santiana</h3>
+              <p className="text-gray-500 text-sm mb-4">Full Stack Developer</p>
+              <div className="flex justify-center space-x-3">
+                <Link
+                  href="https://github.com/4NDR3S-01"
+                  className="inline-flex items-center px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors duration-300 text-sm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Github className="w-4 h-4 mr-1" />
+                  GitHub
+                </Link>
+                <Link
+                  href="#"
+                  className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 text-sm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Linkedin className="w-4 h-4 mr-1" />
+                  LinkedIn
+                </Link>
+              </div>
+            </div>
+          
+            {/* Cinthia Zambrano */}
+            <div className="text-center p-6 hover:shadow-lg transition-all duration-300 rounded-xl border border-gray-100 bg-white group relative overflow-hidden hover:-translate-y-1">
+              <div className="relative mb-4 group">
+                <div className="w-32 h-32 mx-auto rounded-full border-4 border-blue-50 p-1 group-hover:border-blue-100 transition-colors duration-300">
+                  <Image
+                    src="/Cinthia.jpg"
+                    width={120}
+                    height={120}
+                    alt="Cinthia Zambrano"
+                    className="w-full h-full rounded-full object-cover group-hover:opacity-90 transition-opacity duration-300"
+                  />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4">
+                  <p className="text-sm text-gray-700 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
+                    Desarrolladora con enfoque en soluciones escalables y robustas.
+                  </p>
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-1">Cinthia Zambrano</h3>
+              <p className="text-gray-500 text-sm mb-4">Full Stack Developer</p>
+              <div className="flex justify-center space-x-3">
+                <Link
+                  href="#"
+                  className="inline-flex items-center px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors duration-300 text-sm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Github className="w-4 h-4 mr-1" />
+                  GitHub
+                </Link>
+                <Link
+                  href="#"
+                  className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 text-sm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Linkedin className="w-4 h-4 mr-1" />
+                  LinkedIn
+                </Link>
+              </div>
+            </div>
+
+            {/* Robinson Moreira */}
+            <div className="text-center p-6 hover:shadow-lg transition-all duration-300 rounded-xl border border-gray-100 bg-white group relative overflow-hidden hover:-translate-y-1">
+              <div className="relative mb-4 group">
+                <div className="w-32 h-32 mx-auto rounded-full border-4 border-blue-50 p-1 group-hover:border-blue-100 transition-colors duration-300">
+                  <Image
+                    src="/Robinson.jpg"
+                    width={120}
+                    height={120}
+                    alt="Robinson Moreira"
+                    className="w-full h-full rounded-full object-cover group-hover:opacity-90 transition-opacity duration-300"
+                  />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4">
+                  <p className="text-sm text-gray-700 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
+                    Desarrolladora con enfoque en soluciones escalables y robustas.
+                  </p>
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-1">Robinson Moreira</h3>
+              <p className="text-gray-500 text-sm mb-4">Full Stack Developer</p>
+              <div className="flex justify-center space-x-3">
+                <Link
+                  href="https://github.com/SantianaT"
                   className="inline-flex items-center px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -221,7 +347,7 @@ export default function ContribuyentesPage() {
                   GitHub
                 </Link>
                 <Link
-                  href="#"
+                  href="https://www.linkedin.com/in/odalis-senge-96945b2a8/"
                   className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -506,7 +632,7 @@ export default function ContribuyentesPage() {
               <p className="text-gray-500 text-sm mb-4">Full Stack Developer</p>
               <div className="flex justify-center space-x-3">
                 <Link
-                  href="#"
+                  href="https://github.com/Akamnex666"
                   className="inline-flex items-center px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -515,7 +641,7 @@ export default function ContribuyentesPage() {
                   GitHub
                 </Link>
                 <Link
-                  href="#"
+                  href="https://www.linkedin.com/in/eli-z-ruiz-a1907b377/"
                   className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
