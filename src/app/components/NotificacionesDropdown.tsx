@@ -43,6 +43,9 @@ export default function NotificacionesDropdown({ isCollapsed = false, roleColor 
     id: string;
     leida: boolean;
     url_accion?: string;
+    categoria?: string;
+    titulo?: string;
+    mensaje?: string;
   }) => {
     // Marcar como leída si no lo está
     if (!notificacion.leida) {
@@ -51,7 +54,98 @@ export default function NotificacionesDropdown({ isCollapsed = false, roleColor 
 
     // Redireccionar si tiene URL de acción
     if (notificacion.url_accion) {
-      router.push(notificacion.url_accion);
+      let urlFinal = notificacion.url_accion;
+      
+      // Correcciones de rutas para el rol ADMIN
+      if (roleColor === 'red') { // Admin
+        // Corregir URLs de donaciones
+        if (urlFinal === '/admin/donaciones' || 
+            (notificacion.categoria === 'donaciones' || 
+             notificacion.titulo?.toLowerCase().includes('donacion') || 
+             notificacion.mensaje?.toLowerCase().includes('donacion'))) {
+          urlFinal = '/admin/reportes/donaciones';
+        }
+        
+        // Corregir URLs de solicitudes
+        if (urlFinal === '/admin/solicitudes' || 
+            (notificacion.categoria === 'solicitudes' || 
+             notificacion.titulo?.toLowerCase().includes('solicitud') || 
+             notificacion.mensaje?.toLowerCase().includes('solicitud'))) {
+          urlFinal = '/admin/reportes/solicitudes';
+        }
+        
+        // Corregir URLs de inventario
+        if (urlFinal === '/admin/inventario' || 
+            (notificacion.categoria === 'inventario' || 
+             notificacion.titulo?.toLowerCase().includes('inventario') || 
+             notificacion.mensaje?.toLowerCase().includes('inventario'))) {
+          urlFinal = '/admin/reportes/inventario';
+        }
+        
+        // Corregir URLs de movimientos
+        if (urlFinal === '/admin/movimientos' || 
+            (notificacion.categoria === 'movimientos' || 
+             notificacion.titulo?.toLowerCase().includes('movimiento') || 
+             notificacion.mensaje?.toLowerCase().includes('movimiento'))) {
+          urlFinal = '/admin/reportes/movimientos';
+        }
+      }
+      
+      // Correcciones de rutas para el rol DONANTE
+      if (roleColor === 'green') { // Donante
+        // Corregir URLs de donaciones para donantes
+        if (urlFinal === '/donante/donaciones' || urlFinal === '/admin/donaciones' ||
+            (notificacion.categoria === 'donaciones' || 
+             notificacion.titulo?.toLowerCase().includes('donacion') || 
+             notificacion.mensaje?.toLowerCase().includes('donacion'))) {
+          urlFinal = '/donante/donaciones';
+        }
+        
+        // Corregir URLs de nueva donación
+        if (urlFinal === '/donante/nueva-donacion' ||
+            (notificacion.categoria === 'nueva-donacion' || 
+             notificacion.titulo?.toLowerCase().includes('nueva donacion') || 
+             notificacion.mensaje?.toLowerCase().includes('nueva donacion'))) {
+          urlFinal = '/donante/nueva-donacion';
+        }
+        
+        // Corregir URLs de perfil para donantes
+        if (urlFinal === '/donante/perfil' ||
+            (notificacion.categoria === 'perfil' || 
+             notificacion.titulo?.toLowerCase().includes('perfil') || 
+             notificacion.mensaje?.toLowerCase().includes('perfil'))) {
+          urlFinal = '/donante/perfil';
+        }
+      }
+      
+      // Correcciones de rutas para el rol USUARIO/SOLICITANTE
+      if (roleColor === 'blue') { // Usuario/Solicitante
+        // Corregir URLs de solicitudes para usuarios
+        if (urlFinal === '/user/solicitudes' || urlFinal === '/admin/solicitudes' ||
+            (notificacion.categoria === 'solicitudes' || 
+             notificacion.titulo?.toLowerCase().includes('solicitud') || 
+             notificacion.mensaje?.toLowerCase().includes('solicitud'))) {
+          urlFinal = '/user/solicitudes';
+        }
+        
+        // Corregir URLs de perfil para usuarios
+        if (urlFinal === '/user/perfil' ||
+            (notificacion.categoria === 'perfil' || 
+             notificacion.titulo?.toLowerCase().includes('perfil') || 
+             notificacion.mensaje?.toLowerCase().includes('perfil'))) {
+          urlFinal = '/user/perfil';
+        }
+        
+        // Corregir URLs de configuración para usuarios
+        if (urlFinal === '/user/configuracion' ||
+            (notificacion.categoria === 'configuracion' || 
+             notificacion.titulo?.toLowerCase().includes('configuracion') || 
+             notificacion.mensaje?.toLowerCase().includes('configuracion'))) {
+          urlFinal = '/user/configuracion';
+        }
+      }
+      
+      router.push(urlFinal);
     }
 
     setIsOpen(false);
