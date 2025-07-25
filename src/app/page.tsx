@@ -132,165 +132,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Team Contributors - Simplified */}
-      <section className="py-20 bg-gradient-to-br from-blue-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Personas que contribuyeron</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Las personas que hicieron posible este proyecto
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-            <div className="text-center p-6 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg bg-white">
-              <div className="relative mb-4">
-                <Image
-                  src="/Kristhian.png"
-                  width={120}
-                  height={120}
-                  alt="Kristhian Bello."
-                  className="mx-auto rounded-full border-4 border-blue-100"
-                />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">Kristhian Bello.</h3>
-            </div>
-
-            <div className="text-center p-6 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg bg-white">
-              <div className="relative mb-4">
-                <Image
-                  src="/Walther.png"
-                  width={120}
-                  height={120}
-                  alt="Walther Guiterrez"
-                  className="mx-auto rounded-full border-4 border-blue-100"
-                />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">Walther Guiterrez.</h3>
-            </div>
-
-            <div className="text-center p-6 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg bg-white">
-              <div className="relative mb-4">
-                <Image
-                  src="/Mayk.jpg"
-                  width={120}
-                  height={120}
-                  alt="Maykel Menendez"
-                  className="mx-auto rounded-full border-4 border-blue-100"
-                />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">Maykel Menendez</h3>
-            </div>
-            <div className="text-center p-6 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg bg-white">
-              <div className="relative mb-4">
-                <Image
-                  src="/LizzardiM.jpg"
-                  width={120}
-                  height={120}
-                  alt="Lizzardi Milazzo"
-                  className="mx-auto rounded-full border-4 border-blue-100"
-                />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">Lizzardi Milazzo</h3>
-            </div>
-              <div className="text-center p-6 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg bg-white">
-              <div className="relative mb-4">
-                <Image
-                  src="/IsaacZ.png"
-                  width={120}
-                  height={120}
-                  alt="Isaac Zacharias Alcivar"
-                  className="mx-auto rounded-full border-4 border-blue-100"
-                />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">Isaac Zacharias Alcivar</h3>
-            </div>
-
-            <div className="text-center p-6 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg bg-white">
-              <div className="relative mb-4">
-                <Image
-                  src="/EmilioC.png"
-                  width={120}
-                  height={120}
-                  alt="Emilio Cardenas"
-                  className="mx-auto rounded-full border-4 border-blue-100"
-                />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">Emilio Cardenas</h3>
-            </div>
-            <div className="text-center p-6 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg bg-white">
-              <div className="relative mb-4">
-                <Image
-                  src="/William.png"
-                  width={120}
-                  height={120}
-                  alt="William Cabrera Palacios"
-                  className="mx-auto rounded-full border-4 border-blue-100"
-                />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">William Cabrera Palacios</h3>
-            </div>
-       <div className="text-center p-6 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg bg-white">
-              <div className="relative mb-4">
-                <Image
-                  src="/OdaliaS.png"
-                  width={120}
-                  height={120}
-                  alt="Odalia Senge Loor"
-                  className="mx-auto rounded-full border-4 border-blue-100"
-                />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">Odalia Senge Loor</h3>
-            </div>
 
 
-            <div className="text-center p-6 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg bg-white">
-              <div className="relative mb-4">
-                <Image
-                  src="/Elisa.png"
-                  width={120}
-                  height={120}
-                  alt="Elisa Ruiz"
-                  className="mx-auto rounded-full border-4 border-blue-100"
-                />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">Elisa Ruiz</h3>
-            </div>
-          
-            <div className="text-center p-6 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg bg-white">
-              <div className="relative mb-4">
-                <Image
-                  src="/Michael.png"
-                  width={120}
-                  height={120}
-                  alt="Michael Intriago"
-                  className="mx-auto rounded-full border-4 border-blue-100"
-                />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">Michael Intriago</h3>
-            </div>
-          </div>
-          
-          
-          {/* Team Photo */}
-          <div className="overflow-hidden shadow-xl rounded-lg border-0">
-            <div className="p-0">
-              <Image
-                src="/ImagenEquipo.jpg"
-                width={500}
-                height={200}
-                alt="Equipo de desarrollo trabajando juntos"
-                className="w-full object-cover"
-              />
-              <div className="p-6 bg-gradient-to-r from-blue-50 to-blue-100">
-                <p className="text-center text-gray-700 italic text-lg">
-                  "Trabajando juntos para crear soluciones tecnológicas con impacto social"
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+
+
+
+
+
 
       {/* Footer */}
       <footer className="bg-gradient-to-br from-gray-800 to-gray-900 text-white py-16">
@@ -304,15 +152,17 @@ export default function HomePage() {
                 <h3 className="text-xl font-bold">Banco de Alimentos Solidarios</h3>
               </div>
           
+          
               <div className="flex items-center space-x-4">
                 <Link
-                  href="https://github.com/mintriago123/bancoalimentostest"
+                  href="/contribuyentes"
                   className="inline-flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors duration-300"
                 >
-                  <Github className="w-5 h-5 mr-2" />
-                  Ver en GitHub
+                  <Users className="w-5 h-5 mr-2" />
+                  Ver Contribuyentes
                 </Link>
               </div>
+
             </div>
 
             <div>

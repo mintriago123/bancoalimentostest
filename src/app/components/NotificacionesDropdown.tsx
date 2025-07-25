@@ -112,6 +112,28 @@ export default function NotificacionesDropdown({ isCollapsed = false, roleColor 
     });
   };
 
+  // Utilidad para obtener el color del borde izquierdo según el rol
+  const getRoleBorderColor = (isUnread: boolean) => {
+    if (!isUnread) return 'border-l-4 border-transparent';
+    
+    switch (roleColor) {
+      case 'red': return 'border-l-4 border-red-500';
+      case 'green': return 'border-l-4 border-green-500';
+      default: return 'border-l-4 border-blue-500';
+    }
+  };
+
+  // Utilidad para obtener el color de fondo según el rol
+  const getRoleBackgroundColor = (isUnread: boolean) => {
+    if (!isUnread) return '';
+    
+    switch (roleColor) {
+      case 'red': return 'bg-red-25';
+      case 'green': return 'bg-green-25';
+      default: return 'bg-blue-25';
+    }
+  };
+
   const renderNotificaciones = () => {
     if (notificaciones.length === 0) {
       return (
@@ -127,43 +149,87 @@ export default function NotificacionesDropdown({ isCollapsed = false, roleColor 
         {notificaciones.slice(0, 10).map((notificacion) => (
           <div
             key={notificacion.id}
-            className={`w-full p-4 hover:bg-gray-50 text-left transition-colors cursor-pointer ${
-              !notificacion.leida ? 'bg-blue-25' : ''
-            }`}
-            tabIndex={0}
-            role="button"
-            onClick={() => handleNotificacionClick(notificacion)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                handleNotificacionClick(notificacion);
-              }
-            }}
+            className={`w-full p-4 hover:bg-gray-50 text-left transition-colors duration-150 ${
+              getRoleBackgroundColor(!notificacion.leida)
+            } ${getRoleBorderColor(!notificacion.leida)}`}
           >
-            <div className="flex items-start space-x-3">
-              {/* Icono de tipo */}
-              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm ${
-                obtenerColorTipo(notificacion.tipo)
-              }`}>
-                {obtenerIconoTipo(notificacion.tipo)}
-              </div>
-
-              {/* Contenido */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className={`text-sm font-medium ${
-                    !notificacion.leida ? 'text-gray-900' : 'text-gray-700'
-                  }`}>
-                    {notificacion.titulo}
-                  </p>
-                  
-                  {/* Indicador de no leída */}
-                  {!notificacion.leida && (
-                    <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
-                  )}
+            {/* Área clickeable principal */}
+            <div 
+              className="cursor-pointer"
+              tabIndex={0}
+              role="button"
+              onClick={() => handleNotificacionClick(notificacion)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handleNotificacionClick(notificacion);
+                }
+              }}
+            >
+              <div className="flex items-start space-x-3">
+                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm border ${
+                  obtenerColorTipo(notificacion.tipo)
+                }`}>
+                  {obtenerIconoTipo(notificacion.tipo)}
                 </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className={`text-sm font-medium ${
+                      !notificacion.leida ? 'text-gray-900' : 'text-gray-700'
+                    }`}>
+                      {notificacion.titulo}
+                    </p>
+                    {!notificacion.leida && (
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        roleColor === 'red'
+                          ? 'bg-red-600'
+                          : roleColor === 'green'
+                          ? 'bg-green-600'
+                          : 'bg-blue-600'
+                      }`}></div>
+                    )}
+                  </div>
+                  
+                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                    {notificacion.mensaje}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Acciones (botones separados) */}
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-xs text-gray-500">
+                {formatearFecha(notificacion.fecha_creacion)}
+              </span>
+              
+              <div className="flex items-center space-x-1">
+                {!notificacion.leida && (
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      await marcarComoLeida(notificacion.id);
+                    }}
+                    className={`p-1 rounded-full transition-colors duration-150 ${
+                      roleColor === 'red'
+                        ? 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                        : roleColor === 'green'
+                        ? 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                        : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                    }`}
+                    title="Marcar como leída"
+                  >
+                    <EyeIcon className="h-4 w-4" />
+                  </button>
+                )}
                 
-                <p className="text-xs text-gray-500 mt-1">{notificacion.mensaje}</p>
-                <p className="text-xs text-gray-400 mt-1">{formatearFecha(notificacion.fecha_creacion)}</p>
+                <button
+                  onClick={(e) => handleEliminarNotificacion(e, notificacion.id)}
+                  className="p-1 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors duration-150"
+                  title="Eliminar notificación"
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                </button>
               </div>
             </div>
           </div>
@@ -181,20 +247,35 @@ export default function NotificacionesDropdown({ isCollapsed = false, roleColor 
     }
   };
 
+  // Utilidad para obtener colores de fondo del botón
+  const getRoleButtonColors = () => {
+    if (isOpen) {
+      switch (roleColor) {
+        case 'red': return 'bg-red-100 text-red-600';
+        case 'green': return 'bg-green-100 text-green-600';
+        default: return 'bg-blue-100 text-blue-600';
+      }
+    }
+    return 'text-gray-600 hover:bg-gray-100 hover:text-gray-900';
+  };
+
+  // Utilidad para obtener color del badge
+  const getRoleBadgeColor = () => {
+    switch (roleColor) {
+      case 'red': return 'bg-red-600';
+      case 'green': return 'bg-green-600';
+      default: return 'bg-blue-600';
+    }
+  };
+
   return (
     <div className="relative" ref={dropdownRef}>
       {/* Botón de notificaciones */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`relative p-2 rounded-lg transition-colors duration-200 ${
-          isOpen
-            ? roleColor === 'red'
-              ? 'bg-red-100 text-red-600'
-              : roleColor === 'green'
-              ? 'bg-green-100 text-green-600'
-              : 'bg-blue-100 text-blue-600'
-            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-        } ${isCollapsed ? 'w-10 h-10' : 'w-full'}`}
+        className={`relative p-2 rounded-lg transition-colors duration-200 ${getRoleButtonColors()} ${
+          isCollapsed ? 'w-10 h-10' : 'w-full'
+        }`}
         aria-label="Notificaciones"
       >
         <div className="flex items-center">
@@ -208,15 +289,9 @@ export default function NotificacionesDropdown({ isCollapsed = false, roleColor 
             <span className="ml-3 text-sm font-medium">Notificaciones</span>
           )}
           
-          {/* Badge de conteo */}
+          {/* Badge de conteo con colores por rol */}
           {conteoNoLeidas > 0 && (
-            <span className={`absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 ${
-              roleColor === 'red'
-                ? 'bg-red-600'
-                : roleColor === 'green'
-                ? 'bg-green-600'
-                : 'bg-blue-600'
-            } rounded-full ${
+            <span className={`absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 ${getRoleBadgeColor()} rounded-full ${
               isCollapsed ? 'min-w-[1.25rem] h-5' : 'min-w-[1.5rem] h-6'
             }`}>
               {conteoNoLeidas > 99 ? '99+' : conteoNoLeidas}
@@ -231,7 +306,7 @@ export default function NotificacionesDropdown({ isCollapsed = false, roleColor 
           {/* Overlay para cerrar al hacer click fuera en móviles */}
           <button
             type="button"
-            className="fixed inset-0 z-40 md:hidden bg-transparent"
+            className="fixed inset-0 z-40 md:hidden bg-black bg-opacity-10 backdrop-blur-sm"
             onClick={() => setIsOpen(false)}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
@@ -241,59 +316,65 @@ export default function NotificacionesDropdown({ isCollapsed = false, roleColor 
             aria-label="Cerrar notificaciones"
           />
           
-          <div className={`absolute z-50 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 ${
+          <div className={`absolute z-50 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 ${
             isCollapsed 
               ? 'left-full ml-2 w-80 md:w-96' 
               : 'left-0 w-80 md:w-96'
-          } max-h-[80vh] md:max-h-96`}>
-          {/* Header */}
-          <div className="px-4 py-3 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Notificaciones
-              </h3>
+          } max-h-[80vh] md:max-h-96 overflow-hidden`}>
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Notificaciones
+                </h3>
+                {conteoNoLeidas > 0 && (
+                  <button
+                    onClick={handleMarcarTodasLeidas}
+                    className={`text-sm ${getRoleTextColor()} font-medium transition-colors duration-150`}
+                  >
+                    Marcar todas como leídas
+                  </button>
+                )}
+              </div>
               {conteoNoLeidas > 0 && (
-                <button
-                  onClick={handleMarcarTodasLeidas}
-                  className={`text-sm ${getRoleTextColor()} font-medium`}
-                >
-                  Marcar todas como leídas
-                </button>
+                <p className="text-sm text-gray-500 mt-1">
+                  {conteoNoLeidas} sin leer
+                </p>
               )}
             </div>
-            {conteoNoLeidas > 0 && (
-              <p className="text-sm text-gray-500 mt-1">
-                {conteoNoLeidas} sin leer
-              </p>
-            )}
-          </div>
 
-          {/* Lista de notificaciones */}
-          <div className="max-h-96 overflow-y-auto">
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                <span className="ml-2 text-sm text-gray-600">Cargando...</span>
-              </div>
-            ) : (
-              renderNotificaciones()
-            )}
-          </div>
-
-          {/* Footer */}
-          {notificaciones.length > 10 && (
-            <div className="px-4 py-3 border-t border-gray-200 text-center">
-              <button
-                onClick={() => {
-                  router.push('/notificaciones');
-                  setIsOpen(false);
-                }}
-                className={`text-sm ${getRoleTextColor()} font-medium`}
-              >
-                Ver todas las notificaciones
-              </button>
+            {/* Lista de notificaciones con scroll suave */}
+            <div className="max-h-[calc(80vh-120px)] md:max-h-[calc(384px-120px)] overflow-y-auto smooth-scroll scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className={`animate-spin rounded-full h-6 w-6 border-b-2 ${
+                    roleColor === 'red'
+                      ? 'border-red-600'
+                      : roleColor === 'green'
+                      ? 'border-green-600'
+                      : 'border-blue-600'
+                  }`}></div>
+                  <span className="ml-2 text-sm text-gray-600">Cargando...</span>
+                </div>
+              ) : (
+                renderNotificaciones()
+              )}
             </div>
-          )}
+
+            {/* Footer */}
+            {notificaciones.length > 10 && (
+              <div className="px-4 py-3 border-t border-gray-100 text-center bg-gray-50 hover:bg-gray-100 transition-colors duration-150">
+                <button
+                  onClick={() => {
+                    router.push('/notificaciones');
+                    setIsOpen(false);
+                  }}
+                  className={`text-sm ${getRoleTextColor()} font-medium`}
+                >
+                  Ver todas las notificaciones
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}
