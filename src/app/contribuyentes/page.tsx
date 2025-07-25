@@ -95,7 +95,7 @@ export default function ContribuyentesPage() {
                   GitHub
                 </Link>
                 <Link
-                  href="#"
+                  href="https://www.linkedin.com/in/michael-intriago-1aa968375"
                   className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -137,7 +137,7 @@ export default function ContribuyentesPage() {
                   GitHub
                 </Link>
                 <Link
-                  href="#"
+                  href="https://www.linkedin.com/in/walther-gutierrez-0940a0198?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"
                   className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -162,7 +162,7 @@ export default function ContribuyentesPage() {
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4">
                   <p className="text-sm text-gray-700 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-                    Desarrollador full stack con experiencia en múltiples tecnologías.
+                    Colaborador en el desarrollo del proyecto, Desarrollador de maquetación de frontend.
                   </p>
                 </div>
               </div>
@@ -203,13 +203,11 @@ export default function ContribuyentesPage() {
                   />
                 </div>
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4">
-                  <p className="text-sm text-gray-700 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-                    Desarrollador full stack con experiencia en múltiples tecnologías.
-                  </p>
+                
                 </div>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-1">Anderson Santiana</h3>
-              <p className="text-gray-500 text-sm mb-4">Full Stack Developer</p>
+              <p className="text-gray-500 text-sm mb-4"></p>
               <div className="flex justify-center space-x-3">
                 <Link
                   href="https://github.com/4NDR3S-01"
@@ -221,7 +219,7 @@ export default function ContribuyentesPage() {
                   GitHub
                 </Link>
                 <Link
-                  href="#"
+                  href="https://ec.linkedin.com/in/anderson-santiana-76b1252a2"
                   className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -245,16 +243,13 @@ export default function ContribuyentesPage() {
                   />
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4">
-                  <p className="text-sm text-gray-700 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-                    Desarrolladora con enfoque en soluciones escalables y robustas.
-                  </p>
                 </div>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-1">Cinthia Zambrano</h3>
-              <p className="text-gray-500 text-sm mb-4">Full Stack Developer</p>
+              <p className="text-gray-500 text-sm mb-4"></p>
               <div className="flex justify-center space-x-3">
                 <Link
-                  href="#"
+                  href="https://github.com/Cinthia-Zambrano"
                   className="inline-flex items-center px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -263,7 +258,7 @@ export default function ContribuyentesPage() {
                   GitHub
                 </Link>
                 <Link
-                  href="#"
+                  href="https://www.linkedin.com/in/dayanna-zg-94b89036a?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app"
                   className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -286,14 +281,9 @@ export default function ContribuyentesPage() {
                     className="w-full h-full rounded-full object-cover group-hover:opacity-90 transition-opacity duration-300"
                   />
                 </div>
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4">
-                  <p className="text-sm text-gray-700 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-                    Desarrolladora con enfoque en soluciones escalables y robustas.
-                  </p>
-                </div>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-1">Robinson Moreira</h3>
-              <p className="text-gray-500 text-sm mb-4">Full Stack Developer</p>
+              <p className="text-gray-500 text-sm mb-4"></p>
               <div className="flex justify-center space-x-3">
                 <Link
                   href="https://github.com/SantianaT"
@@ -305,7 +295,7 @@ export default function ContribuyentesPage() {
                   GitHub
                 </Link>
                 <Link
-                  href="#"
+                  href="https://www.linkedin.com/in/robinson-moreira-b59b4a376?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app"
                   className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -316,7 +306,7 @@ export default function ContribuyentesPage() {
               </div>
             </div>
 
-            {/* Odalia Senge Loor */}
+            {/* Odalia Senge */}
             <div className="text-center p-6 hover:shadow-lg transition-all duration-300 rounded-xl border border-gray-100 bg-white group relative overflow-hidden hover:-translate-y-1">
               <div className="relative mb-4 group">
                 <div className="w-32 h-32 mx-auto rounded-full border-4 border-blue-50 p-1 group-hover:border-blue-100 transition-colors duration-300">
@@ -330,7 +320,7 @@ export default function ContribuyentesPage() {
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4">
                   <p className="text-sm text-gray-700 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-                    Desarrolladora con enfoque en soluciones escalables y robustas.
+                    Participación puntual en el desarrollo front-end/back-end.
                   </p>
                 </div>
               </div>
@@ -414,7 +404,7 @@ export default function ContribuyentesPage() {
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4">
                   <p className="text-sm text-gray-700 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-                    Experto en bases de datos y optimización de consultas.
+                    Especialista en diseño de interfaces y experiencia de usuario.
                   </p>
                 </div>
               </div>
@@ -422,7 +412,7 @@ export default function ContribuyentesPage() {
               <p className="text-gray-500 text-sm mb-4">Full Stack Developer</p>
               <div className="flex justify-center space-x-3">
                 <Link
-                  href="#"
+                  href="https://github.com/EZMayk"
                   className="inline-flex items-center px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -447,7 +437,7 @@ export default function ContribuyentesPage() {
               <div className="relative mb-4 group">
                 <div className="w-32 h-32 mx-auto rounded-full border-4 border-blue-50 p-1 group-hover:border-blue-100 transition-colors duration-300">
                   <Image
-                    src="/Kristhian.png"
+                    src="/KristhianB.jpg"
                     width={120}
                     height={120}
                     alt="Kristhian Bello"
@@ -456,15 +446,15 @@ export default function ContribuyentesPage() {
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4">
                   <p className="text-sm text-gray-700 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-                    Desarrollador backend con enfoque en seguridad y rendimiento.
+                    Especialista en desarrollo frontend.
                   </p>
                 </div>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-1">Kristhian Bello</h3>
-              <p className="text-gray-500 text-sm mb-4">Full Stack Developer</p>
+              <p className="text-gray-500 text-sm mb-4">Frontend</p>
               <div className="flex justify-center space-x-3">
                 <Link
-                  href="#"
+                  href="https://github.com/KristhianBello"
                   className="inline-flex items-center px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -484,7 +474,7 @@ export default function ContribuyentesPage() {
               </div>
             </div>
 
-            {/* Isaac Zacharias Alcivar */}
+            {/* Isaac Zacharias */}
             <div className="text-center p-6 hover:shadow-lg transition-all duration-300 rounded-xl border border-gray-100 bg-white group relative overflow-hidden hover:-translate-y-1">
               <div className="relative mb-4 group">
                 <div className="w-32 h-32 mx-auto rounded-full border-4 border-blue-50 p-1 group-hover:border-blue-100 transition-colors duration-300">
@@ -506,7 +496,7 @@ export default function ContribuyentesPage() {
               <p className="text-gray-500 text-sm mb-4">Full Stack Developer</p>
               <div className="flex justify-center space-x-3">
                 <Link
-                  href="#"
+                  href="https://github.com/IsaacZacha"
                   className="inline-flex items-center px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -515,7 +505,7 @@ export default function ContribuyentesPage() {
                   GitHub
                 </Link>
                 <Link
-                  href="#"
+                  href="http://www.linkedin.com/in/isaac-zacharias-071b50376"
                   className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -531,7 +521,7 @@ export default function ContribuyentesPage() {
               <div className="relative mb-4 group">
                 <div className="w-32 h-32 mx-auto rounded-full border-4 border-blue-50 p-1 group-hover:border-blue-100 transition-colors duration-300">
                   <Image
-                    src="/EmilioC.png"
+                    src="/Emilioo.jpg"
                     width={120}
                     height={120}
                     alt="Emilio Cardenas"
@@ -548,7 +538,7 @@ export default function ContribuyentesPage() {
               <p className="text-gray-500 text-sm mb-4">Full Stack Developer</p>
               <div className="flex justify-center space-x-3">
                 <Link
-                  href="#"
+                  href="https://github.com/EmilioSle"
                   className="inline-flex items-center px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -568,7 +558,7 @@ export default function ContribuyentesPage() {
               </div>
             </div>
 
-            {/* Jhon Kenedy Garcia */}
+            {/* Jhon Garcia*/}
             <div className="text-center p-6 hover:shadow-lg transition-all duration-300 rounded-xl border border-gray-100 bg-white group relative overflow-hidden hover:-translate-y-1">
               <div className="relative mb-4 group">
                 <div className="w-32 h-32 mx-auto rounded-full border-4 border-blue-50 p-1 group-hover:border-blue-100 transition-colors duration-300">
@@ -590,7 +580,7 @@ export default function ContribuyentesPage() {
               <p className="text-gray-500 text-sm mb-4">Full Stack Developer</p>
               <div className="flex justify-center space-x-3">
                 <Link
-                  href="#"
+                  href="https://github.com/Jkennedy2004"
                   className="inline-flex items-center px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -610,7 +600,7 @@ export default function ContribuyentesPage() {
               </div>
             </div>
 
-            {/* Elisa Ruiz Lavayen */}
+            {/* Elisa Ruiz */}
             <div className="text-center p-6 hover:shadow-lg transition-all duration-300 rounded-xl border border-gray-100 bg-white group relative overflow-hidden hover:-translate-y-1">
               <div className="relative mb-4 group">
                 <div className="w-32 h-32 mx-auto rounded-full border-4 border-blue-50 p-1 group-hover:border-blue-100 transition-colors duration-300">
@@ -624,12 +614,12 @@ export default function ContribuyentesPage() {
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4">
                   <p className="text-sm text-gray-700 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-                    Especialista en testing y calidad de software.
+                    Especialista en desarrollo frontend.
                   </p>
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-1">Elisa Ruiz Lavayen</h3>
-              <p className="text-gray-500 text-sm mb-4">Full Stack Developer</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-1">Elisa Ruiz</h3>
+              <p className="text-gray-500 text-sm mb-4">Frontend</p>
               <div className="flex justify-center space-x-3">
                 <Link
                   href="https://github.com/Akamnex666"
