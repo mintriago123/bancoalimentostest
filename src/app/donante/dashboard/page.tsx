@@ -8,7 +8,7 @@ import Link from 'next/link';
 export default function UsuarioDashboardPage() {
   const { user, supabase } = useSupabase();
   const [nombre, setNombre] = useState('');
-
+// hola
   useEffect(() => {
     const obtenerNombre = async () => {
       if (!user) return;
