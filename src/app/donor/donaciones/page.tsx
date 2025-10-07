@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight, User, Package, Calendar, MapPin, MessageCirc
 
 // Importa el hook useSupabase desde tu SupabaseProvider
 import { useSupabase } from '@/app/components/SupabaseProvider'; // Ajusta la ruta si es diferente
+import { fetchAlimentos, fetchUnidades } from '@/services/catalogService';
+import { calcularImpacto as calcularImpactoUtil } from '@/utils/impact';
 
 // Define los horarios disponibles para la recolección
 const HORARIOS_DISPONIBLES = [
@@ -90,7 +92,6 @@ export default function PaginaDonacion() {
     fecha_disponible: '',
     direccion_entrega: '',
     horario_preferido: '',
-
     // Paso 4: Detalles adicionales
     observaciones: '',
   });
@@ -100,13 +101,30 @@ export default function PaginaDonacion() {
 
   // Cargar alimentos y unidades al montar el componente
   useEffect(() => {
-    cargarAlimentos();
-    cargarUnidades();
+    (async () => {
+      try {
+        setCargandoAlimentos(true);
+        setCargandoUnidades(true);
+        const [alim, unid] = await Promise.all([
+          fetchAlimentos(supabase),
+          fetchUnidades(supabase),
+        ]);
+        setAlimentos(alim);
+        setUnidades(unid);
+      } catch (error) {
+        console.error('Error al cargar catálogos:', error);
+        setMensaje('Error al cargar catálogos');
+      } finally {
+        setCargandoAlimentos(false);
+        setCargandoUnidades(false);
+      }
+    })();
+
     // Llama a cargarPerfilUsuario cada vez que el `currentUser` del contexto cambie
     if (currentUser !== undefined) {
       cargarPerfilUsuario(currentUser);
     }
-  }, [currentUser]); // Añade currentUser a las dependencias.
+  }, [currentUser, supabase]); // Añade currentUser y supabase a las dependencias.
 
   // Función para cargar el perfil del usuario desde la tabla 'usuarios'
   const cargarPerfilUsuario = async (user: typeof currentUser) => {
@@ -158,41 +176,7 @@ export default function PaginaDonacion() {
     }
   };
 
-  const cargarAlimentos = async () => {
-    try {
-      setCargandoAlimentos(true);
-      const { data, error } = await supabase
-        .from('alimentos')
-        .select('id, nombre, categoria')
-        .order('nombre');
-
-      if (error) throw error;
-      setAlimentos(data || []);
-    } catch (error) {
-      console.error('Error al cargar alimentos:', error);
-      setMensaje('Error al cargar la lista de alimentos');
-    } finally {
-      setCargandoAlimentos(false);
-    }
-  };
-
-  const cargarUnidades = async () => {
-    try {
-      setCargandoUnidades(true);
-      const { data, error } = await supabase
-        .from('unidades')
-        .select('id, nombre, simbolo')
-        .order('nombre');
-
-      if (error) throw error;
-      setUnidades(data || []);
-    } catch (error) {
-      console.error('Error al cargar unidades:', error);
-      setMensaje('Error al cargar la lista de unidades');
-    } finally {
-      setCargandoUnidades(false);
-    }
-  };
+  // carga de catálogos movida a catalogService (fetchAlimentos / fetchUnidades)
 
   // Obtener información del producto seleccionado
   const getProductoSeleccionado = () => {
@@ -213,36 +197,7 @@ export default function PaginaDonacion() {
     return unidad || null;
   };
 
-  // Cálculo de impacto estimado
-  const calcularImpacto = () => {
-    const cantidad = parseInt(formulario.cantidad) || 0;
-    const unidadSeleccionada = getUnidadSeleccionada();
-    let personasAlimentadas = 0;
-    let comidaEquivalente = '';
-
-    if (unidadSeleccionada) {
-      const simbolo = unidadSeleccionada.simbolo.toLowerCase();
-
-      if (simbolo.includes('kg')) {
-        personasAlimentadas = Math.floor(cantidad * 2); // 1kg alimenta ~2 personas
-        comidaEquivalente = `${cantidad * 3} porciones aproximadamente`;
-      } else if (simbolo.includes('l')) {
-        personasAlimentadas = Math.floor(cantidad * 1.5);
-        comidaEquivalente = `${cantidad} litros de bebida`;
-      } else if (simbolo.includes('caja')) {
-        personasAlimentadas = Math.floor(cantidad * 4);
-        comidaEquivalente = `${cantidad} cajas de alimentos`;
-      } else if (simbolo.includes('und') || simbolo.includes('pza')) {
-        personasAlimentadas = Math.floor(cantidad * 0.5);
-        comidaEquivalente = `${cantidad} unidades`;
-      } else {
-        personasAlimentadas = Math.floor(cantidad * 1);
-        comidaEquivalente = `${cantidad} ${unidadSeleccionada.nombre}`;
-      }
-    }
-
-    return { personasAlimentadas, comidaEquivalente };
-  };
+  // Impacto: usar utilidad centralizada
 
   const manejarCambio = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -358,7 +313,7 @@ export default function PaginaDonacion() {
     setMensaje(null);
 
     try {
-      const impacto = calcularImpacto();
+  const impacto = calcularImpactoUtil(formulario.cantidad, getUnidadSeleccionada() ?? undefined);
       const productoInfo = getProductoSeleccionado();
       const unidadInfo = getUnidadSeleccionada();
 
@@ -804,9 +759,9 @@ export default function PaginaDonacion() {
         );
 
       case 4:
-        const { personasAlimentadas, comidaEquivalente } = calcularImpacto();
         const productoFinal = getProductoSeleccionado();
         const unidadFinal = getUnidadSeleccionada();
+        const { personasAlimentadas, comidaEquivalente } = calcularImpactoUtil(formulario.cantidad, unidadFinal ?? undefined);
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">

@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase';
+import { createBrowserSupabaseClient } from '@/core/supabaseClient';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 
 type SupabaseContext = {
@@ -17,7 +17,7 @@ export default function SupabaseProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [supabase] = useState(() => createClient());
+  const [supabase] = useState(() => createBrowserSupabaseClient());
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -32,14 +32,19 @@ export default function SupabaseProvider({
     getInitialSession();
 
     // Escuchar cambios en el estado de autenticación
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // Limpieza segura
+    return () => {
+      try {
+        data?.subscription?.unsubscribe();
+      } catch {
+        // noop
+      }
+    };
   }, [supabase.auth]);
 
   // Mostrar loading mientras se verifica el estado de autenticación

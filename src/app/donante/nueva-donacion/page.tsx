@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSupabase } from '@/app/components/SupabaseProvider';
+import { fetchAlimentos, fetchUnidades } from '@/services/catalogService';
+import { calcularImpacto as calcularImpactoUtil } from '@/utils/impact';
 import DashboardLayout from '@/app/components/DashboardLayout';
 import { ChevronLeft, ChevronRight, Heart, Package, MapPin, Clock, Check, User, Info, Plus, Search, X } from 'lucide-react';
 
@@ -93,14 +95,30 @@ export default function NuevaDonacionPage() {
 
   // Cargar datos al montar el componente
   useEffect(() => {
-    if (!authLoading) {
-      cargarAlimentos();
-      cargarUnidades();
-      if (currentUser !== undefined) {
-        cargarPerfilUsuario(currentUser);
+    (async () => {
+      try {
+        setCargandoAlimentos(true);
+        setCargandoUnidades(true);
+        const [alim, unid] = await Promise.all([
+          fetchAlimentos(supabase),
+          fetchUnidades(supabase),
+        ]);
+        setAlimentos(alim);
+        setAlimentosFiltrados(alim);
+        setUnidades(unid);
+      } catch (error) {
+        console.error('Error al cargar catálogos:', error);
+        setMensaje('Error al cargar catálogos');
+      } finally {
+        setCargandoAlimentos(false);
+        setCargandoUnidades(false);
       }
+    })();
+
+    if (!authLoading && currentUser !== undefined) {
+      cargarPerfilUsuario(currentUser);
     }
-  }, [currentUser, authLoading]);
+  }, [currentUser, authLoading, supabase]);
 
   // Función para filtrar alimentos basado en la búsqueda
   const filtrarAlimentos = useCallback((termino: string) => {
@@ -286,59 +304,7 @@ export default function NuevaDonacionPage() {
   };
 
   // Cálculo de impacto estimado
-  const calcularImpacto = () => {
-    const cantidad = parseFloat(formulario.cantidad) || 0;
-    const unidadSeleccionada = getUnidadSeleccionada();
-    let personasAlimentadas = 0;
-    let comidaEquivalente = '';
-    let factorMultiplicador = 1;
-
-    if (unidadSeleccionada) {
-      const simbolo = unidadSeleccionada.simbolo.toLowerCase();
-
-      if (simbolo.includes('kg')) {
-        factorMultiplicador = 2;
-        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
-        comidaEquivalente = `${Math.round(cantidad * 3)} porciones aproximadamente`;
-      } else if (simbolo.includes('l') || simbolo.includes('lt')) {
-        factorMultiplicador = 1.5;
-        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
-        comidaEquivalente = `${cantidad} litros de bebida`;
-      } else if (simbolo.includes('caja')) {
-        factorMultiplicador = 4;
-        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
-        comidaEquivalente = `${cantidad} cajas de alimentos`;
-      } else if (simbolo.includes('und') || simbolo.includes('pza') || simbolo.includes('unidad')) {
-        factorMultiplicador = 0.5;
-        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
-        comidaEquivalente = `${cantidad} unidades`;
-      } else if (simbolo.includes('g') && !simbolo.includes('kg')) {
-        // Para gramos
-        const cantidadEnKg = cantidad / 1000;
-        factorMultiplicador = 2;
-        personasAlimentadas = Math.floor(cantidadEnKg * factorMultiplicador);
-        comidaEquivalente = `${Math.round(cantidadEnKg * 3)} porciones aproximadamente`;
-      } else if (simbolo.includes('ml') && !simbolo.includes('l')) {
-        // Para mililitros
-        const cantidadEnL = cantidad / 1000;
-        factorMultiplicador = 1.5;
-        personasAlimentadas = Math.floor(cantidadEnL * factorMultiplicador);
-        comidaEquivalente = `${cantidadEnL.toFixed(1)} litros de bebida`;
-      } else {
-        // Para otras unidades no específicas
-        factorMultiplicador = 1;
-        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
-        comidaEquivalente = `${cantidad} ${unidadSeleccionada.nombre}`;
-      }
-
-      // Asegurar que siempre haya al menos una persona si hay cantidad
-      if (cantidad > 0 && personasAlimentadas === 0) {
-        personasAlimentadas = 1;
-      }
-    }
-
-    return { personasAlimentadas, comidaEquivalente, factorMultiplicador };
-  };
+  const calcularImpacto = () => calcularImpactoUtil(formulario.cantidad, getUnidadSeleccionada() ?? undefined);
 
   const manejarCambio = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

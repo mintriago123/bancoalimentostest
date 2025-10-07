@@ -15,8 +15,8 @@ export async function middleware(request: NextRequest) {
       error
     } = await supabase.auth.getUser();
 
-    // Si hay error al obtener el usuario, asumir que no está autenticado
-    const isAuthenticated = user && !error;
+  // Si hay error al obtener el usuario, asumir que no está autenticado
+  const isAuthenticated = !!user && !error;
 
     const { pathname } = request.nextUrl;
 
@@ -52,9 +52,7 @@ export async function middleware(request: NextRequest) {
     const esRutaPublica = RUTAS_PUBLICAS.some(ruta => pathname.startsWith(ruta));
 
     // Si es una ruta pública, permitir acceso
-    if (esRutaPublica) {
-      return supabaseResponse;
-    }
+    if (esRutaPublica) return supabaseResponse;
 
     // Para rutas protegidas, verificar autenticación y autorización
     if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/donante') || pathname.startsWith('/user')) {
@@ -83,7 +81,7 @@ export async function middleware(request: NextRequest) {
           return NextResponse.redirect(url);
         }
 
-        // Verificar autorización por rol
+  // Verificar autorización por rol
         if (pathname.startsWith('/admin') && rolUsuario !== 'ADMINISTRADOR') {
           // Redirigir al dashboard correspondiente según el rol
           if (rolUsuario === 'DONANTE') {
@@ -111,7 +109,7 @@ export async function middleware(request: NextRequest) {
           }
         }
 
-        // Verificar acceso a /dashboard genérico - redirigir al dashboard específico del rol
+  // Verificar acceso a /dashboard genérico - redirigir al dashboard específico del rol
         if (pathname === '/dashboard') {
           if (rolUsuario === 'ADMINISTRADOR') {
             return NextResponse.redirect(new URL('/admin/dashboard', request.url));
@@ -124,8 +122,8 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // Permitir acceso a la página principal de bienvenida
-    // Los usuarios logueados pueden acceder tanto a la página principal como a sus dashboards
+  // Permitir acceso a la página principal de bienvenida
+  // Los usuarios logueados pueden acceder tanto a la página principal como a sus dashboards
     if (pathname === '/') {
       // Si está autenticado, verificar el estado del usuario pero permitir acceso a la página de bienvenida
       if (isAuthenticated) {
@@ -153,8 +151,10 @@ export async function middleware(request: NextRequest) {
     }
 
     return supabaseResponse;
-  } catch {
-    // Si hay error, permitir el acceso y manejar la autenticación en el cliente
+  } catch (err) {
+    // Registrar para depuración y permitir que el cliente maneje la autenticación
+    // eslint-disable-next-line no-console
+    console.error('[middleware] error', err);
     return supabaseResponse;
   }
 }

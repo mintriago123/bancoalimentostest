@@ -7,6 +7,7 @@ import {
   validarCedulaEcuatoriana,
   validarRucEcuatoriano,
 } from "@/lib/validaciones";
+import { fetchUserProfile, isDocumentDuplicate } from '@/services/userService';
 
 // Extrae expedición y expiración para natural
 function extraerDatosDemograficos(apiResponse: any) {
@@ -196,7 +197,7 @@ export default function CompletarPerfil() {
           ].filter(Boolean)
         );
 
-        if (respuesta.ok && datosDemograficos && datosDemograficos.nombre) {
+  if (respuesta.ok && datosDemograficos && datosDemograficos.nombre) {
           setForm((prev) => ({
             ...prev,
             nombre: datosDemograficos.nombre,
@@ -220,7 +221,7 @@ export default function CompletarPerfil() {
           });
           setFechasValidasNatural([]);
         }
-      } else {
+  } else {
         const url = `${process.env.NEXT_PUBLIC_SERVICIO_CONSULTAS_RUC}?ruc=${numero}`;
         const respuesta = await fetch(url, {
           method: "GET",
