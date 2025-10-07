@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-// Configurar el token de acceso de Mapbox
-// IMPORTANTE: Token configurado desde variables de entorno
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_API_KEY 
+// Token de Mapbox (desde variables de entorno expuestas al cliente)
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_API_KEY || '';
+if (MAPBOX_TOKEN) {
+  mapboxgl.accessToken = MAPBOX_TOKEN;
+}
 
 interface MapboxMapProps {
   latitude: number;
@@ -27,6 +29,20 @@ export default function MapboxMap({
   const [lng] = useState(longitude);
   const [lat] = useState(latitude);
   const [zoom] = useState(15);
+
+  const hasToken = !!MAPBOX_TOKEN;
+
+  // Si no hay token de Mapbox, mostramos un placeholder y evitamos inicializar la librería
+  if (!hasToken) {
+    return (
+      <div className={`${className} relative flex items-center justify-center border border-dashed border-gray-200 bg-gray-50 text-gray-600`}>
+        <div className="px-4 py-6 text-center">
+          <p className="font-medium">Mapa no disponible</p>
+          <p className="text-xs mt-1">Falta la clave de Mapbox (NEXT_PUBLIC_MAPBOX_API_KEY). Consulta la documentación para configurar un token.</p>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (map.current) return; // initialize map only once
