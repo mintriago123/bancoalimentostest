@@ -157,8 +157,10 @@ CREATE TABLE public.solicitudes (
   created_at timestamp with time zone DEFAULT now(),
   fecha_respuesta timestamp with time zone,
   comentario_admin text,
+  unidad_id bigint,
   CONSTRAINT solicitudes_pkey PRIMARY KEY (id),
-  CONSTRAINT solicitudes_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id)
+  CONSTRAINT solicitudes_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id),
+  CONSTRAINT solicitudes_unidad_id_fkey FOREIGN KEY (unidad_id) REFERENCES public.unidades(id)
 );
 CREATE TABLE public.tipos_magnitud (
   id bigint NOT NULL DEFAULT nextval('tipos_magnitud_id_seq'::regclass),
