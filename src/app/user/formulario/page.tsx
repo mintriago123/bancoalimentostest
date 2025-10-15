@@ -24,12 +24,16 @@ export default function FormularioSolicitante() {
   const router = useRouter();
 
   const [alimentosDisponibles, setAlimentosDisponibles] = useState<any[]>([]);
+  const [unidades, setUnidades] = useState<any[]>([]);
   const [tipoAlimento, setTipoAlimento] = useState("");
-  const [cantidad, setCantidad] = useState(0);
+  const [alimentoId, setAlimentoId] = useState<number | null>(null);
+  const [cantidad, setCantidad] = useState("");
+  const [unidadId, setUnidadId] = useState("");
   const [comentarios, setComentarios] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [cargandoUnidades, setCargandoUnidades] = useState(true);
   const [ubicacionSeleccionada, setUbicacionSeleccionada] = useState<{
     latitud: number;
     longitud: number;
@@ -40,6 +44,7 @@ export default function FormularioSolicitante() {
   const [alimentosFiltrados, setAlimentosFiltrados] = useState<any[]>([]);
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
   const [alimentoSeleccionado, setAlimentoSeleccionado] = useState<any>(null);
+  const [filtroCategoria, setFiltroCategoria] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -84,19 +89,43 @@ export default function FormularioSolicitante() {
     fetchAlimentos();
   }, [supabase]);
 
-  // Función para filtrar alimentos basado en la búsqueda
-  const filtrarAlimentos = (termino: string) => {
-    if (!termino.trim()) {
-      setAlimentosFiltrados(alimentosDisponibles);
-      return;
+  useEffect(() => {
+    const fetchUnidades = async () => {
+      setCargandoUnidades(true);
+      const { data, error } = await supabase
+        .from("unidades")
+        .select("id, nombre, simbolo")
+        .order("nombre");
+      if (!error && data) {
+        setUnidades(data);
+      }
+      setCargandoUnidades(false);
+    };
+
+    fetchUnidades();
+  }, [supabase]);
+
+  // Función para filtrar alimentos basado en la búsqueda y categoría
+  const filtrarAlimentos = (termino: string, categoria: string = filtroCategoria) => {
+    let filtrados = alimentosDisponibles;
+
+    // Filtrar por término de búsqueda
+    if (termino.trim()) {
+      const terminoLower = termino.toLowerCase();
+      filtrados = filtrados.filter(
+        (alimento) =>
+          alimento.nombre.toLowerCase().includes(terminoLower) ||
+          alimento.categoria.toLowerCase().includes(terminoLower)
+      );
     }
 
-    const terminoLower = termino.toLowerCase();
-    const filtrados = alimentosDisponibles.filter(
-      (alimento) =>
-        alimento.nombre.toLowerCase().includes(terminoLower) ||
-        alimento.categoria.toLowerCase().includes(terminoLower)
-    );
+    // Filtrar por categoría
+    if (categoria) {
+      filtrados = filtrados.filter(
+        (alimento) => alimento.categoria.toLowerCase() === categoria.toLowerCase()
+      );
+    }
+
     setAlimentosFiltrados(filtrados);
   };
 
@@ -109,6 +138,7 @@ export default function FormularioSolicitante() {
     if (alimentoSeleccionado && valor !== alimentoSeleccionado.nombre) {
       setAlimentoSeleccionado(null);
       setTipoAlimento("");
+      setAlimentoId(null);
     }
 
     filtrarAlimentos(valor);
@@ -127,6 +157,7 @@ export default function FormularioSolicitante() {
   const manejarSeleccionAlimento = (alimento: any) => {
     setAlimentoSeleccionado(alimento);
     setTipoAlimento(alimento.nombre);
+    setAlimentoId(alimento.id);
     setBusquedaAlimento(alimento.nombre);
     setMostrarDropdown(false);
   };
@@ -135,10 +166,32 @@ export default function FormularioSolicitante() {
   const limpiarSeleccion = () => {
     setAlimentoSeleccionado(null);
     setTipoAlimento("");
+    setAlimentoId(null);
     setBusquedaAlimento("");
     setMostrarDropdown(true);
-    filtrarAlimentos("");
+    filtrarAlimentos("", filtroCategoria);
   };
+
+  // Manejar cambio de categoría
+  const manejarCambioCategoria = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const categoria = e.target.value;
+    setFiltroCategoria(categoria);
+    
+    // Limpiar la selección actual si existe
+    if (alimentoSeleccionado) {
+      setAlimentoSeleccionado(null);
+      setTipoAlimento("");
+      setAlimentoId(null);
+      setBusquedaAlimento("");
+    }
+
+    // Filtrar y mostrar el dropdown
+    filtrarAlimentos("", categoria);
+    setMostrarDropdown(false);
+  };
+
+  // Obtener categorías únicas de los alimentos disponibles
+  const categoriasUnicas = [...new Set(alimentosDisponibles.map(a => a.categoria))].sort();
 
   // Manejar blur del container
   const manejarBlurContainer = (e: React.FocusEvent) => {
@@ -158,12 +211,20 @@ export default function FormularioSolicitante() {
     });
   };
 
+  // Obtener información de la unidad seleccionada
+  const getUnidadSeleccionada = () => {
+    const unidad = unidades.find((u) => u.id.toString() === unidadId);
+    return unidad || null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMensaje("");
 
-    if (!user || !userData || !tipoAlimento || cantidad <= 0) {
+    const cantidadNum = parseFloat(cantidad);
+
+    if (!user || !userData || !tipoAlimento || !cantidad || cantidadNum <= 0 || !unidadId) {
       setMensaje("Por favor completa todos los campos requeridos.");
       setLoading(false);
       return;
@@ -173,7 +234,8 @@ export default function FormularioSolicitante() {
       {
         usuario_id: user.id,
         tipo_alimento: tipoAlimento,
-        cantidad,
+        cantidad: cantidadNum,
+        unidad_id: parseInt(unidadId),
         comentarios,
         latitud: ubicacionSeleccionada?.latitud,
         longitud: ubicacionSeleccionada?.longitud,
@@ -181,13 +243,17 @@ export default function FormularioSolicitante() {
     ]);
 
     if (error) {
-      setMensaje("Error al enviar la solicitud.");
+      console.error("Error al insertar:", error);
+      setMensaje("Error al enviar la solicitud: " + error.message);
     } else {
       setMensaje("Solicitud enviada con éxito.");
       setTipoAlimento("");
+      setAlimentoId(null);
       setAlimentoSeleccionado(null);
       setBusquedaAlimento("");
-      setCantidad(0);
+      setFiltroCategoria("");
+      setCantidad("");
+      setUnidadId("");
       setComentarios("");
     }
 
@@ -290,25 +356,51 @@ export default function FormularioSolicitante() {
               </div>
 
               <div className="space-y-4">
+                {/* Filtro de Categoría */}
+                <div>
+                  <label
+                    htmlFor="filtroCategoria"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Categoría de Alimentos
+                  </label>
+                  <select
+                    id="filtroCategoria"
+                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
+                    value={filtroCategoria}
+                    onChange={manejarCambioCategoria}
+                  >
+                    <option value="">Todas las categorías</option>
+                    {categoriasUnicas.map((categoria) => (
+                      <option key={categoria} value={categoria}>
+                        {categoria}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Filtra por categoría para encontrar alimentos más fácilmente
+                  </p>
+                </div>
+
                 <div>
                   <label
                     htmlFor="tipoAlimento"
                     className="block text-sm font-medium text-gray-700 mb-2"
                   >
-                    Tipo de Alimento *
+                    Productos *
                   </label>
                   <div className="relative" onBlur={manejarBlurContainer}>
                     <input
                       type="text"
                       id="tipoAlimento"
-                      placeholder="Buscar o seleccionar alimento..."
-                      className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 pr-12 focus:border-blue-500 focus:outline-none transition-colors"
+                      placeholder="Buscar o seleccionar producto..."
+                      className="w-full border-2 border-gray-300 rounded-lg pl-11 pr-12 py-3 focus:border-blue-500 focus:outline-none transition-colors"
                       value={busquedaAlimento}
                       onChange={manejarBusquedaAlimento}
                       onFocus={manejarFocusInput}
                       required
                     />
-                    <ShoppingBasket className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <ShoppingBasket className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
 
                     {alimentoSeleccionado && (
                       <button
@@ -339,53 +431,87 @@ export default function FormularioSolicitante() {
                               </div>
                             </div>
                           ))
-                        ) : busquedaAlimento ? (
+                        ) : busquedaAlimento || filtroCategoria ? (
                           <div className="p-3 text-gray-500 text-center">
-                            No se encontraron alimentos que coincidan con "
-                            {busquedaAlimento}"
+                            No se encontraron productos que coincidan con tu búsqueda
+                            {filtroCategoria && ` en la categoría "${filtroCategoria}"`}
                           </div>
                         ) : (
                           <div className="p-3 text-gray-500 text-center">
-                            Escribe para buscar alimentos...
+                            {filtroCategoria 
+                              ? `Escribe para buscar productos en "${filtroCategoria}"...` 
+                              : "Escribe para buscar productos..."}
                           </div>
                         )}
                       </div>
                     )}
 
-                    {/* Mostrar contador de resultados si hay búsqueda activa */}
-                    {busquedaAlimento && !alimentoSeleccionado && (
+                    {/* Mostrar contador de resultados */}
+                    {(busquedaAlimento || filtroCategoria) && !alimentoSeleccionado && (
                       <p className="text-sm text-gray-500 mt-1">
-                        {alimentosFiltrados.length} alimento
-                        {alimentosFiltrados.length !== 1 ? "s" : ""} encontrado
+                        {alimentosFiltrados.length} producto
+                        {alimentosFiltrados.length !== 1 ? "s" : ""} disponible
                         {alimentosFiltrados.length !== 1 ? "s" : ""}
+                        {filtroCategoria && ` en "${filtroCategoria}"`}
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="cantidad"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Cantidad Solicitada *
-                  </label>
-                  <div className="relative">
+                {/* Grid de Cantidad y Unidad */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      htmlFor="cantidad"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Cantidad Solicitada *
+                    </label>
                     <input
                       type="number"
                       id="cantidad"
                       value={cantidad}
-                      onChange={(e) => setCantidad(Number(e.target.value))}
+                      onChange={(e) => setCantidad(e.target.value)}
                       required
-                      min={1}
-                      className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 pl-12 focus:border-blue-500 focus:outline-none transition-colors"
-                      placeholder="Ingresa la cantidad necesaria"
+                      min="0.1"
+                      step="0.1"
+                      className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
+                      placeholder="0"
                     />
-                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Ingresa la cantidad necesaria
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Especifica la cantidad en kg, litros, unidades, etc.
-                  </p>
+
+                  <div>
+                    <label
+                      htmlFor="unidad"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Unidad de Medida *
+                    </label>
+                    <select
+                      id="unidad"
+                      value={unidadId}
+                      onChange={(e) => setUnidadId(e.target.value)}
+                      required
+                      className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
+                    >
+                      <option value="">Selecciona una unidad</option>
+                      {cargandoUnidades ? (
+                        <option disabled>Cargando unidades...</option>
+                      ) : (
+                        unidades.map((unidad) => (
+                          <option key={unidad.id} value={unidad.id}>
+                            {unidad.nombre} ({unidad.simbolo})
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Selecciona la unidad de medida
+                    </p>
+                  </div>
                 </div>
 
                 <div>
