@@ -1,6 +1,5 @@
 import Link from "next/link"
-import { Heart, User, Github, Users, Package, Truck, HandHeart } from "lucide-react"
-import Image from "next/image"
+import { Heart, User, Users, Package, Truck } from "lucide-react"
 
 export default function HomePage() {
   return (
@@ -202,7 +201,7 @@ export default function HomePage() {
           {/* Commemorative Message */}
           <div className="border-t border-gray-700 pt-8">
             <div className="text-center space-y-4">
-              <p className="text-blue-400 font-semibold text-lg italic">"Juntos nutrimos sueños, sembramos futuro."</p>
+              <p className="text-blue-400 font-semibold text-lg italic">&quot;Juntos nutrimos sueños, sembramos futuro.&quot;</p>
               <p className="text-gray-400">
                 Este proyecto fue desarrollado con compromiso social por estudiantes de la ULEAM como parte del programa
                 de vinculación con la comunidad.

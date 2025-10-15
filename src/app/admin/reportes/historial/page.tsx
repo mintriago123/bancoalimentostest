@@ -164,11 +164,11 @@ export default function ReportsHistory() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-4">
               <Link 
-                href="/admin/reportes" 
+                href="/admin/dashboard" 
                 className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Volver a Reportes
+                Volver al Inicio
               </Link>
               <div className="flex items-center space-x-3">
                 <History className="h-8 w-8 text-purple-600" />
