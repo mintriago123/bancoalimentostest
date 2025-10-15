@@ -26,6 +26,7 @@ export default function FormularioSolicitante() {
   const [alimentosDisponibles, setAlimentosDisponibles] = useState<any[]>([]);
   const [unidades, setUnidades] = useState<any[]>([]);
   const [tipoAlimento, setTipoAlimento] = useState("");
+  const [alimentoId, setAlimentoId] = useState<number | null>(null);
   const [cantidad, setCantidad] = useState("");
   const [unidadId, setUnidadId] = useState("");
   const [comentarios, setComentarios] = useState("");
@@ -137,6 +138,7 @@ export default function FormularioSolicitante() {
     if (alimentoSeleccionado && valor !== alimentoSeleccionado.nombre) {
       setAlimentoSeleccionado(null);
       setTipoAlimento("");
+      setAlimentoId(null);
     }
 
     filtrarAlimentos(valor);
@@ -155,6 +157,7 @@ export default function FormularioSolicitante() {
   const manejarSeleccionAlimento = (alimento: any) => {
     setAlimentoSeleccionado(alimento);
     setTipoAlimento(alimento.nombre);
+    setAlimentoId(alimento.id);
     setBusquedaAlimento(alimento.nombre);
     setMostrarDropdown(false);
   };
@@ -163,6 +166,7 @@ export default function FormularioSolicitante() {
   const limpiarSeleccion = () => {
     setAlimentoSeleccionado(null);
     setTipoAlimento("");
+    setAlimentoId(null);
     setBusquedaAlimento("");
     setMostrarDropdown(true);
     filtrarAlimentos("", filtroCategoria);
@@ -177,6 +181,7 @@ export default function FormularioSolicitante() {
     if (alimentoSeleccionado) {
       setAlimentoSeleccionado(null);
       setTipoAlimento("");
+      setAlimentoId(null);
       setBusquedaAlimento("");
     }
 
@@ -225,16 +230,12 @@ export default function FormularioSolicitante() {
       return;
     }
 
-    const unidadInfo = getUnidadSeleccionada();
-
     const { error } = await supabase.from("solicitudes").insert([
       {
         usuario_id: user.id,
         tipo_alimento: tipoAlimento,
         cantidad: cantidadNum,
         unidad_id: parseInt(unidadId),
-        unidad_nombre: unidadInfo?.nombre,
-        unidad_simbolo: unidadInfo?.simbolo,
         comentarios,
         latitud: ubicacionSeleccionada?.latitud,
         longitud: ubicacionSeleccionada?.longitud,
@@ -242,10 +243,12 @@ export default function FormularioSolicitante() {
     ]);
 
     if (error) {
-      setMensaje("Error al enviar la solicitud.");
+      console.error("Error al insertar:", error);
+      setMensaje("Error al enviar la solicitud: " + error.message);
     } else {
       setMensaje("Solicitud enviada con éxito.");
       setTipoAlimento("");
+      setAlimentoId(null);
       setAlimentoSeleccionado(null);
       setBusquedaAlimento("");
       setFiltroCategoria("");
