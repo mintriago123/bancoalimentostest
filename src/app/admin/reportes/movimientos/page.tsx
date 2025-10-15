@@ -1,273 +1,107 @@
+/**
+ * @fileoverview Página principal del reporte de movimientos de inventario
+ * Componente refactorizado que utiliza arquitectura modular con separación
+ * de responsabilidades, hooks personalizados y componentes reutilizables.
+ * 
+ * @author Sistema de Banco de Alimentos
+ * @version 2.0.0 - Refactorizado para arquitectura profesional
+ */
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import DashboardLayout from '@/app/components/DashboardLayout';
-import { Download, RefreshCw, TrendingUp, Filter, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 
-interface MovementItem {
-  id: string;
-  fecha_movimiento: string;
-  tipo_movimiento: 'ingreso' | 'egreso';
-  nombre_producto: string;
-  unidad_medida: string;
-  cantidad: number;
-  usuario_responsable: string;
-  rol_usuario: string;
-  origen_movimiento: string;
-  observaciones: string;
-}
+// Importar hooks personalizados
+import { 
+  useMovementsData, 
+  useReportFilters, 
+  useExportReport 
+} from './hooks/useMovementsData';
 
-interface ReportFilters {
-  fecha_inicio: string;
-  fecha_fin: string;
-  tipo_movimiento?: 'ingreso' | 'egreso';
-  producto: string;
-}
+// Importar componentes modulares
+import ReportHeader from './components/ReportHeader';
+import MovementFilters from './components/MovementFilters';
+import MovementTable from './components/MovementTable';
+import MovementSummary from './components/MovementSummary';
 
-export default function MovementsReport() {
+// Importar constantes
+import { SYSTEM_MESSAGES } from './constants';
+
+/**
+ * Componente de estado de error para mostrar errores de manera consistente
+ */
+const ErrorState: React.FC<{ 
+  message: string; 
+  onRetry?: () => void; 
+}> = ({ message, onRetry }) => (
+  <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+    <div className="flex items-center">
+      <div className="flex-shrink-0">
+        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+        </svg>
+      </div>
+      <div className="ml-3">
+        <h3 className="text-sm font-medium text-red-800">
+          Error al cargar el reporte
+        </h3>
+        <p className="mt-1 text-sm text-red-700">{message}</p>
+        {onRetry && (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={onRetry}
+              className="bg-red-100 px-3 py-2 rounded-md text-sm font-medium text-red-800 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
+/**
+ * Componente principal de la página de reporte de movimientos
+ * Utiliza arquitectura modular con hooks personalizados y componentes especializados
+ */
+export default function MovementsReportPage() {
   const { supabase } = useSupabase();
-  const [data, setData] = useState<MovementItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState<string>('');
-  const [filters, setFilters] = useState<ReportFilters>({
-    fecha_inicio: '',
-    fecha_fin: '',
-    tipo_movimiento: undefined,
-    producto: ''
-  });
 
-  const loadReport = async () => {
-    setLoading(true);
-    try {
-      // Obtener datos reales de movimientos registrados en el sistema
-      const movementsData: MovementItem[] = [];
+  // Hook para gestión de filtros
+  const {
+    filters,
+    setFilter,
+    clearFilters,
+    filterDescriptions,
+    hasActiveFilters
+  } = useReportFilters();
 
-      // 1. Obtener movimientos registrados en las tablas de movimiento_inventario
-      const { data: movimientosRegistrados, error: errorMovimientos } = await supabase
-        .from('movimiento_inventario_cabecera')
-        .select(`
-          id_movimiento,
-          fecha_movimiento,
-          estado_movimiento,
-          observaciones,
-          donante:usuarios!id_donante(nombre, rol),
-          solicitante:usuarios!id_solicitante(nombre, rol),
-          movimiento_inventario_detalle!inner(
-            cantidad,
-            tipo_transaccion,
-            rol_usuario,
-            observacion_detalle,
-            productos_donados!inner(
-              nombre_producto,
-              unidad_medida
-            )
-          )
-        `)
-        .order('fecha_movimiento', { ascending: false });
+  // Hook para gestión de datos
+  const {
+    filteredData,
+    summary,
+    loadingState,
+    errorMessage,
+    lastUpdate,
+    refetchData,
+    hasData
+  } = useMovementsData(supabase, filters);
 
-      if (!errorMovimientos && movimientosRegistrados) {
-        movimientosRegistrados.forEach((movimiento: any) => {
-          movimiento.movimiento_inventario_detalle.forEach((detalle: any, index: number) => {
-            const esIngreso = detalle.tipo_transaccion === 'ingreso';
-            const usuarioResponsable = esIngreso 
-              ? movimiento.donante?.nombre || 'Usuario desconocido'
-              : movimiento.solicitante?.nombre || 'Usuario desconocido';
-            const rolUsuario = esIngreso 
-              ? movimiento.donante?.rol || 'DONANTE'
-              : movimiento.solicitante?.rol || 'BENEFICIARIO';
+  // Hook para gestión de exportación
+  const {
+    exportReport,
+    isExporting,
+    exportError,
+    canExport
+  } = useExportReport(filteredData, summary, filterDescriptions, lastUpdate);
 
-            movementsData.push({
-              id: `m-${movimiento.id_movimiento}-${index}`,
-              fecha_movimiento: movimiento.fecha_movimiento,
-              tipo_movimiento: detalle.tipo_transaccion === 'ingreso' ? 'ingreso' : 'egreso',
-              nombre_producto: detalle.productos_donados?.nombre_producto || 'Producto sin nombre',
-              unidad_medida: detalle.productos_donados?.unidad_medida || 'unidad',
-              cantidad: detalle.cantidad || 0,
-              usuario_responsable: usuarioResponsable,
-              rol_usuario: rolUsuario,
-              origen_movimiento: esIngreso ? 'Donación Registrada' : 'Solicitud Aprobada',
-              observaciones: detalle.observacion_detalle || movimiento.observaciones || 'Sin observaciones'
-            });
-          });
-        });
-      }
-
-      // 2. FALLBACK: Obtener donaciones como movimientos de ingreso (para datos no migrados)
-      const { data: donaciones, error: errorDonaciones } = await supabase
-        .from('donaciones')
-        .select(`
-          id,
-          creado_en,
-          tipo_producto,
-          unidad_simbolo,
-          cantidad,
-          observaciones,
-          estado,
-          usuarios:user_id(nombre, rol)
-        `)
-        .eq('estado', 'Entregada')
-        .order('creado_en', { ascending: false });
-
-      if (!errorDonaciones && donaciones) {
-        const ingresos: MovementItem[] = donaciones
-          .filter(donacion => !movementsData.some(m => m.id === `d-${donacion.id}`)) // Evitar duplicados
-          .map((donacion: any) => ({
-            id: `d-${donacion.id}`,
-            fecha_movimiento: donacion.creado_en,
-            tipo_movimiento: 'ingreso' as const,
-            nombre_producto: donacion.tipo_producto || 'Producto sin nombre',
-            unidad_medida: donacion.unidad_simbolo || 'unidad',
-            cantidad: donacion.cantidad || 0,
-            usuario_responsable: donacion.usuarios?.nombre || 'Usuario desconocido',
-            rol_usuario: donacion.usuarios?.rol || 'DONANTE',
-            origen_movimiento: 'Donación (Legado)',
-            observaciones: donacion.observaciones || `Donación - Estado: ${donacion.estado}`
-          }));
-        movementsData.push(...ingresos);
-      }
-
-      // 3. FALLBACK: Obtener solicitudes aprobadas como movimientos de egreso (para datos no migrados)
-      const { data: solicitudes, error: errorSolicitudes } = await supabase
-        .from('solicitudes')
-        .select(`
-          id,
-          created_at,
-          tipo_alimento,
-          cantidad,
-          comentarios,
-          estado,
-          usuarios:usuario_id(nombre, rol)
-        `)
-        .eq('estado', 'aprobada')
-        .order('created_at', { ascending: false });
-
-      if (!errorSolicitudes && solicitudes) {
-        const egresos: MovementItem[] = solicitudes
-          .filter(solicitud => !movementsData.some(m => m.id === `s-${solicitud.id}`)) // Evitar duplicados
-          .map((solicitud: any) => ({
-            id: `s-${solicitud.id}`,
-            fecha_movimiento: solicitud.created_at,
-            tipo_movimiento: 'egreso' as const,
-            nombre_producto: solicitud.tipo_alimento || 'Producto sin nombre',
-            unidad_medida: 'unidad',
-            cantidad: solicitud.cantidad || 0,
-            usuario_responsable: solicitud.usuarios?.nombre || 'Usuario desconocido',
-            rol_usuario: solicitud.usuarios?.rol || 'BENEFICIARIO',
-            origen_movimiento: 'Solicitud Aprobada (Legado)',
-            observaciones: solicitud.comentarios || 'Entrega de solicitud aprobada'
-          }));
-        movementsData.push(...egresos);
-      }
-
-      // Ordenar todos los movimientos por fecha (más recientes primero)
-      movementsData.sort((a, b) => new Date(b.fecha_movimiento).getTime() - new Date(a.fecha_movimiento).getTime());
-
-      // Aplicar filtros y establecer datos
-      setData(applyFilters(movementsData));
-      
-      setLastUpdate(new Date().toISOString());
-    } catch (error) {
-      console.error('Error cargando reporte:', error);
-      // En caso de error, mostrar tabla vacía (sin datos de ejemplo)
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const applyFilters = (rawData: MovementItem[]) => {
-    let filtered = rawData;
-
-    if (filters.fecha_inicio) {
-      filtered = filtered.filter(item => 
-        new Date(item.fecha_movimiento) >= new Date(filters.fecha_inicio)
-      );
-    }
-
-    if (filters.fecha_fin) {
-      filtered = filtered.filter(item => 
-        new Date(item.fecha_movimiento) <= new Date(filters.fecha_fin + 'T23:59:59')
-      );
-    }
-
-    if (filters.tipo_movimiento) {
-      filtered = filtered.filter(item => item.tipo_movimiento === filters.tipo_movimiento);
-    }
-
-    if (filters.producto) {
-      filtered = filtered.filter(item => 
-        item.nombre_producto.toLowerCase().includes(filters.producto.toLowerCase())
-      );
-    }
-
-    return filtered;
-  };
-
-  const exportReport = async (format: 'excel' | 'csv') => {
-    try {
-      const csvContent = [
-        ['Fecha', 'Tipo', 'Producto', 'Unidad', 'Cantidad', 'Usuario', 'Origen', 'Observaciones'],
-        ...data.map(item => [
-          formatDate(item.fecha_movimiento),
-          item.tipo_movimiento === 'ingreso' ? 'Ingreso' : 'Egreso',
-          item.nombre_producto,
-          item.unidad_medida,
-          item.cantidad.toString(),
-          `${item.usuario_responsable} (${item.rol_usuario})`,
-          item.origen_movimiento,
-          item.observaciones
-        ])
-      ].map(row => row.join(',')).join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `reporte_movimientos_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      console.log(`Reporte exportado como ${format.toUpperCase()}`);
-    } catch (error) {
-      console.error('Error exportando reporte:', error);
-    }
-  };
-
-  const handleFilterChange = (key: keyof ReportFilters, value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [key]: value === '' ? undefined : value
-    }));
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      fecha_inicio: '',
-      fecha_fin: '',
-      tipo_movimiento: undefined,
-      producto: ''
-    });
-  };
-
-  useEffect(() => {
-    loadReport();
-  }, []);
-
-  const formatNumber = (num: number) => {
-    return num.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('es-ES');
-  };
-
-  const getMovementTypeColor = (type: string) => {
-    return type === 'ingreso' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-  };
+  // Determinar si está cargando
+  const isLoading = loadingState === 'loading';
+  const hasError = loadingState === 'error';
 
   return (
     <DashboardLayout
@@ -276,225 +110,58 @@ export default function MovementsReport() {
       description="Historial de ingresos y egresos de productos"
     >
       <div className="space-y-6">
-        {/* Header con navegación */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-4">
-              <Link 
-                href="/admin/reportes" 
-                className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Volver a Reportes
-              </Link>
-              <div className="flex items-center space-x-3">
-                <TrendingUp className="h-8 w-8 text-green-600" />
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Reporte de Movimientos</h1>
-                  <p className="text-gray-600">Historial de ingresos y egresos de productos</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              <button 
-                onClick={loadReport} 
-                disabled={loading}
-                className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors duration-200"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Actualizar
-              </button>
-              
-              <button 
-                onClick={() => exportReport('csv')}
-                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar CSV
-              </button>
-            </div>
-          </div>
+        {/* Encabezado del reporte */}
+        <ReportHeader
+          title="Reporte de Movimientos"
+          description="Análisis completo de ingresos y egresos de inventario"
+          loading={isLoading}
+          lastUpdate={lastUpdate}
+          onRefresh={refetchData}
+          onExport={exportReport}
+          canExport={canExport && !isExporting}
+        />
 
-          {/* Filtros */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
-                <input
-                  type="date"
-                  value={filters.fecha_inicio || ''}
-                  onChange={(e) => handleFilterChange('fecha_inicio', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Fin</label>
-                <input
-                  type="date"
-                  value={filters.fecha_fin || ''}
-                  onChange={(e) => handleFilterChange('fecha_fin', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Movimiento</label>
-                <select
-                  value={filters.tipo_movimiento || ''}
-                  onChange={(e) => handleFilterChange('tipo_movimiento', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Todos</option>
-                  <option value="ingreso">Ingreso</option>
-                  <option value="egreso">Egreso</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Producto</label>
-                <input
-                  type="text"
-                  placeholder="Buscar producto..."
-                  value={filters.producto || ''}
-                  onChange={(e) => handleFilterChange('producto', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-            
-            <div className="flex space-x-3">
-              <button 
-                onClick={loadReport} 
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Aplicar Filtros
-              </button>
-              <button 
-                onClick={clearFilters} 
-                className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
-              >
-                Limpiar
-              </button>
-            </div>
-          </div>
-          
-          {lastUpdate && (
-            <div className="mt-4 text-sm text-gray-500">
-              Última actualización: {formatDate(lastUpdate)}
-            </div>
-          )}
-        </div>
+        {/* Mostrar errores de exportación si existen */}
+        {exportError && (
+          <ErrorState 
+            message={`Error en exportación: ${exportError}`}
+            onRetry={exportReport}
+          />
+        )}
 
-        {/* Contenido del reporte */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <RefreshCw className="h-8 w-8 animate-spin text-green-600" />
-              <span className="ml-3 text-gray-600">Cargando reporte...</span>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fecha
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tipo
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Producto
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Unidad
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Cantidad
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Usuario
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Origen
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Observaciones
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {data.map((item, index) => (
-                    <tr key={item.id || index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(item.fecha_movimiento)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getMovementTypeColor(item.tipo_movimiento)}`}>
-                          {item.tipo_movimiento === 'ingreso' ? 'Ingreso' : 'Egreso'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900">{item.nombre_producto}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item.unidad_medida}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                        {formatNumber(item.cantidad)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div>{item.usuario_responsable}</div>
-                        <div className="text-gray-500">({item.rol_usuario})</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item.origen_movimiento}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
-                        {item.observaciones}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              
-              {data.length === 0 && !loading && (
-                <div className="text-center py-12">
-                  <TrendingUp className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No hay movimientos</h3>
-                  <p className="mt-1 text-sm text-gray-500">No se encontraron movimientos con los filtros aplicados</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        {/* Filtros */}
+        <MovementFilters
+          filters={filters}
+          onFilterChange={setFilter}
+          onClearFilters={clearFilters}
+          activeFilterDescriptions={filterDescriptions}
+          disabled={isLoading}
+        />
 
-        {/* Resumen */}
-        {data.length > 0 && (
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Resumen de Movimientos</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{data.length}</div>
-                <div className="text-sm text-gray-500">Total movimientos</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {data.filter(item => item.tipo_movimiento === 'ingreso').length}
-                </div>
-                <div className="text-sm text-gray-500">Total ingresos</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">
-                  {data.filter(item => item.tipo_movimiento === 'egreso').length}
-                </div>
-                <div className="text-sm text-gray-500">Total egresos</div>
-              </div>
-            </div>
-          </div>
+        {/* Mostrar error de carga si existe */}
+        {hasError && errorMessage && (
+          <ErrorState 
+            message={errorMessage}
+            onRetry={refetchData}
+          />
+        )}
+
+        {/* Tabla de datos principales */}
+        <MovementTable
+          data={filteredData}
+          loading={isLoading}
+          emptyMessage={hasActiveFilters 
+            ? SYSTEM_MESSAGES.noFilteredData 
+            : SYSTEM_MESSAGES.noData
+          }
+        />
+
+        {/* Resumen estadístico - solo mostrar si hay datos */}
+        {(hasData || isLoading) && (
+          <MovementSummary
+            summary={summary}
+            loading={isLoading}
+          />
         )}
       </div>
     </DashboardLayout>
