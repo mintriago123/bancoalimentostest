@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import DashboardLayout from '@/app/components/DashboardLayout';
-import { ChevronLeft, ChevronRight, Heart, Package, MapPin, Clock, Check, User, Info, Plus, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Package, MapPin, Clock, Check, User, Info, Plus, Search, X, ShoppingBasket } from 'lucide-react';
 
 // Define los horarios disponibles para la recolección
 const HORARIOS_DISPONIBLES = [
@@ -58,6 +58,7 @@ export default function NuevaDonacionPage() {
   const [alimentosFiltrados, setAlimentosFiltrados] = useState<Alimento[]>([]);
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
   const [alimentoSeleccionado, setAlimentoSeleccionado] = useState<Alimento | null>(null);
+  const [filtroCategoria, setFiltroCategoria] = useState('');
 
   // Estado para el formulario de nuevo producto
   const [mostrarFormularioNuevoProducto, setMostrarFormularioNuevoProducto] = useState(false);
@@ -102,25 +103,31 @@ export default function NuevaDonacionPage() {
     }
   }, [currentUser, authLoading]);
 
-  // Función para filtrar alimentos basado en la búsqueda
-  const filtrarAlimentos = useCallback((termino: string) => {
-    if (!termino.trim()) {
-      setAlimentosFiltrados(alimentos);
-      return;
+  // Función para filtrar alimentos basado en la búsqueda y categoría
+  const filtrarAlimentos = useCallback((termino: string, categoria: string = '') => {
+    let filtrados = alimentos;
+
+    // Filtrar por término de búsqueda
+    if (termino.trim()) {
+      const terminoLower = termino.toLowerCase();
+      filtrados = filtrados.filter(alimento =>
+        alimento.nombre.toLowerCase().includes(terminoLower) ||
+        alimento.categoria.toLowerCase().includes(terminoLower)
+      );
     }
 
-    const terminoLower = termino.toLowerCase();
-    const filtrados = alimentos.filter(alimento => 
-      alimento.nombre.toLowerCase().includes(terminoLower) ||
-      alimento.categoria.toLowerCase().includes(terminoLower)
-    );
+    // Filtrar por categoría si se especificó
+    if (categoria) {
+      filtrados = filtrados.filter(alimento => alimento.categoria.toLowerCase() === categoria.toLowerCase());
+    }
+
     setAlimentosFiltrados(filtrados);
   }, [alimentos]);
 
   // Filtrar alimentos cuando cambia la búsqueda o se cargan los alimentos
   useEffect(() => {
-    filtrarAlimentos(busquedaAlimento);
-    
+    filtrarAlimentos(busquedaAlimento, filtroCategoria);
+
     // Actualizar el alimento seleccionado si hay un producto en el formulario
     if (formulario.tipo_producto && formulario.tipo_producto !== 'personalizado') {
       const alimento = alimentos.find(a => a.id.toString() === formulario.tipo_producto);
@@ -131,7 +138,7 @@ export default function NuevaDonacionPage() {
     } else if (formulario.tipo_producto === 'personalizado' && !alimentoSeleccionado) {
       setBusquedaAlimento('Producto personalizado');
     }
-  }, [alimentos, busquedaAlimento, filtrarAlimentos, formulario.tipo_producto, alimentoSeleccionado]);
+  }, [alimentos, busquedaAlimento, filtrarAlimentos, formulario.tipo_producto, alimentoSeleccionado, filtroCategoria]);
 
   // Manejar cambio en el buscador
   const manejarBusquedaAlimento = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,7 +152,7 @@ export default function NuevaDonacionPage() {
       setMostrarFormularioNuevoProducto(false);
     }
     
-    filtrarAlimentos(valor);
+    filtrarAlimentos(valor, filtroCategoria);
     setMostrarDropdown(true);
   };
 
@@ -183,6 +190,23 @@ export default function NuevaDonacionPage() {
     setFormulario(prev => ({ ...prev, tipo_producto: '' }));
     setMostrarFormularioNuevoProducto(false);
     setMostrarDropdown(true); // Mostrar dropdown después de limpiar
+  };
+  
+  // Manejar cambio de categoría
+  const manejarCambioCategoria = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const categoria = e.target.value;
+    setFiltroCategoria(categoria);
+
+    // Limpiar la selección actual si existe
+    if (alimentoSeleccionado) {
+      setAlimentoSeleccionado(null);
+      setBusquedaAlimento('');
+      setFormulario(prev => ({ ...prev, tipo_producto: '' }));
+    }
+
+    // Filtrar y ocultar dropdown para que el usuario vuelva a activar/search
+    filtrarAlimentos('', categoria);
+    setMostrarDropdown(false);
   };
   const manejarBlurContainer = (e: React.FocusEvent) => {
     // Solo ocultar si el focus sale completamente del container
@@ -522,56 +546,92 @@ export default function NuevaDonacionPage() {
 
             <div className="space-y-4">
               <div className="relative" onBlur={manejarBlurContainer}>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Producto *</label>
-                
-                {/* Input personalizado con dropdown */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Buscar o seleccionar producto..."
-                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 pr-12 focus:border-blue-500 focus:outline-none transition-colors"
-                    value={busquedaAlimento}
-                    onChange={manejarBusquedaAlimento}
-                    onFocus={manejarFocusInput}
-                  />
-                  <div className="absolute inset-y-0 right-0 flex items-center">
-                    {alimentoSeleccionado && (
-                      <button
-                        type="button"
-                        onClick={limpiarSeleccion}
-                        className="p-1 mr-2 text-gray-400 hover:text-red-600 rounded hover:bg-gray-100 transition-colors"
-                        title="Limpiar selección"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                    <div className="pr-3 pointer-events-none">
-                      <Search className="h-5 w-5 text-gray-400" />
-                    </div>
-                  </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Categoria de Alimentos *</label>
+
+                <div className="mb-3">
+                  <select
+                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
+                    value={filtroCategoria}
+                    onChange={manejarCambioCategoria}
+                  >
+                    <option value="">Todas las categorías</option>
+                    {categoriasUnicas.map((categoria) => (
+                      <option key={categoria} value={categoria}>{categoria}</option>
+                    ))}
+                  </select>
                 </div>
 
-                {/* Dropdown personalizado con los productos filtrados */}
-                {mostrarDropdown && !alimentoSeleccionado && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {cargandoAlimentos ? (
-                      <div className="p-3 text-gray-500 text-center">Cargando productos...</div>
-                    ) : (
-                      <>
-                        {alimentosFiltrados.length > 0 ? (
-                          <>
-                            {alimentosFiltrados.map((alimento) => (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Productos a donar *</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Buscar o seleccionar producto..."
+                      className="w-full border-2 border-gray-300 rounded-lg pl-11 pr-12 py-3 text-gray-700 placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-colors"
+                      value={busquedaAlimento}
+                      onChange={manejarBusquedaAlimento}
+                      onFocus={manejarFocusInput}
+                    />
+                    {/* Icono carrito a la izquierda */}
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none">
+                      <ShoppingBasket className="h-5 w-5" />
+                    </span>
+                    {/* Icono limpiar y buscar a la derecha */}
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center">
+                      {alimentoSeleccionado && (
+                        <button
+                          type="button"
+                          onClick={limpiarSeleccion}
+                          className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-gray-100 transition-colors"
+                          title="Limpiar selección"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {mostrarDropdown && !alimentoSeleccionado && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {cargandoAlimentos ? (
+                        <div className="p-3 text-gray-500 text-center">Cargando productos...</div>
+                      ) : (
+                        <>
+                          {alimentosFiltrados.length > 0 ? (
+                            <>
+                              {alimentosFiltrados.map((alimento) => (
+                                <div
+                                  key={alimento.id}
+                                  className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                  onClick={() => manejarSeleccionProducto(alimento)}
+                                >
+                                  <div className="font-medium text-gray-900">{alimento.nombre}</div>
+                                  <div className="text-sm text-gray-500">{alimento.categoria}</div>
+                                </div>
+                              ))}
                               <div
-                                key={alimento.id}
-                                className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                                onClick={() => manejarSeleccionProducto(alimento)}
+                                className="p-3 hover:bg-blue-50 cursor-pointer border-t border-gray-200 text-blue-600 font-medium"
+                                onClick={manejarSeleccionPersonalizado}
                               >
-                                <div className="font-medium text-gray-900">{alimento.nombre}</div>
-                                <div className="text-sm text-gray-500">{alimento.categoria}</div>
+                                <div className="flex items-center">
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Agregar producto personalizado
+                                </div>
                               </div>
-                            ))}
+                            </>
+                          ) : busquedaAlimento ? (
+                            <div className="p-3 text-gray-500 text-center">
+                              No se encontraron productos que coincidan con "{busquedaAlimento}"
+                              <div
+                                className="mt-2 text-blue-600 cursor-pointer hover:underline"
+                                onClick={manejarSeleccionPersonalizado}
+                              >
+                                + Crear producto personalizado
+                              </div>
+                            </div>
+                          ) : (
                             <div
-                              className="p-3 hover:bg-blue-50 cursor-pointer border-t border-gray-200 text-blue-600 font-medium"
+                              className="p-3 hover:bg-blue-50 cursor-pointer text-blue-600 font-medium"
                               onClick={manejarSeleccionPersonalizado}
                             >
                               <div className="flex items-center">
@@ -579,39 +639,19 @@ export default function NuevaDonacionPage() {
                                 Agregar producto personalizado
                               </div>
                             </div>
-                          </>
-                        ) : busquedaAlimento ? (
-                          <div className="p-3 text-gray-500 text-center">
-                            No se encontraron productos que coincidan con "{busquedaAlimento}"
-                            <div
-                              className="mt-2 text-blue-600 cursor-pointer hover:underline"
-                              onClick={manejarSeleccionPersonalizado}
-                            >
-                              + Crear producto personalizado
-                            </div>
-                          </div>
-                        ) : (
-                          <div
-                            className="p-3 hover:bg-blue-50 cursor-pointer text-blue-600 font-medium"
-                            onClick={manejarSeleccionPersonalizado}
-                          >
-                            <div className="flex items-center">
-                              <Plus className="w-4 h-4 mr-2" />
-                              Agregar producto personalizado
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
 
-                {/* Mostrar contador de resultados si hay búsqueda activa */}
-                {busquedaAlimento && !cargandoAlimentos && !alimentoSeleccionado && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    {alimentosFiltrados.length} producto{alimentosFiltrados.length !== 1 ? 's' : ''} encontrado{alimentosFiltrados.length !== 1 ? 's' : ''}
-                  </p>
-                )}
+                  {/* Mostrar contador de resultados si hay búsqueda activa */}
+                  {busquedaAlimento && !cargandoAlimentos && !alimentoSeleccionado && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      {alimentosFiltrados.length} producto{alimentosFiltrados.length !== 1 ? 's' : ''} encontrado{alimentosFiltrados.length !== 1 ? 's' : ''}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {mostrarFormularioNuevoProducto && (

@@ -395,7 +395,7 @@ export default function ContribuyentesPage() {
               <div className="relative mb-4 group">
                 <div className="w-32 h-32 mx-auto rounded-full border-4 border-blue-50 p-1 group-hover:border-blue-100 transition-colors duration-300">
                   <Image
-                    src="/Mayk.jpg"
+                    src="/Maykel.png"
                     width={120}
                     height={120}
                     alt="Maykel Menendez"
@@ -421,7 +421,7 @@ export default function ContribuyentesPage() {
                   GitHub
                 </Link>
                 <Link
-                  href="#"
+                  href="https://www.linkedin.com/in/maykel-men%C3%A9ndez-0aa71a264/"
                   className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 text-sm"
                   target="_blank"
                   rel="noopener noreferrer"
