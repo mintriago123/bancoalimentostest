@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { TrendingUp, TrendingDown, Package } from 'lucide-react';
+import { TrendingUp, TrendingDown, Package, BarChart3 } from 'lucide-react';
 import type { MovementSummary as MovementSummaryData } from '../types';
 import { formatNumber } from '../utils/formatters';
 
@@ -138,8 +138,15 @@ export const MovementSummary: React.FC<MovementSummaryProps> = ({
 
   return (
     <div className={`bg-white p-6 rounded-lg shadow-sm border border-gray-200 ${className}`}>
-        {/* Primera fila - 3 métricas principales */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        {/* Primera fila - 4 métricas principales */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <MovementSummaryCard
+            title="Total Movimientos"
+            value={formatNumber(summary.totalRecords)}
+            description="Registros totales"
+            icon={<BarChart3 className="h-6 w-6" />}
+            variant="info"
+          />
           <MovementSummaryCard
             title="Total Ingresos"
             value={formatNumber(summary.totalIngresosCount)}

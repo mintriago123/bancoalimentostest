@@ -217,19 +217,19 @@ export class ExportService {
     const executiveHeaderRowIndex = registerRow(['Resumen Ejecutivo'], { mergeAcross: true });
     
     const kpiTitleRowIndex = registerRow(
-      ['Ingresos', '', '', 'Egresos', '', '', 'Productos Únicos', ''],
+      ['Movimientos Totales', '', '', 'Ingresos', '', '', 'Egresos', ''],
       { merges: kpiCardMerges }
     );
     
     const kpiValueRowIndex = registerRow(
       [
+        formatNumber(summary.totalRecords),
+        '',
+        '',
         formatNumber(summary.totalIngresosCount),
         '',
         '',
         formatNumber(summary.totalEgresosCount),
-        '',
-        '',
-        formatNumber(summary.uniqueProducts),
         ''
       ],
       { merges: kpiCardMerges }
@@ -237,13 +237,13 @@ export class ExportService {
     
     const kpiSupportRowIndex = registerRow(
       [
+        'Total de registros',
+        '',
+        '',
         `${summary.ingresosPercentage.toFixed(1)}% del total`,
         '',
         '',
         `${summary.egresosPercentage.toFixed(1)}% del total`,
-        '',
-        '',
-        'Variedad de productos',
         ''
       ],
       { merges: kpiCardMerges }
