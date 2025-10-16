@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import DashboardLayout from '@/app/components/DashboardLayout';
+import Toast from '@/app/components/ui/Toast';
+import { useToast } from '@/app/hooks/useToast';
 import { 
   Search, 
   Filter, 
@@ -72,6 +74,7 @@ interface FiltroTipoPersona {
 
 export default function AdminDonaciones() {
   const { supabase } = useSupabase();
+  const { toasts, showSuccess, showError, showWarning, showInfo, hideToast } = useToast();
   const [donaciones, setDonaciones] = useState<Donacion[]>([]);
   const [donacionesFiltradas, setDonacionesFiltradas] = useState<Donacion[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -135,7 +138,7 @@ export default function AdminDonaciones() {
     } catch (error) {
       console.error('Error cargando donaciones:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      alert(`Error: ${errorMessage}`);
+      showError(`Error: ${errorMessage}`);
     } finally {
       setCargando(false);
     }
@@ -254,7 +257,7 @@ export default function AdminDonaciones() {
       // Obtener la donación actual para procesamiento
       const donacionActual = donaciones.find(d => d.id === id);
       if (!donacionActual) {
-        alert('Donación no encontrada');
+        showError('Donación no encontrada');
         return;
       }
 
@@ -269,7 +272,7 @@ export default function AdminDonaciones() {
 
       if (error) {
         console.error('Error actualizando estado:', error);
-        alert(`Error actualizando estado: ${error.message}`);
+        showError(`Error actualizando estado: ${error.message}`);
         return;
       }
 
@@ -287,11 +290,11 @@ export default function AdminDonaciones() {
       await cargarDonaciones();
       
       // Mostrar confirmación al usuario
-      alert(`Donación ${nuevoEstado.toLowerCase()} exitosamente${nuevoEstado === 'Entregada' ? ' y agregada al inventario' : ''}`);
+      showSuccess(`Donación ${nuevoEstado.toLowerCase()} exitosamente${nuevoEstado === 'Entregada' ? ' y agregada al inventario' : ''}`);
       
     } catch (error) {
       console.error('Error inesperado:', error);
-      alert(`Error inesperado: ${error}`);
+      showError(`Error inesperado: ${error}`);
     }
   };
 
@@ -307,7 +310,7 @@ export default function AdminDonaciones() {
       return productoId; // Retornar el ID del producto para registrar movimiento
     } catch (error) {
       console.error('Error integrando con inventario:', error);
-      alert(`Advertencia: Donación marcada como entregada, pero hubo un error al actualizar el inventario: ${error}`);
+      showWarning(`Advertencia: Donación marcada como entregada, pero hubo un error al actualizar el inventario: ${error}`);
       return null;
     }
   };
@@ -609,14 +612,14 @@ export default function AdminDonaciones() {
       if (errorInventario) errores.push('inventario');
       
       if (errores.length > 0) {
-        alert(`⚠️ Tablas faltantes para integración: ${errores.join(', ')}\nLa integración automática no funcionará hasta que se creen estas tablas.`);
+        showWarning(`⚠️ Tablas faltantes para integración: ${errores.join(', ')}\nLa integración automática no funcionará hasta que se creen estas tablas.`);
       } else {
-        alert('✅ Todas las tablas necesarias para la integración existen.');
+        showSuccess('✅ Todas las tablas necesarias para la integración existen.');
       }
       
     } catch (error) {
       console.error('Error verificando esquema:', error);
-      alert(`Error verificando esquema: ${error}`);
+      showError(`Error verificando esquema: ${error}`);
     }
   };
 
@@ -992,6 +995,19 @@ export default function AdminDonaciones() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Toast Notifications Container */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {toasts.map(toast => (
+          <Toast
+            key={toast.id}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => hideToast(toast.id)}
+            duration={5000}
+          />
+        ))}
       </div>
     </DashboardLayout>
   );

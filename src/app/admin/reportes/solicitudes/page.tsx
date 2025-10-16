@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import DashboardLayout from '@/app/components/DashboardLayout';
+import Toast from '@/app/components/ui/Toast';
+import { useToast } from '@/app/hooks/useToast';
 import { 
   CheckCircle, 
   XCircle, 
@@ -70,6 +72,7 @@ interface ResultadoInventario {
 
 export default function SolicitudesPage() {
   const { supabase } = useSupabase();
+  const { toasts, showSuccess, showError, showWarning, showInfo, hideToast } = useToast();
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [solicitudesFiltradas, setSolicitudesFiltradas] = useState<Solicitud[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -161,7 +164,7 @@ export default function SolicitudesPage() {
       // Obtener la solicitud actual para procesamiento
       const solicitudActual = solicitudes.find(s => s.id === solicitudId);
       if (!solicitudActual) {
-        alert('Solicitud no encontrada');
+        showError('Solicitud no encontrada');
         return;
       }
 
@@ -188,28 +191,30 @@ export default function SolicitudesPage() {
         
         if (resultadoInventario.error) {
           mensajeFinal = `⚠️ Solicitud aprobada, pero hubo un error al actualizar el inventario.`;
+          showWarning(mensajeFinal);
         } else if (resultadoInventario.noStock) {
           mensajeFinal = `⚠️ Solicitud aprobada, pero no hay productos en inventario que coincidan con "${solicitudActual.tipo_alimento}".`;
+          showWarning(mensajeFinal);
         } else if (resultadoInventario.cantidadRestante > 0) {
           mensajeFinal = `⚠️ Solicitud aprobada parcialmente. Se descontaron ${solicitudActual.cantidad - resultadoInventario.cantidadRestante} unidades de ${solicitudActual.cantidad} solicitadas. Cantidad no satisfecha: ${resultadoInventario.cantidadRestante}`;
+          showWarning(mensajeFinal);
         } else {
           mensajeFinal = `✅ Solicitud aprobada exitosamente y descontada del inventario completamente.`;
+          showSuccess(mensajeFinal);
         }
       } else {
         mensajeFinal = `Solicitud ${nuevoEstado} exitosamente`;
+        showSuccess(mensajeFinal);
       }
       
       await cargarSolicitudes();
       setMostrarModal(false);
       setSolicitudSeleccionada(null);
       setComentarioAdmin('');
-
-      // Mostrar mensaje consolidado
-      alert(mensajeFinal);
       
     } catch (error) {
       console.error('Error al actualizar estado:', error);
-      alert(`Error al actualizar estado: ${error}`);
+      showError(`Error al actualizar estado: ${error}`);
     }
   };
 
@@ -457,10 +462,10 @@ export default function SolicitudesPage() {
       setSolicitudes(prev => prev.map(s => 
         s.id === solicitudId ? { ...s, estado: 'pendiente' } : s
       ));
-      alert('Solicitud revertida a pendiente exitosamente');
+      showSuccess('Solicitud revertida a pendiente exitosamente');
     } catch (error) {
       console.error('Error al revertir solicitud:', error);
-      alert('Error al revertir la solicitud');
+      showError('Error al revertir la solicitud');
     }
   };
 
@@ -986,6 +991,19 @@ export default function SolicitudesPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Toast Notifications Container */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {toasts.map(toast => (
+          <Toast
+            key={toast.id}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => hideToast(toast.id)}
+            duration={5000}
+          />
+        ))}
       </div>
     </DashboardLayout>
   );
