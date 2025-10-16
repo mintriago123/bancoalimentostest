@@ -1,4 +1,5 @@
 # Verificación de Estructura de Tablas - Inventario
+ola
 
 ## Resumen de cambios realizados
 
