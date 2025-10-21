@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import DashboardLayout from '@/app/components/DashboardLayout';
 import { Eye, Edit, Trash2, Clock, CheckCircle, XCircle, Calendar, Heart, Package, MapPin, Phone, Mail } from 'lucide-react';
+import { useDonaciones, useModal, useDonationStats, useFilter } from '@/app/hooks';
 
 interface Donacion {
   id: number;
@@ -38,183 +39,50 @@ interface Donacion {
 
 export default function MisDonacionesPage() {
   const { supabase, user } = useSupabase();
-  const [donaciones, setDonaciones] = useState<Donacion[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [mensaje, setMensaje] = useState('');
-  const [editando, setEditando] = useState(false);
-  const [donacionAEditar, setDonacionAEditar] = useState<Donacion | null>(null);
-  const [viendoDetalle, setViendoDetalle] = useState(false);
-  const [donacionDetalle, setDonacionDetalle] = useState<Donacion | null>(null);
-  const [filtroEstado, setFiltroEstado] = useState<string>('todos');
+  
+  // Hook para gestión de donaciones
+  const {
+    donaciones,
+    cargando,
+    mensaje,
+    cargarDonaciones,
+    eliminarDonacion: eliminar,
+    actualizarDonacion: actualizar,
+  } = useDonaciones(supabase, user);
 
-  const cargarMisDonaciones = useCallback(async () => {
-    try {
-      setCargando(true);
-      
-      if (!user?.id) {
-        console.log('No hay usuario autenticado');
-        return;
-      }
+  // Hooks para modales
+  const modalEdicion = useModal<Donacion>();
+  const modalDetalle = useModal<Donacion>();
 
-      console.log('Cargando donaciones para usuario:', user.id);
-      
-      const { data, error } = await supabase
-        .from('donaciones')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('creado_en', { ascending: false });
+  // Hook para filtros
+  const { filtro: filtroEstado, setFiltro: setFiltroEstado, datosFiltrados: donacionesFiltradas } = useFilter<Donacion>(
+    donaciones,
+    (donacion, filtro) => donacion.estado === filtro,
+    'todos'
+  );
 
-      if (error) {
-        console.error('Error en query:', error);
-        throw error;
-      }
-      
-      console.log('Donaciones cargadas:', data?.length || 0);
-      setDonaciones(data || []);
-    } catch (error) {
-      console.error('Error al cargar donaciones:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      setMensaje(`Error al cargar las donaciones: ${errorMessage}`);
-      setTimeout(() => setMensaje(''), 3000);
-    } finally {
-      setCargando(false);
-    }
-  }, [supabase, user]);
+  // Hook para estadísticas
+  const estadisticas = useDonationStats(donaciones);
 
+  // Cargar donaciones al montar
   useEffect(() => {
-    if (user) cargarMisDonaciones();
-  }, [cargarMisDonaciones, user]);
+    if (user) cargarDonaciones();
+  }, [user, cargarDonaciones]);
 
-  const eliminarDonacion = async (id: number) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta donación?')) return;
-    
-    console.log('Intentando eliminar donación:', { id, userId: user?.id });
-    
-    try {
-      // Verificar que el usuario esté autenticado
-      if (!user?.id) {
-        setMensaje('Usuario no autenticado.');
-        return;
-      }
-
-      // Primero verificar que la donación pertenece al usuario
-      const { data: donacionExistente, error: errorVerificar } = await supabase
-        .from('donaciones')
-        .select('id, user_id, estado')
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .single();
-
-      if (errorVerificar) {
-        console.error('Error al verificar donación:', errorVerificar);
-        setMensaje('Error al verificar la donación.');
-        return;
-      }
-
-      if (!donacionExistente) {
-        setMensaje('No tienes permiso para eliminar esta donación.');
-        return;
-      }
-
-      if (donacionExistente.estado !== 'Pendiente') {
-        setMensaje('Solo se pueden eliminar donaciones pendientes.');
-        return;
-      }
-
-      // Proceder con la eliminación
-      const { error } = await supabase
-        .from('donaciones')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('Error en delete:', error);
-        throw error;
-      }
-
-      console.log('Donación eliminada exitosamente');
-      await cargarMisDonaciones();
-      setMensaje('Donación eliminada con éxito.');
-      setTimeout(() => setMensaje(''), 2000);
-    } catch (error) {
-      console.error('Error al eliminar donación:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      setMensaje(`Error al eliminar la donación: ${errorMessage}`);
-      setTimeout(() => setMensaje(''), 3000);
-    }
-  };
-
-  const actualizarDonacion = async () => {
-    if (!donacionAEditar) return;
-    
-    console.log('Intentando actualizar donación:', { 
-      id: donacionAEditar.id, 
-      userId: user?.id,
-      estado: donacionAEditar.estado 
-    });
-
-    try {
-      // Verificar que el usuario esté autenticado
-      if (!user?.id) {
-        setMensaje('Usuario no autenticado.');
-        return;
-      }
-
-      // Verificar que la donación pertenece al usuario y está pendiente
-      if (donacionAEditar.estado !== 'Pendiente') {
-        setMensaje('Solo se pueden editar donaciones pendientes.');
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('donaciones')
-        .update({
-          tipo_producto: donacionAEditar.tipo_producto,
-          categoria_comida: donacionAEditar.categoria_comida,
-          cantidad: donacionAEditar.cantidad,
-          fecha_disponible: donacionAEditar.fecha_disponible,
-          direccion_entrega: donacionAEditar.direccion_entrega,
-          horario_preferido: donacionAEditar.horario_preferido,
-          observaciones: donacionAEditar.observaciones,
-          actualizado_en: new Date().toISOString(),
-        })
-        .eq('id', donacionAEditar.id)
-        .eq('user_id', user.id)
-        .select();
-
-      if (error) {
-        console.error('Error en update:', error);
-        throw error;
-      }
-      
-      if (data && data.length > 0) {
-        console.log('Donación actualizada exitosamente:', data[0]);
-        setDonaciones(donaciones.map(d => d.id === donacionAEditar.id ? data[0] : d));
-        setMensaje('Donación actualizada con éxito.');
-        setEditando(false);
-      } else {
-        console.log('No se retornaron datos después de la actualización');
-        // Recargar todas las donaciones para asegurar consistencia
-        await cargarMisDonaciones();
-        setMensaje('Donación actualizada.');
-        setEditando(false);
-      }
-      
-      setTimeout(() => setMensaje(''), 3000);
-    } catch (error) {
-      console.error('Error al actualizar la donación:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      setMensaje(`Error al actualizar la donación: ${errorMessage}`);
-      setTimeout(() => setMensaje(''), 3000);
+  // Handlers
+  const handleActualizarDonacion = async () => {
+    if (!modalEdicion.data) return;
+    const exito = await actualizar(modalEdicion.data);
+    if (exito) {
+      modalEdicion.close();
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    if (donacionAEditar) {
-      setDonacionAEditar({ 
-        ...donacionAEditar, 
+    if (modalEdicion.data) {
+      modalEdicion.setData({ 
+        ...modalEdicion.data, 
         [name]: name === 'cantidad' ? parseFloat(value) || 0 : value 
       });
     }
@@ -255,19 +123,6 @@ export default function MisDonacionesPage() {
     new Date(fecha).toLocaleDateString('es-ES', {
       year: 'numeric', month: 'short', day: 'numeric',
     });
-
-  const donacionesFiltradas = donaciones.filter(donacion => 
-    filtroEstado === 'todos' || donacion.estado === filtroEstado
-  );
-
-  const estadisticas = {
-    total: donaciones.length,
-    pendientes: donaciones.filter(d => d.estado === 'Pendiente').length,
-    recogidas: donaciones.filter(d => d.estado === 'Recogida').length,
-    entregadas: donaciones.filter(d => d.estado === 'Entregada').length,
-    canceladas: donaciones.filter(d => d.estado === 'Cancelada').length,
-    impactoTotal: donaciones.reduce((acc, d) => acc + (d.impacto_estimado_personas || 0), 0)
-  };
 
   return (
     <DashboardLayout>
@@ -361,7 +216,7 @@ export default function MisDonacionesPage() {
         </div>
 
         {/* Modal de Edición */}
-        {editando && donacionAEditar && (
+        {modalEdicion.isOpen && modalEdicion.data && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <h3 className="text-xl font-bold mb-4">Editar Donación</h3>
@@ -371,7 +226,7 @@ export default function MisDonacionesPage() {
                   <input
                     type="text"
                     name="tipo_producto"
-                    value={donacionAEditar.tipo_producto}
+                    value={modalEdicion.data.tipo_producto}
                     onChange={handleChange}
                     className="border border-gray-300 rounded-md p-2 w-full"
                   />
@@ -380,7 +235,7 @@ export default function MisDonacionesPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
                   <select
                     name="categoria_comida"
-                    value={donacionAEditar.categoria_comida}
+                    value={modalEdicion.data.categoria_comida}
                     onChange={handleChange}
                     className="border border-gray-300 rounded-md p-2 w-full"
                   >
@@ -399,7 +254,7 @@ export default function MisDonacionesPage() {
                   <input
                     type="number"
                     name="cantidad"
-                    value={donacionAEditar.cantidad}
+                    value={modalEdicion.data.cantidad}
                     onChange={handleChange}
                     min="0"
                     step="0.1"
@@ -411,7 +266,7 @@ export default function MisDonacionesPage() {
                   <input
                     type="date"
                     name="fecha_disponible"
-                    value={donacionAEditar.fecha_disponible}
+                    value={modalEdicion.data.fecha_disponible}
                     onChange={handleChange}
                     className="border border-gray-300 rounded-md p-2 w-full"
                   />
@@ -421,7 +276,7 @@ export default function MisDonacionesPage() {
                   <input
                     type="text"
                     name="direccion_entrega"
-                    value={donacionAEditar.direccion_entrega}
+                    value={modalEdicion.data.direccion_entrega}
                     onChange={handleChange}
                     className="border border-gray-300 rounded-md p-2 w-full"
                   />
@@ -431,7 +286,7 @@ export default function MisDonacionesPage() {
                   <input
                     type="text"
                     name="horario_preferido"
-                    value={donacionAEditar.horario_preferido || ''}
+                    value={modalEdicion.data.horario_preferido || ''}
                     onChange={handleChange}
                     placeholder="Ej: 9:00 AM - 5:00 PM"
                     className="border border-gray-300 rounded-md p-2 w-full"
@@ -441,7 +296,7 @@ export default function MisDonacionesPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
                   <textarea
                     name="observaciones"
-                    value={donacionAEditar.observaciones || ''}
+                    value={modalEdicion.data.observaciones || ''}
                     onChange={handleChange}
                     rows={3}
                     className="border border-gray-300 rounded-md p-2 w-full"
@@ -450,13 +305,13 @@ export default function MisDonacionesPage() {
               </div>
               <div className="flex gap-2 mt-6">
                 <button
-                  onClick={actualizarDonacion}
+                  onClick={handleActualizarDonacion}
                   className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex-1"
                 >
                   Guardar Cambios
                 </button>
                 <button
-                  onClick={() => setEditando(false)}
+                  onClick={modalEdicion.close}
                   className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 flex-1"
                 >
                   Cancelar
@@ -467,7 +322,7 @@ export default function MisDonacionesPage() {
         )}
 
         {/* Modal de Detalle */}
-        {viendoDetalle && donacionDetalle && (
+        {modalDetalle.isOpen && modalDetalle.data && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <h3 className="text-xl font-bold mb-4">Detalles de la Donación</h3>
@@ -476,11 +331,11 @@ export default function MisDonacionesPage() {
                   <div>
                     <h4 className="font-semibold text-gray-700 mb-2">Información del Producto</h4>
                     <div className="bg-gray-50 p-3 rounded-md space-y-2">
-                      <p><span className="font-medium">Tipo:</span> {donacionDetalle.tipo_producto}</p>
-                      <p><span className="font-medium">Categoría:</span> {donacionDetalle.categoria_comida}</p>
-                      <p><span className="font-medium">Cantidad:</span> {donacionDetalle.cantidad} {donacionDetalle.unidad_simbolo}</p>
-                      {donacionDetalle.fecha_vencimiento && (
-                        <p><span className="font-medium">Vencimiento:</span> {formatearFechaSolo(donacionDetalle.fecha_vencimiento)}</p>
+                      <p><span className="font-medium">Tipo:</span> {modalDetalle.data.tipo_producto}</p>
+                      <p><span className="font-medium">Categoría:</span> {modalDetalle.data.categoria_comida}</p>
+                      <p><span className="font-medium">Cantidad:</span> {modalDetalle.data.cantidad} {modalDetalle.data.unidad_simbolo}</p>
+                      {modalDetalle.data.fecha_vencimiento && (
+                        <p><span className="font-medium">Vencimiento:</span> {formatearFechaSolo(modalDetalle.data.fecha_vencimiento)}</p>
                       )}
                     </div>
                   </div>
@@ -488,10 +343,10 @@ export default function MisDonacionesPage() {
                   <div>
                     <h4 className="font-semibold text-gray-700 mb-2">Información de Entrega</h4>
                     <div className="bg-gray-50 p-3 rounded-md space-y-2">
-                      <p><span className="font-medium">Fecha disponible:</span> {formatearFechaSolo(donacionDetalle.fecha_disponible)}</p>
-                      <p><span className="font-medium">Dirección:</span> {donacionDetalle.direccion_entrega}</p>
-                      {donacionDetalle.horario_preferido && (
-                        <p><span className="font-medium">Horario:</span> {donacionDetalle.horario_preferido}</p>
+                      <p><span className="font-medium">Fecha disponible:</span> {formatearFechaSolo(modalDetalle.data.fecha_disponible)}</p>
+                      <p><span className="font-medium">Dirección:</span> {modalDetalle.data.direccion_entrega}</p>
+                      {modalDetalle.data.horario_preferido && (
+                        <p><span className="font-medium">Horario:</span> {modalDetalle.data.horario_preferido}</p>
                       )}
                     </div>
                   </div>
@@ -502,14 +357,14 @@ export default function MisDonacionesPage() {
                     <h4 className="font-semibold text-gray-700 mb-2">Estado e Impacto</h4>
                     <div className="bg-gray-50 p-3 rounded-md space-y-2">
                       <div className="flex items-center space-x-2">
-                        {getEstadoIcon(donacionDetalle.estado)}
-                        <span className={getEstadoBadge(donacionDetalle.estado)}>{donacionDetalle.estado}</span>
+                        {getEstadoIcon(modalDetalle.data.estado)}
+                        <span className={getEstadoBadge(modalDetalle.data.estado)}>{modalDetalle.data.estado}</span>
                       </div>
-                      {donacionDetalle.impacto_estimado_personas && (
-                        <p><span className="font-medium">Impacto estimado:</span> {donacionDetalle.impacto_estimado_personas} personas</p>
+                      {modalDetalle.data.impacto_estimado_personas && (
+                        <p><span className="font-medium">Impacto estimado:</span> {modalDetalle.data.impacto_estimado_personas} personas</p>
                       )}
-                      {donacionDetalle.impacto_equivalente && (
-                        <p><span className="font-medium">Equivalente:</span> {donacionDetalle.impacto_equivalente}</p>
+                      {modalDetalle.data.impacto_equivalente && (
+                        <p><span className="font-medium">Equivalente:</span> {modalDetalle.data.impacto_equivalente}</p>
                       )}
                     </div>
                   </div>
@@ -519,21 +374,21 @@ export default function MisDonacionesPage() {
                     <div className="bg-gray-50 p-3 rounded-md space-y-2">
                       <div className="flex items-center space-x-2">
                         <Phone className="w-4 h-4 text-gray-500" />
-                        <span>{donacionDetalle.telefono}</span>
+                        <span>{modalDetalle.data.telefono}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Mail className="w-4 h-4 text-gray-500" />
-                        <span>{donacionDetalle.email}</span>
+                        <span>{modalDetalle.data.email}</span>
                       </div>
                     </div>
                   </div>
                 </div>
                 
-                {donacionDetalle.observaciones && (
+                {modalDetalle.data.observaciones && (
                   <div className="md:col-span-2">
                     <h4 className="font-semibold text-gray-700 mb-2">Observaciones</h4>
                     <div className="bg-gray-50 p-3 rounded-md">
-                      <p>{donacionDetalle.observaciones}</p>
+                      <p>{modalDetalle.data.observaciones}</p>
                     </div>
                   </div>
                 )}
@@ -541,7 +396,7 @@ export default function MisDonacionesPage() {
               
               <div className="flex justify-end mt-6">
                 <button
-                  onClick={() => setViendoDetalle(false)}
+                  onClick={modalDetalle.close}
                   className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
                 >
                   Cerrar
@@ -620,7 +475,7 @@ export default function MisDonacionesPage() {
                       <td className="px-6 py-4">
                         <div className="flex space-x-2">
                           <button
-                            onClick={() => { setDonacionDetalle(donacion); setViendoDetalle(true); }}
+                            onClick={() => modalDetalle.open(donacion)}
                             className="text-blue-600 hover:text-blue-800"
                             title="Ver detalles"
                           >
@@ -629,14 +484,14 @@ export default function MisDonacionesPage() {
                           {donacion.estado === 'Pendiente' && (
                             <>
                               <button
-                                onClick={() => { setDonacionAEditar(donacion); setEditando(true); }}
+                                onClick={() => modalEdicion.open(donacion)}
                                 className="text-green-600 hover:text-green-800"
                                 title="Editar"
                               >
                                 <Edit className="w-5 h-5" />
                               </button>
                               <button
-                                onClick={() => eliminarDonacion(donacion.id)}
+                                onClick={() => eliminar(donacion.id)}
                                 className="text-red-600 hover:text-red-800"
                                 title="Eliminar"
                               >

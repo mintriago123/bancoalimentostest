@@ -1,31 +1,13 @@
 'use client';
 
 import { useSupabase } from '@/app/components/SupabaseProvider';
-import { useEffect, useState } from 'react';
 import DashboardLayout from '@/app/components/DashboardLayout';
 import Link from 'next/link';
+import { useUserProfile } from '@/app/hooks';
 
 export default function UsuarioDashboardPage() {
-  const { user, supabase } = useSupabase();
-  const [nombre, setNombre] = useState('');
-// hola
-  useEffect(() => {
-    const obtenerNombre = async () => {
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('nombre')
-        .eq('id', user.id)
-        .single();
-
-      if (!error && data) {
-        setNombre(data.nombre);
-      }
-    };
-
-    obtenerNombre();
-  }, [user, supabase]);
+  const { supabase, user, isLoading: authLoading } = useSupabase();
+  const { userProfile, loadingUser } = useUserProfile(supabase, user, authLoading);
 
   return (
     <DashboardLayout
@@ -35,12 +17,21 @@ export default function UsuarioDashboardPage() {
     >
       <div className="space-y-6">
         <div className="bg-white p-6 rounded-2xl shadow">
-          <h2 className="text-xl font-semibold text-gray-800">
-            ¡Bienvenido, {nombre || 'Usuario'}!
-          </h2>
-          <p className="text-gray-600 mt-2">
-            Este es tu panel donde puedes gestionar tu perfil, reservas y más.
-          </p>
+          {loadingUser ? (
+            <div className="animate-pulse">
+              <div className="h-6 bg-gray-200 rounded w-1/3 mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+            </div>
+          ) : (
+            <>
+              <h2 className="text-xl font-semibold text-gray-800">
+                ¡Bienvenido, {userProfile?.nombre || 'Usuario'}!
+              </h2>
+              <p className="text-gray-600 mt-2">
+                Este es tu panel donde puedes gestionar tu perfil, reservas y más.
+              </p>
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
