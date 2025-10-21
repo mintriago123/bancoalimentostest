@@ -75,7 +75,6 @@ export default function NuevaDonacionPage() {
     // Paso 1: Información del producto
     tipo_producto: '',
     producto_personalizado_nombre: '',
-    producto_personalizado_categoria: '',
     cantidad: '',
     unidad_id: '',
     fecha_vencimiento: '',
@@ -107,7 +106,6 @@ export default function NuevaDonacionPage() {
   const filtrarAlimentos = useCallback((termino: string, categoria: string = '') => {
     let filtrados = alimentos;
 
-    // Filtrar por término de búsqueda
     if (termino.trim()) {
       const terminoLower = termino.toLowerCase();
       filtrados = filtrados.filter(alimento =>
@@ -116,7 +114,6 @@ export default function NuevaDonacionPage() {
       );
     }
 
-    // Filtrar por categoría si se especificó
     if (categoria) {
       filtrados = filtrados.filter(alimento => alimento.categoria.toLowerCase() === categoria.toLowerCase());
     }
@@ -128,7 +125,6 @@ export default function NuevaDonacionPage() {
   useEffect(() => {
     filtrarAlimentos(busquedaAlimento, filtroCategoria);
 
-    // Actualizar el alimento seleccionado si hay un producto en el formulario
     if (formulario.tipo_producto && formulario.tipo_producto !== 'personalizado') {
       const alimento = alimentos.find(a => a.id.toString() === formulario.tipo_producto);
       if (alimento && !alimentoSeleccionado) {
@@ -145,7 +141,6 @@ export default function NuevaDonacionPage() {
     const valor = e.target.value;
     setBusquedaAlimento(valor);
     
-    // Si hay un alimento seleccionado y el valor es diferente, limpiar la selección
     if (alimentoSeleccionado && valor !== `${alimentoSeleccionado.nombre} (${alimentoSeleccionado.categoria})`) {
       setAlimentoSeleccionado(null);
       setFormulario(prev => ({ ...prev, tipo_producto: '' }));
@@ -156,7 +151,6 @@ export default function NuevaDonacionPage() {
     setMostrarDropdown(true);
   };
 
-  // Manejar focus del input para mostrar el dropdown
   const manejarFocusInput = () => {
     if (!alimentoSeleccionado) {
       setMostrarDropdown(true);
@@ -173,7 +167,6 @@ export default function NuevaDonacionPage() {
     setMensaje(null);
   };
 
-  // Manejar selección de producto personalizado
   const manejarSeleccionPersonalizado = () => {
     setFormulario(prev => ({ ...prev, tipo_producto: 'personalizado' }));
     setAlimentoSeleccionado(null);
@@ -183,13 +176,12 @@ export default function NuevaDonacionPage() {
     setMensaje(null);
   };
 
-  // Limpiar selección de producto
   const limpiarSeleccion = () => {
     setAlimentoSeleccionado(null);
     setBusquedaAlimento('');
     setFormulario(prev => ({ ...prev, tipo_producto: '' }));
     setMostrarFormularioNuevoProducto(false);
-    setMostrarDropdown(true); // Mostrar dropdown después de limpiar
+    setMostrarDropdown(true);
   };
   
   // Manejar cambio de categoría
@@ -197,19 +189,17 @@ export default function NuevaDonacionPage() {
     const categoria = e.target.value;
     setFiltroCategoria(categoria);
 
-    // Limpiar la selección actual si existe
     if (alimentoSeleccionado) {
       setAlimentoSeleccionado(null);
       setBusquedaAlimento('');
       setFormulario(prev => ({ ...prev, tipo_producto: '' }));
     }
 
-    // Filtrar y ocultar dropdown para que el usuario vuelva a activar/search
     filtrarAlimentos('', categoria);
     setMostrarDropdown(false);
   };
+  
   const manejarBlurContainer = (e: React.FocusEvent) => {
-    // Solo ocultar si el focus sale completamente del container
     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       setTimeout(() => {
         setMostrarDropdown(false);
@@ -295,7 +285,7 @@ export default function NuevaDonacionPage() {
     if (formulario.tipo_producto === 'personalizado') {
       return {
         nombre: formulario.producto_personalizado_nombre,
-        categoria: formulario.producto_personalizado_categoria
+        categoria: nuevoProducto.categoria
       };
     }
 
@@ -315,61 +305,47 @@ export default function NuevaDonacionPage() {
     const unidadSeleccionada = getUnidadSeleccionada();
     let personasAlimentadas = 0;
     let comidaEquivalente = '';
-    let factorMultiplicador = 1;
 
     if (unidadSeleccionada) {
       const simbolo = unidadSeleccionada.simbolo.toLowerCase();
 
       if (simbolo.includes('kg')) {
-        factorMultiplicador = 2;
-        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
+        personasAlimentadas = Math.floor(cantidad * 2);
         comidaEquivalente = `${Math.round(cantidad * 3)} porciones aproximadamente`;
       } else if (simbolo.includes('l') || simbolo.includes('lt')) {
-        factorMultiplicador = 1.5;
-        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
+        personasAlimentadas = Math.floor(cantidad * 1.5);
         comidaEquivalente = `${cantidad} litros de bebida`;
       } else if (simbolo.includes('caja')) {
-        factorMultiplicador = 4;
-        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
+        personasAlimentadas = Math.floor(cantidad * 4);
         comidaEquivalente = `${cantidad} cajas de alimentos`;
       } else if (simbolo.includes('und') || simbolo.includes('pza') || simbolo.includes('unidad')) {
-        factorMultiplicador = 0.5;
-        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
+        personasAlimentadas = Math.floor(cantidad * 0.5);
         comidaEquivalente = `${cantidad} unidades`;
       } else if (simbolo.includes('g') && !simbolo.includes('kg')) {
-        // Para gramos
         const cantidadEnKg = cantidad / 1000;
-        factorMultiplicador = 2;
-        personasAlimentadas = Math.floor(cantidadEnKg * factorMultiplicador);
+        personasAlimentadas = Math.floor(cantidadEnKg * 2);
         comidaEquivalente = `${Math.round(cantidadEnKg * 3)} porciones aproximadamente`;
       } else if (simbolo.includes('ml') && !simbolo.includes('l')) {
-        // Para mililitros
         const cantidadEnL = cantidad / 1000;
-        factorMultiplicador = 1.5;
-        personasAlimentadas = Math.floor(cantidadEnL * factorMultiplicador);
+        personasAlimentadas = Math.floor(cantidadEnL * 1.5);
         comidaEquivalente = `${cantidadEnL.toFixed(1)} litros de bebida`;
       } else {
-        // Para otras unidades no específicas
-        factorMultiplicador = 1;
-        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
+        personasAlimentadas = Math.floor(cantidad);
         comidaEquivalente = `${cantidad} ${unidadSeleccionada.nombre}`;
       }
 
-      // Asegurar que siempre haya al menos una persona si hay cantidad
       if (cantidad > 0 && personasAlimentadas === 0) {
         personasAlimentadas = 1;
       }
     }
 
-    return { personasAlimentadas, comidaEquivalente, factorMultiplicador };
+    return { personasAlimentadas, comidaEquivalente };
   };
 
   const manejarCambio = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormulario((prev) => ({ ...prev, [name]: value }));
     setMensaje(null);
-
-    // No necesitamos manejar tipo_producto aquí porque se maneja en las funciones específicas
   };
 
   const manejarCambioNuevoProducto = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -378,8 +354,6 @@ export default function NuevaDonacionPage() {
 
     if (name === 'nombre') {
       setFormulario(prev => ({ ...prev, producto_personalizado_nombre: value }));
-    } else if (name === 'categoria') {
-      setFormulario(prev => ({ ...prev, producto_personalizado_categoria: value }));
     }
   };
 
@@ -391,7 +365,7 @@ export default function NuevaDonacionPage() {
           return false;
         }
         if (formulario.tipo_producto === 'personalizado') {
-          if (!formulario.producto_personalizado_nombre.trim() || !formulario.producto_personalizado_categoria.trim()) {
+          if (!formulario.producto_personalizado_nombre.trim() || !nuevoProducto.categoria.trim()) {
             setMensaje('Por favor, completa la información del producto personalizado.');
             return false;
           }
@@ -481,7 +455,7 @@ export default function NuevaDonacionPage() {
         Object.assign(datosInsercion, {
           alimento_id: null,
           tipo_producto: formulario.producto_personalizado_nombre,
-          categoria_comida: formulario.producto_personalizado_categoria,
+          categoria_comida: nuevoProducto.categoria,
           es_producto_personalizado: true
         });
       }
@@ -498,7 +472,6 @@ export default function NuevaDonacionPage() {
       setFormulario({
         tipo_producto: '',
         producto_personalizado_nombre: '',
-        producto_personalizado_categoria: '',
         cantidad: '',
         unidad_id: '',
         fecha_vencimiento: '',
@@ -507,6 +480,7 @@ export default function NuevaDonacionPage() {
         horario_preferido: '',
         observaciones: '',
       });
+      setNuevoProducto({ nombre: '', categoria: '' });
       setMostrarFormularioNuevoProducto(false);
       setAlimentoSeleccionado(null);
       setBusquedaAlimento('');
@@ -521,17 +495,6 @@ export default function NuevaDonacionPage() {
 
   // Obtener categorías únicas para productos personalizados
   const categoriasUnicas = [...new Set(alimentos.map(a => a.categoria))].sort();
-
-  // Mostrar loader mientras se autentica
-  if (authLoading) {
-    return (
-      <DashboardLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   const renderPaso = () => {
     switch (pasoActual) {
@@ -572,11 +535,9 @@ export default function NuevaDonacionPage() {
                       onChange={manejarBusquedaAlimento}
                       onFocus={manejarFocusInput}
                     />
-                    {/* Icono carrito a la izquierda */}
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none">
                       <ShoppingBasket className="h-5 w-5" />
                     </span>
-                    {/* Icono limpiar y buscar a la derecha */}
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center">
                       {alimentoSeleccionado && (
                         <button
@@ -645,7 +606,6 @@ export default function NuevaDonacionPage() {
                     </div>
                   )}
 
-                  {/* Mostrar contador de resultados si hay búsqueda activa */}
                   {busquedaAlimento && !cargandoAlimentos && !alimentoSeleccionado && (
                     <p className="text-sm text-gray-500 mt-1">
                       {alimentosFiltrados.length} producto{alimentosFiltrados.length !== 1 ? 's' : ''} encontrado{alimentosFiltrados.length !== 1 ? 's' : ''}
@@ -741,7 +701,6 @@ export default function NuevaDonacionPage() {
                 />
               </div>
 
-              {/* Tabla de equivalencias - siempre visible como referencia */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="font-medium text-blue-800 mb-3 flex items-center">
                   <Info className="w-5 h-5 mr-2" />
@@ -779,7 +738,6 @@ export default function NuevaDonacionPage() {
                 </div>
               </div>
 
-              {/* Mostrar cálculo de impacto personalizado si hay datos */}
               {formulario.cantidad && formulario.unidad_id && (
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
                   <h4 className="font-medium text-purple-800 mb-3 flex items-center">
@@ -929,7 +887,13 @@ export default function NuevaDonacionPage() {
       <div className="flex flex-col min-h-screen bg-gray-50">
         <main className="flex-grow flex items-center justify-center p-4">
           <div className="bg-white shadow-xl rounded-2xl p-8 max-w-2xl w-full">
-            {/* Título y navegación de pasos en la misma línea */}
+            {mensaje && (
+              <div className={`p-4 mb-6 rounded-lg text-white ${
+                mensaje.includes('exitosa') ? 'bg-green-500' : 'bg-red-500'
+              }`}>
+                {mensaje}
+              </div>
+            )}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
               <h1 className="text-xl sm:text-2xl font-extrabold text-blue-700">Nueva Donación</h1>
               <nav className="flex justify-center sm:justify-end space-x-2 sm:space-x-4">
