@@ -4,110 +4,65 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSupabase } from "@/app/components/SupabaseProvider";
 import {
-  validarCedulaEcuatoriana,
-  validarRucEcuatoriano,
-} from "@/lib/validaciones";
-
-// Extrae expedición y expiración para natural
-function extraerDatosDemograficos(apiResponse: any) {
-  const entidad = apiResponse?.paquete?.entidades?.entidad?.[0];
-  const fila = entidad?.filas?.fila?.[0];
-  const columnas = fila?.columnas?.columna;
-  const getCampo = (campo: string) =>
-    columnas?.find((col: any) => col.campo === campo)?.valor || "";
-  return {
-    nombre: getCampo("nombre"),
-    cedula: getCampo("cedula"),
-    estadoCivil: getCampo("estadoCivil"),
-    profesion: getCampo("profesion"),
-    fechaNacimiento: getCampo("fechaNacimiento"),
-    lugarNacimiento: getCampo("lugarNacimiento"),
-    fechaExpedicion:
-      getCampo("fechaExpedicion") || getCampo("fecha_expedicion"),
-    fechaExpiracion:
-      getCampo("fechaExpiracion") || getCampo("fecha_expiracion"),
-  };
-}
-
-// Extrae expedición y expiración para jurídica
-function extraerDatosRuc(respuesta: any) {
-  const s5383 = respuesta?.["Servicio 5383"];
-  const s5387 = respuesta?.["Servicio 5387"];
-  const datosRepre = s5387?.["Datos Representante Legal"];
-  return {
-    razonSocial: s5383?.["Razon Social"] || "",
-    direccion: s5383?.["Descripcion Ubicacion Geo"] || "",
-    representante: s5387?.["Nombre Repre Legal"] || "",
-    cedulaRepresentante: datosRepre?.["Cedula"] || "",
-    fechaExpedicionRepresentante: datosRepre?.["Fecha Expedicion"] || "",
-    fechaExpiracionRepresentante: datosRepre?.["Fecha Expiracion"] || "",
-  };
-}
+  useIdentityValidation,
+  useProfileForm,
+  useDateFormatter,
+  useProfileUpdate,
+} from "@/app/hooks";
 
 export default function CompletarPerfil() {
   const router = useRouter();
   const { supabase } = useSupabase();
 
-  const [form, setForm] = useState({
-    tipo_persona: "Natural",
-    cedula: "",
-    ruc: "",
-    nombre: "",
-    direccion: "",
-    telefono: "",
-    fechaEmisionIngresada: "",
-    fechaExpRepreIngresada: "",
-    representante: "",
-  });
+  // Custom hooks
+  const {
+    consultando,
+    validacionDocumento,
+    fechasValidasNatural,
+    fechasValidasJuridica,
+    consultarCedula,
+    consultarRuc,
+    resetValidation,
+  } = useIdentityValidation();
 
-  // Arrays de fechas válidas para natural y jurídica
-  const [fechasValidasNatural, setFechasValidasNatural] = useState<string[]>(
-    []
-  );
-  const [fechasValidasJuridica, setFechasValidasJuridica] = useState<string[]>(
-    []
-  );
+  const {
+    form,
+    nombreBloqueado,
+    handleChange,
+    updateField,
+    updateMultipleFields,
+    resetForm,
+    lockName,
+    validateTelefono,
+  } = useProfileForm();
 
-  const [consultando, setConsultando] = useState(false);
-  const [nombreBloqueado, setNombreBloqueado] = useState(false);
+  const {
+    error,
+    success: exito,
+    setError,
+    checkDuplicateIdentification,
+    saveProfile,
+  } = useProfileUpdate(supabase);
+
   const [identificacionValidada, setIdentificacionValidada] = useState(false);
-  const [validacionDocumento, setValidacionDocumento] = useState<{
-    esValido: boolean;
-    mensaje: string | null;
-  }>({ esValido: false, mensaje: null });
-  const [error, setError] = useState<string | null>(null);
-  const [exito, setExito] = useState<string | null>(null);
 
   // Limpia el formulario al cambiar tipo_persona
   const limpiarFormulario = (tipo: "Natural" | "Juridica") => {
-    setForm({
-      tipo_persona: tipo,
-      cedula: "",
-      ruc: "",
-      nombre: "",
-      direccion: "",
-      telefono: "",
-      fechaEmisionIngresada: "",
-      fechaExpRepreIngresada: "",
-      representante: "",
-    });
-    setFechasValidasNatural([]);
-    setFechasValidasJuridica([]);
-    setNombreBloqueado(false);
-    setValidacionDocumento({ esValido: false, mensaje: null });
+    resetForm(tipo);
+    resetValidation();
+    setIdentificacionValidada(false);
     setError(null);
-    setExito(null);
   };
 
   // Formateo automático y validación de fecha tipo DD/MM/AAAA
   const manejarCambioFecha = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, ""); // Solo números
-    if (value.length > 8) value = value.slice(0, 8);
+    const { name, value } = e.target;
+    let cleanValue = value.replace(/\D/g, "");
+    if (cleanValue.length > 8) cleanValue = cleanValue.slice(0, 8);
 
-    // Validar días y meses en el input
-    let dia = value.slice(0, 2);
-    let mes = value.slice(2, 4);
-    let anio = value.slice(4, 8);
+    let dia = cleanValue.slice(0, 2);
+    let mes = cleanValue.slice(2, 4);
+    let anio = cleanValue.slice(4, 8);
 
     if (dia) {
       let nDia = parseInt(dia, 10);
@@ -124,26 +79,7 @@ export default function CompletarPerfil() {
     if (mes) nuevaFecha += "/" + mes;
     if (anio) nuevaFecha += "/" + anio;
 
-    setForm((prev) => ({
-      ...prev,
-      [e.target.name]: nuevaFecha,
-    }));
-    setError(null);
-  };
-
-  // Validación de número de teléfono: debe ser de 10 dígitos numéricos
-  const validarTelefono = (telefono: string) => {
-    const soloNumeros = telefono.replace(/\D/g, "");
-    return soloNumeros.length === 10 && /^[0-9]+$/.test(soloNumeros);
-  };
-
-  const manejarCambio = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
-  ) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    updateField(name as any, nuevaFecha);
     setError(null);
   };
 
@@ -157,128 +93,43 @@ export default function CompletarPerfil() {
       return;
     }
 
-    let esValido = false;
-    if (form.tipo_persona === "Natural") {
-      esValido = validarCedulaEcuatoriana(numero);
-    } else {
-      esValido = validarRucEcuatoriano(numero);
-    }
-    if (!esValido) {
-      setValidacionDocumento({
-        esValido: false,
-        mensaje:
-          form.tipo_persona === "Natural"
-            ? "La cédula ingresada no es válida."
-            : "El RUC ingresado no es válido.",
-      });
-      setIdentificacionValidada(false);
-      setNombreBloqueado(false);
-      return;
-    }
-
-    setConsultando(true);
     setError(null);
 
-    try {
-      if (form.tipo_persona === "Natural") {
-        const url = `${process.env.NEXT_PUBLIC_SERVICIO_CONSULTAS_DINARAP}?identificacion=${numero}`;
-        const respuesta = await fetch(url, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
+    if (form.tipo_persona === "Natural") {
+      const resultado = await consultarCedula(numero);
+      if (resultado) {
+        updateMultipleFields({
+          nombre: resultado.nombre || '',
+          cedula: resultado.cedula || numero,
         });
-        const datos = await respuesta.json();
-        const datosDemograficos = extraerDatosDemograficos(datos);
-        // Guardar fechas válidas (expedición o expiración si existen)
-        setFechasValidasNatural(
-          [
-            datosDemograficos.fechaExpedicion,
-            datosDemograficos.fechaExpiracion,
-          ].filter(Boolean)
-        );
-
-        if (respuesta.ok && datosDemograficos && datosDemograficos.nombre) {
-          setForm((prev) => ({
-            ...prev,
-            nombre: datosDemograficos.nombre,
-            cedula: datosDemograficos.cedula || prev.cedula,
-            ruc: prev.ruc,
-          }));
-          setNombreBloqueado(true);
-          setIdentificacionValidada(false);
-          setValidacionDocumento({
-            esValido: false,
-            mensaje:
-              "Por favor, ingresa la fecha de emisión o expiración de tu cédula para continuar.",
-          });
-          setExito(null);
-        } else {
-          setNombreBloqueado(false);
-          setIdentificacionValidada(false);
-          setValidacionDocumento({
-            esValido: false,
-            mensaje: "Puedes ingresar los datos manualmente.",
-          });
-          setFechasValidasNatural([]);
-        }
+        lockName(true);
+        setIdentificacionValidada(false);
       } else {
-        const url = `${process.env.NEXT_PUBLIC_SERVICIO_CONSULTAS_RUC}?ruc=${numero}`;
-        const respuesta = await fetch(url, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-        const datos = await respuesta.json();
-        const datosRuc = extraerDatosRuc(datos);
-        setFechasValidasJuridica(
-          [
-            datosRuc.fechaExpedicionRepresentante,
-            datosRuc.fechaExpiracionRepresentante,
-          ].filter(Boolean)
-        );
-
-        if (respuesta.ok && datosRuc.razonSocial) {
-          setForm((prev) => ({
-            ...prev,
-            nombre: datosRuc.razonSocial,
-            direccion: datosRuc.direccion,
-            representante: datosRuc.representante,
-          }));
-          setNombreBloqueado(true);
-          setIdentificacionValidada(false);
-          setValidacionDocumento({
-            esValido: false,
-            mensaje:
-              "Por favor, ingresa la fecha de emisión o expiración de la cédula del representante legal para continuar.",
-          });
-          setExito(null);
-        } else {
-          setNombreBloqueado(false);
-          setIdentificacionValidada(false);
-          setValidacionDocumento({
-            esValido: false,
-            mensaje: "Puedes ingresar los datos manualmente.",
-          });
-          setFechasValidasJuridica([]);
-        }
+        lockName(false);
+        setIdentificacionValidada(false);
       }
-    } catch {
-      setNombreBloqueado(false);
-      setIdentificacionValidada(false);
-      setError("No se pudo consultar la identificación.");
-      setFechasValidasNatural([]);
-      setFechasValidasJuridica([]);
-    } finally {
-      setConsultando(false);
+    } else {
+      const resultado = await consultarRuc(numero);
+      if (resultado) {
+        updateMultipleFields({
+          nombre: resultado.nombre || '',
+          direccion: resultado.direccion || '',
+          representante: resultado.representante || '',
+        });
+        lockName(true);
+        setIdentificacionValidada(false);
+      } else {
+        lockName(false);
+        setIdentificacionValidada(false);
+      }
     }
   };
-
-  // Normaliza fecha
-  const normalizar = (fecha: string) =>
-    fecha.replace(/[-/]/g, "").trim().toLowerCase();
 
   // Valida para natural: coincide con alguna de las fechas válidas
   const validarFechaNatural = () => {
     if (!fechasValidasNatural.length || !form.fechaEmisionIngresada)
       return false;
+    const normalizar = (fecha: string) => fecha.replace(/[-/]/g, "").trim().toLowerCase();
     return fechasValidasNatural.some(
       (f) => normalizar(form.fechaEmisionIngresada) === normalizar(f)
     );
@@ -288,6 +139,7 @@ export default function CompletarPerfil() {
   const validarFechaJuridica = () => {
     if (!fechasValidasJuridica.length || !form.fechaExpRepreIngresada)
       return false;
+    const normalizar = (fecha: string) => fecha.replace(/[-/]/g, "").trim().toLowerCase();
     return fechasValidasJuridica.some(
       (f) => normalizar(form.fechaExpRepreIngresada) === normalizar(f)
     );
@@ -296,7 +148,6 @@ export default function CompletarPerfil() {
   const manejarEnvio = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setExito(null);
 
     if (form.tipo_persona === "Natural" && !form.cedula) {
       setError("La cédula es obligatoria.");
@@ -307,7 +158,7 @@ export default function CompletarPerfil() {
       return;
     }
 
-    if (!form.telefono || !validarTelefono(form.telefono)) {
+    if (!form.telefono || !validateTelefono(form.telefono)) {
       setError("El número de teléfono es obligatorio y debe tener 10 dígitos.");
       return;
     }
@@ -352,47 +203,25 @@ export default function CompletarPerfil() {
 
     // Validar que la cédula o RUC no se repita en otro usuario
     if (form.tipo_persona === "Natural") {
-      const { data: existente } = await supabase
-        .from("usuarios")
-        .select("id")
-        .eq("cedula", form.cedula)
-        .neq("id", userId)
-        .maybeSingle();
-      if (existente) {
-        setError("Ya existe un usuario con esa cédula.");
-        return;
-      }
+      const isDuplicate = await checkDuplicateIdentification('Natural', form.cedula, userId);
+      if (isDuplicate) return;
     }
     if (form.tipo_persona === "Juridica") {
-      const { data: existente } = await supabase
-        .from("usuarios")
-        .select("id")
-        .eq("ruc", form.ruc)
-        .neq("id", userId)
-        .maybeSingle();
-      if (existente) {
-        setError("Ya existe un usuario con ese RUC.");
-        return;
-      }
+      const isDuplicate = await checkDuplicateIdentification('Juridica', form.ruc, userId);
+      if (isDuplicate) return;
     }
 
-    const { error: updateError } = await supabase
-      .from("usuarios")
-      .update({
-        tipo_persona: form.tipo_persona,
-        cedula: form.cedula || null,
-        ruc: form.ruc || null,
-        nombre: form.nombre,
-        direccion: form.direccion,
-        telefono: form.telefono,
-        representante: form.representante || null,
-      })
-      .eq("id", userId);
+    const success = await saveProfile(userId, {
+      tipo_persona: form.tipo_persona,
+      cedula: form.cedula || null,
+      ruc: form.ruc || null,
+      nombre: form.nombre,
+      direccion: form.direccion,
+      telefono: form.telefono,
+      representante: form.representante || null,
+    });
 
-    if (updateError) {
-      setError("No se pudo guardar el perfil. " + updateError.message);
-    } else {
-      setExito("¡Perfil guardado correctamente!");
+    if (success) {
       router.push("/auth/iniciar-sesion"); // Redirigir a iniciar sesión
     }
   };
@@ -462,7 +291,7 @@ export default function CompletarPerfil() {
               placeholder={form.tipo_persona === "Natural" ? "Cédula" : "RUC"}
               className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
               value={form.tipo_persona === "Natural" ? form.cedula : form.ruc}
-              onChange={manejarCambio}
+              onChange={handleChange}
             />
             <button
               type="button"
@@ -510,7 +339,7 @@ export default function CompletarPerfil() {
             }
             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none resize-none"
             value={form.nombre}
-            onChange={manejarCambio}
+            onChange={handleChange}
             disabled={nombreBloqueado}
             rows={2}
           />
@@ -533,7 +362,7 @@ export default function CompletarPerfil() {
               placeholder="Representante Legal"
               className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
               value={form.representante}
-              onChange={manejarCambio}
+              onChange={handleChange}
               disabled={nombreBloqueado}
             />
           </div>
@@ -553,7 +382,7 @@ export default function CompletarPerfil() {
             placeholder="Dirección"
             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
             value={form.direccion}
-            onChange={manejarCambio}
+            onChange={handleChange}
           />
         </div>
         <div>
@@ -571,7 +400,7 @@ export default function CompletarPerfil() {
             maxLength={10}
             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
             value={form.telefono}
-            onChange={manejarCambio}
+            onChange={handleChange}
             inputMode="numeric"
             autoComplete="off"
           />

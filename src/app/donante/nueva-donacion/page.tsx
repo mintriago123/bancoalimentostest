@@ -1,9 +1,27 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import DashboardLayout from '@/app/components/DashboardLayout';
-import { ChevronLeft, ChevronRight, Heart, Package, MapPin, Clock, Check, User, Info, Plus, Search, X, ShoppingBasket } from 'lucide-react';
+import { Package, MapPin, Heart } from 'lucide-react';
+import {
+  StepIndicator,
+  StepHeader,
+  StepNavigation,
+  ProductSelector,
+  CustomProductForm,
+  ImpactCalculator,
+  ImpactEquivalenceTable,
+  DonationSummary
+} from '@/app/components';
+import {
+  useProductSelector,
+  useCatalogData,
+  useUserProfile,
+  useMultiStepForm,
+  useDonationSubmit,
+  useFormValidation
+} from '@/app/hooks';
 
 // Define los horarios disponibles para la recolección
 const HORARIOS_DISPONIBLES = [
@@ -28,54 +46,58 @@ interface Unidad {
   simbolo: string;
 }
 
-interface UserProfile {
-  id: string;
-  rol: string;
-  tipo_persona: 'Natural' | 'Juridica';
-  nombre: string;
-  ruc?: string;
-  cedula?: string;
-  direccion: string;
-  telefono: string;
-  representante?: string;
-  email?: string;
-}
-
 export default function NuevaDonacionPage() {
   const { supabase, user: currentUser, isLoading: authLoading } = useSupabase();
 
-  const [pasoActual, setPasoActual] = useState(1);
-  const totalPasos = 3;
+  // Hook de navegación multi-paso
+  const { pasoActual, siguientePaso: avanzarPaso, pasoAnterior, resetearPaso } = useMultiStepForm(3);
 
-  // Estados para los catálogos
-  const [alimentos, setAlimentos] = useState<Alimento[]>([]);
-  const [unidades, setUnidades] = useState<Unidad[]>([]);
-  const [cargandoAlimentos, setCargandoAlimentos] = useState(true);
-  const [cargandoUnidades, setCargandoUnidades] = useState(true);
+  // Hook para cargar catálogos
+  const { alimentos, unidades, cargandoAlimentos, cargandoUnidades, categoriasUnicas } = useCatalogData(supabase, authLoading);
 
-  // Estado para el buscador de alimentos
-  const [busquedaAlimento, setBusquedaAlimento] = useState('');
-  const [alimentosFiltrados, setAlimentosFiltrados] = useState<Alimento[]>([]);
-  const [mostrarDropdown, setMostrarDropdown] = useState(false);
-  const [alimentoSeleccionado, setAlimentoSeleccionado] = useState<Alimento | null>(null);
-  const [filtroCategoria, setFiltroCategoria] = useState('');
+  // Hook para perfil de usuario
+  const { userProfile } = useUserProfile(supabase, currentUser, authLoading);
 
-  // Estado para el formulario de nuevo producto
-  const [mostrarFormularioNuevoProducto, setMostrarFormularioNuevoProducto] = useState(false);
-  const [nuevoProducto, setNuevoProducto] = useState({
-    nombre: '',
-    categoria: ''
-  });
+  // Hook para envío de donación
+  const { enviando, mensaje, enviarDonacion, limpiarMensaje } = useDonationSubmit(supabase, currentUser, userProfile);
 
-  // Estado para la información del usuario logueado
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loadingUser, setLoadingUser] = useState(true);
+  // Hook para validación de formulario
+  const { mensajeValidacion, setMensajeValidacion, limpiarMensajeValidacion } = useFormValidation();
 
+  // Hook para selector de productos
+  const {
+    busquedaAlimento,
+    alimentosFiltrados,
+    mostrarDropdown,
+    alimentoSeleccionado,
+    filtroCategoria,
+    mostrarFormularioNuevoProducto,
+    nuevoProducto,
+    manejarBusquedaAlimento,
+    manejarFocusInput,
+    manejarSeleccionProducto,
+    manejarSeleccionPersonalizado,
+    limpiarSeleccion,
+    manejarCambioCategoria,
+    manejarBlurContainer,
+    manejarCambioNuevoProducto,
+  } = useProductSelector(
+    alimentos,
+    (id: string, nombrePersonalizado?: string) => {
+      setFormulario(prev => ({
+        ...prev,
+        tipo_producto: id,
+        producto_personalizado_nombre: nombrePersonalizado || prev.producto_personalizado_nombre
+      }));
+    },
+    limpiarMensaje
+  );
+
+  // Estado del formulario
   const [formulario, setFormulario] = useState({
     // Paso 1: Información del producto
     tipo_producto: '',
     producto_personalizado_nombre: '',
-    producto_personalizado_categoria: '',
     cantidad: '',
     unidad_id: '',
     fecha_vencimiento: '',
@@ -89,213 +111,22 @@ export default function NuevaDonacionPage() {
     observaciones: '',
   });
 
-  const [mensaje, setMensaje] = useState<string | null>(null);
-  const [enviando, setEnviando] = useState(false);
-
-  // Cargar datos al montar el componente
+  // Inicializar dirección cuando se carga el perfil
   useEffect(() => {
-    if (!authLoading) {
-      cargarAlimentos();
-      cargarUnidades();
-      if (currentUser !== undefined) {
-        cargarPerfilUsuario(currentUser);
-      }
+    if (userProfile?.direccion && !formulario.direccion_entrega) {
+      setFormulario(prev => ({
+        ...prev,
+        direccion_entrega: userProfile.direccion
+      }));
     }
-  }, [currentUser, authLoading]);
-
-  // Función para filtrar alimentos basado en la búsqueda y categoría
-  const filtrarAlimentos = useCallback((termino: string, categoria: string = '') => {
-    let filtrados = alimentos;
-
-    // Filtrar por término de búsqueda
-    if (termino.trim()) {
-      const terminoLower = termino.toLowerCase();
-      filtrados = filtrados.filter(alimento =>
-        alimento.nombre.toLowerCase().includes(terminoLower) ||
-        alimento.categoria.toLowerCase().includes(terminoLower)
-      );
-    }
-
-    // Filtrar por categoría si se especificó
-    if (categoria) {
-      filtrados = filtrados.filter(alimento => alimento.categoria.toLowerCase() === categoria.toLowerCase());
-    }
-
-    setAlimentosFiltrados(filtrados);
-  }, [alimentos]);
-
-  // Filtrar alimentos cuando cambia la búsqueda o se cargan los alimentos
-  useEffect(() => {
-    filtrarAlimentos(busquedaAlimento, filtroCategoria);
-
-    // Actualizar el alimento seleccionado si hay un producto en el formulario
-    if (formulario.tipo_producto && formulario.tipo_producto !== 'personalizado') {
-      const alimento = alimentos.find(a => a.id.toString() === formulario.tipo_producto);
-      if (alimento && !alimentoSeleccionado) {
-        setAlimentoSeleccionado(alimento);
-        setBusquedaAlimento(`${alimento.nombre} (${alimento.categoria})`);
-      }
-    } else if (formulario.tipo_producto === 'personalizado' && !alimentoSeleccionado) {
-      setBusquedaAlimento('Producto personalizado');
-    }
-  }, [alimentos, busquedaAlimento, filtrarAlimentos, formulario.tipo_producto, alimentoSeleccionado, filtroCategoria]);
-
-  // Manejar cambio en el buscador
-  const manejarBusquedaAlimento = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const valor = e.target.value;
-    setBusquedaAlimento(valor);
-    
-    // Si hay un alimento seleccionado y el valor es diferente, limpiar la selección
-    if (alimentoSeleccionado && valor !== `${alimentoSeleccionado.nombre} (${alimentoSeleccionado.categoria})`) {
-      setAlimentoSeleccionado(null);
-      setFormulario(prev => ({ ...prev, tipo_producto: '' }));
-      setMostrarFormularioNuevoProducto(false);
-    }
-    
-    filtrarAlimentos(valor, filtroCategoria);
-    setMostrarDropdown(true);
-  };
-
-  // Manejar focus del input para mostrar el dropdown
-  const manejarFocusInput = () => {
-    if (!alimentoSeleccionado) {
-      setMostrarDropdown(true);
-    }
-  };
-
-  // Manejar selección de producto del dropdown
-  const manejarSeleccionProducto = (alimento: Alimento) => {
-    setFormulario(prev => ({ ...prev, tipo_producto: alimento.id.toString() }));
-    setAlimentoSeleccionado(alimento);
-    setBusquedaAlimento(`${alimento.nombre} (${alimento.categoria})`);
-    setMostrarDropdown(false);
-    setMostrarFormularioNuevoProducto(false);
-    setMensaje(null);
-  };
-
-  // Manejar selección de producto personalizado
-  const manejarSeleccionPersonalizado = () => {
-    setFormulario(prev => ({ ...prev, tipo_producto: 'personalizado' }));
-    setAlimentoSeleccionado(null);
-    setBusquedaAlimento('Producto personalizado');
-    setMostrarDropdown(false);
-    setMostrarFormularioNuevoProducto(true);
-    setMensaje(null);
-  };
-
-  // Limpiar selección de producto
-  const limpiarSeleccion = () => {
-    setAlimentoSeleccionado(null);
-    setBusquedaAlimento('');
-    setFormulario(prev => ({ ...prev, tipo_producto: '' }));
-    setMostrarFormularioNuevoProducto(false);
-    setMostrarDropdown(true); // Mostrar dropdown después de limpiar
-  };
-  
-  // Manejar cambio de categoría
-  const manejarCambioCategoria = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const categoria = e.target.value;
-    setFiltroCategoria(categoria);
-
-    // Limpiar la selección actual si existe
-    if (alimentoSeleccionado) {
-      setAlimentoSeleccionado(null);
-      setBusquedaAlimento('');
-      setFormulario(prev => ({ ...prev, tipo_producto: '' }));
-    }
-
-    // Filtrar y ocultar dropdown para que el usuario vuelva a activar/search
-    filtrarAlimentos('', categoria);
-    setMostrarDropdown(false);
-  };
-  const manejarBlurContainer = (e: React.FocusEvent) => {
-    // Solo ocultar si el focus sale completamente del container
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-      setTimeout(() => {
-        setMostrarDropdown(false);
-      }, 150);
-    }
-  };
-
-  // Función para cargar el perfil del usuario
-  const cargarPerfilUsuario = async (user: typeof currentUser) => {
-    setLoadingUser(true);
-    try {
-      if (user) {
-        const { data, error } = await supabase
-          .from('usuarios')
-          .select('id, rol, tipo_persona, nombre, ruc, cedula, direccion, telefono, representante')
-          .eq('id', user.id)
-          .single();
-
-        if (error && error.details?.includes('0 rows')) {
-          console.log('Usuario no encontrado en la tabla usuarios');
-          setUserProfile(null);
-        } else if (error) {
-          console.error('Error al cargar perfil:', error);
-          setUserProfile(null);
-        } else if (data) {
-          setUserProfile(data);
-          // Inicializar dirección de entrega con la dirección del perfil
-          setFormulario(prev => ({
-            ...prev,
-            direccion_entrega: data.direccion || '',
-          }));
-        }
-      } else {
-        setUserProfile(null);
-      }
-    } catch (error) {
-      console.error('Error al cargar perfil del usuario:', error);
-      setMensaje('Error al cargar tu información. Por favor, intenta nuevamente.');
-    } finally {
-      setLoadingUser(false);
-    }
-  };
-
-  const cargarAlimentos = async () => {
-    try {
-      setCargandoAlimentos(true);
-      const { data, error } = await supabase
-        .from('alimentos')
-        .select('id, nombre, categoria')
-        .order('nombre');
-
-      if (error) throw error;
-      setAlimentos(data || []);
-      setAlimentosFiltrados(data || []);
-    } catch (error) {
-      console.error('Error al cargar alimentos:', error);
-      setMensaje('Error al cargar la lista de alimentos');
-    } finally {
-      setCargandoAlimentos(false);
-    }
-  };
-
-  const cargarUnidades = async () => {
-    try {
-      setCargandoUnidades(true);
-      const { data, error } = await supabase
-        .from('unidades')
-        .select('id, nombre, simbolo')
-        .order('nombre');
-
-      if (error) throw error;
-      setUnidades(data || []);
-    } catch (error) {
-      console.error('Error al cargar unidades:', error);
-      setMensaje('Error al cargar la lista de unidades');
-    } finally {
-      setCargandoUnidades(false);
-    }
-  };
+  }, [userProfile]);
 
   // Obtener información del producto seleccionado
   const getProductoSeleccionado = () => {
     if (formulario.tipo_producto === 'personalizado') {
       return {
         nombre: formulario.producto_personalizado_nombre,
-        categoria: formulario.producto_personalizado_categoria
+        categoria: nuevoProducto.categoria
       };
     }
 
@@ -315,102 +146,77 @@ export default function NuevaDonacionPage() {
     const unidadSeleccionada = getUnidadSeleccionada();
     let personasAlimentadas = 0;
     let comidaEquivalente = '';
-    let factorMultiplicador = 1;
 
     if (unidadSeleccionada) {
       const simbolo = unidadSeleccionada.simbolo.toLowerCase();
 
       if (simbolo.includes('kg')) {
-        factorMultiplicador = 2;
-        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
+        personasAlimentadas = Math.floor(cantidad * 2);
         comidaEquivalente = `${Math.round(cantidad * 3)} porciones aproximadamente`;
       } else if (simbolo.includes('l') || simbolo.includes('lt')) {
-        factorMultiplicador = 1.5;
-        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
+        personasAlimentadas = Math.floor(cantidad * 1.5);
         comidaEquivalente = `${cantidad} litros de bebida`;
       } else if (simbolo.includes('caja')) {
-        factorMultiplicador = 4;
-        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
+        personasAlimentadas = Math.floor(cantidad * 4);
         comidaEquivalente = `${cantidad} cajas de alimentos`;
       } else if (simbolo.includes('und') || simbolo.includes('pza') || simbolo.includes('unidad')) {
-        factorMultiplicador = 0.5;
-        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
+        personasAlimentadas = Math.floor(cantidad * 0.5);
         comidaEquivalente = `${cantidad} unidades`;
       } else if (simbolo.includes('g') && !simbolo.includes('kg')) {
-        // Para gramos
         const cantidadEnKg = cantidad / 1000;
-        factorMultiplicador = 2;
-        personasAlimentadas = Math.floor(cantidadEnKg * factorMultiplicador);
+        personasAlimentadas = Math.floor(cantidadEnKg * 2);
         comidaEquivalente = `${Math.round(cantidadEnKg * 3)} porciones aproximadamente`;
       } else if (simbolo.includes('ml') && !simbolo.includes('l')) {
-        // Para mililitros
         const cantidadEnL = cantidad / 1000;
-        factorMultiplicador = 1.5;
-        personasAlimentadas = Math.floor(cantidadEnL * factorMultiplicador);
+        personasAlimentadas = Math.floor(cantidadEnL * 1.5);
         comidaEquivalente = `${cantidadEnL.toFixed(1)} litros de bebida`;
       } else {
-        // Para otras unidades no específicas
-        factorMultiplicador = 1;
-        personasAlimentadas = Math.floor(cantidad * factorMultiplicador);
+        personasAlimentadas = Math.floor(cantidad);
         comidaEquivalente = `${cantidad} ${unidadSeleccionada.nombre}`;
       }
 
-      // Asegurar que siempre haya al menos una persona si hay cantidad
       if (cantidad > 0 && personasAlimentadas === 0) {
         personasAlimentadas = 1;
       }
     }
 
-    return { personasAlimentadas, comidaEquivalente, factorMultiplicador };
+    return { personasAlimentadas, comidaEquivalente };
   };
 
   const manejarCambio = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormulario((prev) => ({ ...prev, [name]: value }));
-    setMensaje(null);
-
-    // No necesitamos manejar tipo_producto aquí porque se maneja en las funciones específicas
+    limpiarMensajeValidacion();
   };
 
-  const manejarCambioNuevoProducto = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setNuevoProducto(prev => ({ ...prev, [name]: value }));
-
-    if (name === 'nombre') {
-      setFormulario(prev => ({ ...prev, producto_personalizado_nombre: value }));
-    } else if (name === 'categoria') {
-      setFormulario(prev => ({ ...prev, producto_personalizado_categoria: value }));
-    }
-  };
-
-  const validarPaso = (paso: number) => {
+  const validarPaso = (paso: number): boolean => {
     switch (paso) {
       case 1:
         if (!formulario.tipo_producto || !formulario.cantidad || !formulario.unidad_id) {
-          setMensaje('Por favor, completa la información del producto.');
+          setMensajeValidacion('Por favor, completa la información del producto.');
           return false;
         }
         if (formulario.tipo_producto === 'personalizado') {
-          if (!formulario.producto_personalizado_nombre.trim() || !formulario.producto_personalizado_categoria.trim()) {
-            setMensaje('Por favor, completa la información del producto personalizado.');
+          if (!formulario.producto_personalizado_nombre.trim() || !nuevoProducto.categoria.trim()) {
+            setMensajeValidacion('Por favor, completa la información del producto personalizado.');
             return false;
           }
         }
         if (parseFloat(formulario.cantidad) <= 0) {
-          setMensaje('La cantidad debe ser mayor a 0.');
+          setMensajeValidacion('La cantidad debe ser mayor a 0.');
           return false;
         }
         break;
       case 2:
         if (!formulario.fecha_disponible.trim() || !formulario.direccion_entrega.trim()) {
-          setMensaje('Por favor, completa la información de logística.');
+          setMensajeValidacion('Por favor, completa la información de logística.');
           return false;
         }
         const fechaSeleccionada = new Date(formulario.fecha_disponible);
         const fechaHoy = new Date();
         fechaHoy.setHours(0, 0, 0, 0);
         if (fechaSeleccionada < fechaHoy) {
-          setMensaje('La fecha de disponibilidad no puede ser anterior a hoy.');
+          setMensajeValidacion('La fecha de disponibilidad no puede ser anterior a hoy.');
           return false;
         }
         break;
@@ -420,14 +226,9 @@ export default function NuevaDonacionPage() {
 
   const siguientePaso = () => {
     if (validarPaso(pasoActual)) {
-      setPasoActual(prev => Math.min(prev + 1, totalPasos));
-      setMensaje(null);
+      avanzarPaso();
+      limpiarMensajeValidacion();
     }
-  };
-
-  const pasoAnterior = () => {
-    setPasoActual(prev => Math.max(prev - 1, 1));
-    setMensaje(null);
   };
 
   const manejarEnvio = async (e: React.FormEvent) => {
@@ -437,68 +238,24 @@ export default function NuevaDonacionPage() {
       return;
     }
 
-    setEnviando(true);
-    setMensaje(null);
+    const impacto = calcularImpacto();
+    const productoInfo = getProductoSeleccionado();
+    const unidadInfo = getUnidadSeleccionada();
 
-    try {
-      const impacto = calcularImpacto();
-      const productoInfo = getProductoSeleccionado();
-      const unidadInfo = getUnidadSeleccionada();
+    const exito = await enviarDonacion(
+      formulario,
+      nuevoProducto,
+      impacto,
+      productoInfo,
+      unidadInfo,
+      alimentos
+    );
 
-      const datosInsercion: any = {
-        nombre_donante: userProfile?.nombre || 'Usuario Anónimo',
-        telefono: userProfile?.telefono || '',
-        email: currentUser?.email || '',
-        cantidad: Number(formulario.cantidad),
-        fecha_vencimiento: formulario.fecha_vencimiento || null,
-        fecha_disponible: formulario.fecha_disponible,
-        direccion_entrega: formulario.direccion_entrega,
-        horario_preferido: formulario.horario_preferido || null,
-        observaciones: formulario.observaciones || null,
-        impacto_estimado_personas: impacto.personasAlimentadas,
-        impacto_equivalente: impacto.comidaEquivalente,
-        creado_en: new Date().toISOString(),
-        unidad_id: Number(formulario.unidad_id),
-        unidad_nombre: unidadInfo?.nombre,
-        unidad_simbolo: unidadInfo?.simbolo,
-        user_id: currentUser?.id || null,
-        ruc_donante: userProfile?.ruc || null,
-        cedula_donante: userProfile?.cedula || null,
-        direccion_donante_completa: userProfile?.direccion || null,
-        representante_donante: userProfile?.representante || null,
-        tipo_persona_donante: userProfile?.tipo_persona || null,
-      };
-
-      if (formulario.tipo_producto !== 'personalizado') {
-        const alimento = alimentos.find(a => a.id.toString() === formulario.tipo_producto);
-        Object.assign(datosInsercion, {
-          alimento_id: Number(formulario.tipo_producto),
-          tipo_producto: alimento?.nombre,
-          categoria_comida: alimento?.categoria,
-          es_producto_personalizado: false
-        });
-      } else {
-        Object.assign(datosInsercion, {
-          alimento_id: null,
-          tipo_producto: formulario.producto_personalizado_nombre,
-          categoria_comida: formulario.producto_personalizado_categoria,
-          es_producto_personalizado: true
-        });
-      }
-
-      const { error } = await supabase.from('donaciones').insert([datosInsercion]);
-
-      if (error) {
-        throw error;
-      }
-
-      setMensaje('¡Donación registrada exitosamente! Te contactaremos pronto. Gracias por tu contribución.');
-      
+    if (exito) {
       // Reiniciar formulario
       setFormulario({
         tipo_producto: '',
         producto_personalizado_nombre: '',
-        producto_personalizado_categoria: '',
         cantidad: '',
         unidad_id: '',
         fecha_vencimiento: '',
@@ -507,42 +264,22 @@ export default function NuevaDonacionPage() {
         horario_preferido: '',
         observaciones: '',
       });
-      setMostrarFormularioNuevoProducto(false);
-      setAlimentoSeleccionado(null);
-      setBusquedaAlimento('');
-      setMostrarDropdown(false);
-      setPasoActual(1);
-    } catch (err: any) {
-      setMensaje(err.message || 'Error al registrar la donación. Inténtalo nuevamente.');
-    } finally {
-      setEnviando(false);
+      limpiarSeleccion();
+      resetearPaso();
     }
   };
-
-  // Obtener categorías únicas para productos personalizados
-  const categoriasUnicas = [...new Set(alimentos.map(a => a.categoria))].sort();
-
-  // Mostrar loader mientras se autentica
-  if (authLoading) {
-    return (
-      <DashboardLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   const renderPaso = () => {
     switch (pasoActual) {
       case 1:
         return (
           <div className="space-y-6">
-            <div className="text-center mb-6">
-              <Package className="w-16 h-16 mx-auto mb-4 text-green-600" />
-              <h3 className="text-2xl font-bold text-gray-800">Información del Producto</h3>
-              <p className="text-gray-600">Selecciona qué vas a donar</p>
-            </div>
+            <StepHeader 
+              icon={Package}
+              title="Información del Producto"
+              description="Selecciona qué vas a donar"
+              iconColor="text-green-600"
+            />
 
             <div className="space-y-4">
               <div className="relative" onBlur={manejarBlurContainer}>
@@ -561,133 +298,27 @@ export default function NuevaDonacionPage() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Productos a donar *</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Buscar o seleccionar producto..."
-                      className="w-full border-2 border-gray-300 rounded-lg pl-11 pr-12 py-3 text-gray-700 placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-colors"
-                      value={busquedaAlimento}
-                      onChange={manejarBusquedaAlimento}
-                      onFocus={manejarFocusInput}
-                    />
-                    {/* Icono carrito a la izquierda */}
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none">
-                      <ShoppingBasket className="h-5 w-5" />
-                    </span>
-                    {/* Icono limpiar y buscar a la derecha */}
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center">
-                      {alimentoSeleccionado && (
-                        <button
-                          type="button"
-                          onClick={limpiarSeleccion}
-                          className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-gray-100 transition-colors"
-                          title="Limpiar selección"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {mostrarDropdown && !alimentoSeleccionado && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {cargandoAlimentos ? (
-                        <div className="p-3 text-gray-500 text-center">Cargando productos...</div>
-                      ) : (
-                        <>
-                          {alimentosFiltrados.length > 0 ? (
-                            <>
-                              {alimentosFiltrados.map((alimento) => (
-                                <div
-                                  key={alimento.id}
-                                  className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                                  onClick={() => manejarSeleccionProducto(alimento)}
-                                >
-                                  <div className="font-medium text-gray-900">{alimento.nombre}</div>
-                                  <div className="text-sm text-gray-500">{alimento.categoria}</div>
-                                </div>
-                              ))}
-                              <div
-                                className="p-3 hover:bg-blue-50 cursor-pointer border-t border-gray-200 text-blue-600 font-medium"
-                                onClick={manejarSeleccionPersonalizado}
-                              >
-                                <div className="flex items-center">
-                                  <Plus className="w-4 h-4 mr-2" />
-                                  Agregar producto personalizado
-                                </div>
-                              </div>
-                            </>
-                          ) : busquedaAlimento ? (
-                            <div className="p-3 text-gray-500 text-center">
-                              No se encontraron productos que coincidan con "{busquedaAlimento}"
-                              <div
-                                className="mt-2 text-blue-600 cursor-pointer hover:underline"
-                                onClick={manejarSeleccionPersonalizado}
-                              >
-                                + Crear producto personalizado
-                              </div>
-                            </div>
-                          ) : (
-                            <div
-                              className="p-3 hover:bg-blue-50 cursor-pointer text-blue-600 font-medium"
-                              onClick={manejarSeleccionPersonalizado}
-                            >
-                              <div className="flex items-center">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Agregar producto personalizado
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Mostrar contador de resultados si hay búsqueda activa */}
-                  {busquedaAlimento && !cargandoAlimentos && !alimentoSeleccionado && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      {alimentosFiltrados.length} producto{alimentosFiltrados.length !== 1 ? 's' : ''} encontrado{alimentosFiltrados.length !== 1 ? 's' : ''}
-                    </p>
-                  )}
-                </div>
+                <ProductSelector
+                  busqueda={busquedaAlimento}
+                  onBusquedaChange={manejarBusquedaAlimento}
+                  onFocus={manejarFocusInput}
+                  alimentoSeleccionado={alimentoSeleccionado}
+                  onLimpiarSeleccion={limpiarSeleccion}
+                  mostrarDropdown={mostrarDropdown}
+                  cargando={cargandoAlimentos}
+                  alimentosFiltrados={alimentosFiltrados}
+                  onSeleccionarProducto={manejarSeleccionProducto}
+                  onSeleccionarPersonalizado={manejarSeleccionPersonalizado}
+                />
               </div>
 
               {mostrarFormularioNuevoProducto && (
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <h4 className="font-medium text-gray-800 mb-3">Producto Personalizado</h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Producto *</label>
-                      <input
-                        type="text"
-                        name="nombre"
-                        className="w-full border border-gray-300 rounded px-3 py-2"
-                        value={nuevoProducto.nombre}
-                        onChange={manejarCambioNuevoProducto}
-                        placeholder="Ej: Pan integral casero"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
-                      <select
-                        name="categoria"
-                        className="w-full border border-gray-300 rounded px-3 py-2"
-                        value={nuevoProducto.categoria}
-                        onChange={manejarCambioNuevoProducto}
-                      >
-                        <option value="">Selecciona una categoría</option>
-                        {categoriasUnicas.map((categoria) => (
-                          <option key={categoria} value={categoria}>
-                            {categoria}
-                          </option>
-                        ))}
-                        <option value="Otros">Otros</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
+                <CustomProductForm
+                  nombre={nuevoProducto.nombre}
+                  categoria={nuevoProducto.categoria}
+                  categoriasDisponibles={categoriasUnicas}
+                  onChange={manejarCambioNuevoProducto}
+                />
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -741,77 +372,12 @@ export default function NuevaDonacionPage() {
                 />
               </div>
 
-              {/* Tabla de equivalencias - siempre visible como referencia */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-800 mb-3 flex items-center">
-                  <Info className="w-5 h-5 mr-2" />
-                  Tabla de Equivalencias de Impacto
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <h5 className="font-semibold text-blue-700 mb-2">Por Kilogramo (kg):</h5>
-                    <ul className="text-blue-600 space-y-1">
-                      <li>• 1 kg = ~2 personas alimentadas</li>
-                      <li>• 1 kg = ~3 porciones</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h5 className="font-semibold text-blue-700 mb-2">Por Litro (l):</h5>
-                    <ul className="text-blue-600 space-y-1">
-                      <li>• 1 l = ~1.5 personas</li>
-                      <li>• Bebidas y líquidos</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h5 className="font-semibold text-blue-700 mb-2">Por Caja:</h5>
-                    <ul className="text-blue-600 space-y-1">
-                      <li>• 1 caja = ~4 personas</li>
-                      <li>• Alimentos empaquetados</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h5 className="font-semibold text-blue-700 mb-2">Por Unidad:</h5>
-                    <ul className="text-blue-600 space-y-1">
-                      <li>• 1 unidad = ~0.5 personas</li>
-                      <li>• Productos individuales</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
+              <ImpactEquivalenceTable />
 
-              {/* Mostrar cálculo de impacto personalizado si hay datos */}
-              {formulario.cantidad && formulario.unidad_id && (
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
-                  <h4 className="font-medium text-purple-800 mb-3 flex items-center">
-                    <Heart className="w-5 h-5 mr-2" />
-                    Impacto Estimado de tu Donación
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-white bg-opacity-60 rounded-lg p-3">
-                      <div className="text-2xl font-bold text-purple-700">
-                        ~{calcularImpacto().personasAlimentadas}
-                      </div>
-                      <div className="text-sm text-purple-600">
-                        personas podrían alimentarse
-                      </div>
-                    </div>
-                    <div className="bg-white bg-opacity-60 rounded-lg p-3">
-                      <div className="text-lg font-semibold text-purple-700">
-                        {calcularImpacto().comidaEquivalente}
-                      </div>
-                      <div className="text-sm text-purple-600">
-                        equivalencia alimentaria
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-3 text-xs text-purple-600 bg-white bg-opacity-40 rounded p-2">
-                    <div className="flex items-center">
-                      <Info className="w-3 h-3 mr-1" />
-                      *Estimación basada en promedios generales. El impacto real puede variar según el tipo de alimento y las necesidades específicas.
-                    </div>
-                  </div>
-                </div>
-              )}
+              <ImpactCalculator
+                impacto={calcularImpacto()}
+                mostrar={!!(formulario.cantidad && formulario.unidad_id)}
+              />
             </div>
           </div>
         );
@@ -819,11 +385,12 @@ export default function NuevaDonacionPage() {
       case 2:
         return (
           <div className="space-y-6">
-            <div className="text-center mb-6">
-              <MapPin className="w-16 h-16 mx-auto mb-4 text-purple-600" />
-              <h3 className="text-2xl font-bold text-gray-800">Logística de Entrega</h3>
-              <p className="text-gray-600">Dinos cuándo y dónde podemos recoger tu donación</p>
-            </div>
+            <StepHeader 
+              icon={MapPin}
+              title="Logística de Entrega"
+              description="Dinos cuándo y dónde podemos recoger tu donación"
+              iconColor="text-purple-600"
+            />
 
             <div className="space-y-4">
               <div>
@@ -877,31 +444,26 @@ export default function NuevaDonacionPage() {
         const unidadFinal = getUnidadSeleccionada();
         return (
           <div className="space-y-6">
-            <div className="text-center mb-6">
-              <Heart className="w-16 h-16 mx-auto mb-4 text-red-600" />
-              <h3 className="text-2xl font-bold text-gray-800">Confirmación y Detalles Adicionales</h3>
-              <p className="text-gray-600">Revisa tu donación y añade cualquier observación</p>
-            </div>
+            <StepHeader 
+              icon={Heart}
+              title="Confirmación y Detalles Adicionales"
+              description="Revisa tu donación y añade cualquier observación"
+              iconColor="text-red-600"
+            />
 
             <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-800 mb-3">Resumen de tu Donación</h4>
-                <div className="space-y-2 text-sm text-blue-700">
-                  <p><strong>Donante:</strong> {userProfile?.nombre || currentUser?.email || 'Usuario Anónimo'}</p>
-                  <p><strong>Producto:</strong> {productoFinal?.nombre} ({productoFinal?.categoria})</p>
-                  <p><strong>Cantidad:</strong> {formulario.cantidad} {unidadFinal?.simbolo}</p>
-                  <p><strong>Fecha disponible:</strong> {new Date(formulario.fecha_disponible).toLocaleDateString('es-ES')}</p>
-                  <p><strong>Dirección:</strong> {formulario.direccion_entrega}</p>
-                  {formulario.horario_preferido && (
-                    <p><strong>Horario:</strong> {HORARIOS_DISPONIBLES.find(h => h.value === formulario.horario_preferido)?.label}</p>
-                  )}
-                  <div className="bg-purple-100 p-3 rounded mt-3">
-                    <p className="font-medium text-purple-800">Impacto Estimado:</p>
-                    <p className="text-purple-700">• {personasAlimentadas} personas alimentadas</p>
-                    <p className="text-purple-700">• {comidaEquivalente}</p>
-                  </div>
-                </div>
-              </div>
+              <DonationSummary
+                donante={userProfile?.nombre || currentUser?.email || 'Usuario Anónimo'}
+                producto={productoFinal}
+                cantidad={formulario.cantidad}
+                unidad={unidadFinal}
+                fechaDisponible={formulario.fecha_disponible}
+                direccion={formulario.direccion_entrega}
+                horario={formulario.horario_preferido}
+                horarioLabel={HORARIOS_DISPONIBLES.find(h => h.value === formulario.horario_preferido)?.label}
+                personasAlimentadas={personasAlimentadas}
+                comidaEquivalente={comidaEquivalente}
+              />
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Observaciones Adicionales (opcional)</label>
@@ -929,34 +491,6 @@ export default function NuevaDonacionPage() {
       <div className="flex flex-col min-h-screen bg-gray-50">
         <main className="flex-grow flex items-center justify-center p-4">
           <div className="bg-white shadow-xl rounded-2xl p-8 max-w-2xl w-full">
-            {/* Título y navegación de pasos en la misma línea */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
-              <h1 className="text-xl sm:text-2xl font-extrabold text-blue-700">Nueva Donación</h1>
-              <nav className="flex justify-center sm:justify-end space-x-2 sm:space-x-4">
-                {Array.from({ length: totalPasos }).map((_, index) => (
-                  <div
-                    key={index + 1}
-                    className={`flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm font-medium ${
-                      pasoActual >= index + 1 ? 'text-blue-600' : 'text-gray-400'
-                    }`}
-                  >
-                    <div
-                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm ${
-                        pasoActual >= index + 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
-                      }`}
-                    >
-                      {pasoActual > index + 1 ? <Check className="w-3 h-3 sm:w-5 sm:h-5" /> : index + 1}
-                    </div>
-                    <span className="hidden sm:block">
-                      {index === 0 && 'Producto'}
-                      {index === 1 && 'Logística'}
-                      {index === 2 && 'Confirmación'}
-                    </span>
-                  </div>
-                ))}
-              </nav>
-            </div>
-
             {mensaje && (
               <div className={`p-4 mb-6 rounded-lg text-white ${
                 mensaje.includes('exitosa') ? 'bg-green-500' : 'bg-red-500'
@@ -964,48 +498,31 @@ export default function NuevaDonacionPage() {
                 {mensaje}
               </div>
             )}
+            {mensajeValidacion && (
+              <div className="p-4 mb-6 rounded-lg text-white bg-yellow-500">
+                {mensajeValidacion}
+              </div>
+            )}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-blue-700">Nueva Donación</h1>
+              <StepIndicator
+                currentStep={pasoActual}
+                totalSteps={3}
+                stepLabels={['Producto', 'Logística', 'Confirmación']}
+              />
+            </div>
 
             <form onSubmit={manejarEnvio}>
               {renderPaso()}
 
-              <div className="flex justify-between mt-8">
-                {pasoActual > 1 && (
-                  <button
-                    type="button"
-                    onClick={pasoAnterior}
-                    className="flex items-center px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
-                  >
-                    <ChevronLeft className="w-5 h-5 mr-2" /> Atrás
-                  </button>
-                )}
-
-                {pasoActual < totalPasos && (
-                  <button
-                    type="button"
-                    onClick={siguientePaso}
-                    className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold ml-auto"
-                  >
-                    Siguiente <ChevronRight className="w-5 h-5 ml-2" />
-                  </button>
-                )}
-
-                {pasoActual === totalPasos && (
-                  <button
-                    type="submit"
-                    disabled={enviando}
-                    className={`flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold ml-auto ${
-                      enviando ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                  >
-                    {enviando ? 'Enviando...' : (
-                      <>
-                        <Heart className="w-5 h-5 mr-2" />
-                        Enviar Donación
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
+              <StepNavigation
+                pasoActual={pasoActual}
+                totalPasos={3}
+                onAnterior={pasoAnterior}
+                onSiguiente={siguientePaso}
+                onEnviar={manejarEnvio}
+                enviando={enviando}
+              />
             </form>
           </div>
         </main>

@@ -13,74 +13,62 @@ import {
   KeyIcon,
   GlobeAltIcon
 } from '@heroicons/react/24/outline';
+import { usePasswordChange, useUserPreferences, useMessage } from '@/app/hooks';
 
 export default function UserConfiguracionPage() {
-  const { supabase } = useSupabase();
+  const { supabase, user } = useSupabase();
 
-  const [preferences, setPreferences] = useState({
-    recibir_notificaciones: true,
-    idioma: 'es',
-    perfil_publico: true
-  });
+  // Hooks personalizados
+  const { preferences, updatePreference, savePreferences, isSaving: savingPreferences } = useUserPreferences();
+  const { message, showSuccess, showError } = useMessage();
+  
+  const {
+    currentPassword,
+    newPassword,
+    confirmPassword,
+    showPasswords,
+    setCurrentPassword,
+    setNewPassword,
+    setConfirmPassword,
+    togglePasswordVisibility,
+    resetPasswords,
+    validatePasswords,
+  } = usePasswordChange();
 
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
-
-  const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const handlePrefChange = (key: keyof typeof preferences, value: any) => {
-    setPreferences((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
-    setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
-  };
+  // Estado para el botón de cambio de contraseña
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const handleSavePreferences = async () => {
-    setIsSaving(true);
-    setMessage(null);
-    try {
-      // Simula guardado
-      await new Promise(res => setTimeout(res, 1000));
-      setMessage({ type: 'success', text: 'Preferencias guardadas con éxito' });
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Error al guardar preferencias' });
-    } finally {
-      setIsSaving(false);
+    if (!user?.id) {
+      showError('Usuario no autenticado');
+      return;
+    }
+
+    const success = await savePreferences(supabase, user.id);
+    if (success) {
+      showSuccess('Preferencias guardadas con éxito');
+    } else {
+      showError('Error al guardar preferencias');
     }
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true);
-    setMessage(null);
 
-    if (newPassword !== confirmPassword) {
-      setMessage({ type: 'error', text: 'Las contraseñas no coinciden' });
-      setIsSaving(false);
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setMessage({ type: 'error', text: 'La nueva contraseña debe tener al menos 6 caracteres' });
-      setIsSaving(false);
+    const validation = validatePasswords();
+    if (!validation.valid) {
+      showError(validation.error || 'Error de validación');
       return;
     }
 
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      setMessage({ type: 'success', text: 'Contraseña actualizada correctamente' });
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      
+      showSuccess('Contraseña actualizada correctamente');
+      resetPasswords();
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error al cambiar la contraseña' });
-    } finally {
-      setIsSaving(false);
+      showError('Error al cambiar la contraseña');
     }
   };
 
@@ -124,7 +112,7 @@ export default function UserConfiguracionPage() {
               <p className="text-xs text-gray-500">Notificaciones sobre cambios importantes</p>
             </div>
             <button
-              onClick={() => handlePrefChange('recibir_notificaciones', !preferences.recibir_notificaciones)}
+              onClick={() => updatePreference('recibir_notificaciones', !preferences.recibir_notificaciones)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                 preferences.recibir_notificaciones ? 'bg-red-600' : 'bg-gray-200'
               }`}
@@ -143,8 +131,8 @@ export default function UserConfiguracionPage() {
             <select
               id="idioma"
               value={preferences.idioma}
-              onChange={(e) => handlePrefChange('idioma', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              onChange={(e) => updatePreference('idioma', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             >
               <option value="es">Español</option>
               <option value="en">Inglés</option>
@@ -157,7 +145,7 @@ export default function UserConfiguracionPage() {
               <p className="text-xs text-gray-500">Permitir que otros usuarios vean tu perfil</p>
             </div>
             <button
-              onClick={() => handlePrefChange('perfil_publico', !preferences.perfil_publico)}
+              onClick={() => updatePreference('perfil_publico', !preferences.perfil_publico)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                 preferences.perfil_publico ? 'bg-green-600' : 'bg-gray-200'
               }`}
@@ -211,10 +199,10 @@ export default function UserConfiguracionPage() {
 
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={changingPassword}
               className="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 font-medium disabled:opacity-50"
             >
-              {isSaving ? 'Guardando...' : 'Cambiar Contraseña'}
+              {changingPassword ? 'Guardando...' : 'Cambiar Contraseña'}
             </button>
           </form>
         </div>
@@ -223,10 +211,10 @@ export default function UserConfiguracionPage() {
         <div className="mt-6 flex justify-end">
           <button
             onClick={handleSavePreferences}
-            disabled={isSaving}
+            disabled={savingPreferences}
             className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium"
           >
-            {isSaving ? 'Guardando...' : 'Guardar Preferencias'}
+            {savingPreferences ? 'Guardando...' : 'Guardar Preferencias'}
           </button>
         </div>
       </div>

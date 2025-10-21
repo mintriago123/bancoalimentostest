@@ -4,54 +4,49 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
+import { useProfileForm, useProfileUpdate } from '@/app/hooks';
 
 export default function ActualizarPerfil() {
   const router = useRouter();
-  const { supabase, user } = useSupabase();  // Obtener datos de Supabase y usuario autenticado
+  const { supabase, user } = useSupabase();
   const [estaCargando, setEstaCargando] = useState(false);
   const [perfil] = useState<any>(null);
   const [menuAbierto, setMenuAbierto] = useState(false);
 
+  const {
+    form,
+    handleChange,
+    updateMultipleFields,
+    validateTelefono,
+  } = useProfileForm();
 
-  const [form, setForm] = useState({
-    tipo_persona: '',
-    cedula: '',
-    ruc: '',
-    nombre: '',
-    direccion: '',
-    telefono: '',
-  });
-
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [exito, setExito] = useState<string | null>(null);
+  const {
+    loading: cargando,
+    error,
+    success: exito,
+    setError,
+    loadUserProfile,
+    updateProfile,
+  } = useProfileUpdate(supabase);
 
   useEffect(() => {
     const cargarDatos = async () => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user?.id) {
         setError("No se pudo obtener el usuario autenticado.");
-        setCargando(false);
         return;
       }
 
       const userId = userData.user.id;
-      const { data, error } = await supabase
-        .from("usuarios")
-        .select("tipo_persona, cedula, ruc, nombre, direccion, telefono")
-        .eq("id", userId)
-        .single();
+      const data = await loadUserProfile(userId);
 
-      if (error) {
-        setError("No se pudieron cargar los datos del perfil.");
-      } else {
-        setForm(data);
+      if (data) {
+        updateMultipleFields(data);
       }
-      setCargando(false);
     };
 
     cargarDatos();
-  }, [supabase]);
+  }, [supabase, loadUserProfile, updateMultipleFields, setError]);
 
   // Manejo de Cerrar sesión
   const manejarCerrarSesion = async () => {
@@ -60,18 +55,11 @@ export default function ActualizarPerfil() {
     router.push("/auth/iniciar-sesion");
   };
 
-  const manejarCambio = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-    setError(null);
-  };
-
   const manejarEnvio = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setExito(null);
 
-    if (!form.telefono || form.telefono.replace(/\D/g, '').length !== 10) {
+    if (!form.telefono || !validateTelefono(form.telefono)) {
       setError("El número de teléfono debe tener 10 dígitos.");
       return;
     }
@@ -83,18 +71,12 @@ export default function ActualizarPerfil() {
     }
     const userId = userData.user.id;
 
-    const { error: updateError } = await supabase
-      .from("usuarios")
-      .update({
-        direccion: form.direccion,
-        telefono: form.telefono,
-      })
-      .eq("id", userId);
+    const success = await updateProfile(userId, {
+      direccion: form.direccion,
+      telefono: form.telefono,
+    });
 
-    if (updateError) {
-      setError("No se pudo actualizar el perfil. " + updateError.message);
-    } else {
-      setExito("¡Perfil actualizado correctamente!");
+    if (success) {
       router.push("/dashboard");
     }
   };
@@ -210,7 +192,7 @@ export default function ActualizarPerfil() {
           placeholder="Dirección"
           className="w-full border border-gray-300 rounded-lg px-4 py-2"
           value={form.direccion}
-          onChange={manejarCambio}
+          onChange={handleChange}
         />
       </div>
 
@@ -224,7 +206,7 @@ export default function ActualizarPerfil() {
           maxLength={10}
           className="w-full border border-gray-300 rounded-lg px-4 py-2"
           value={form.telefono}
-          onChange={manejarCambio}
+          onChange={handleChange}
           inputMode="numeric"
           autoComplete="off"
         />
