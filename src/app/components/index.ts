@@ -21,6 +21,9 @@ export { default as DonationSummary } from './DonationSummary';
 export { default as ImpactCalculator } from './ImpactCalculator';
 export { default as ImpactEquivalenceTable } from './ImpactEquivalenceTable';
 
+// User settings
+export { default as UserSettings } from './UserSettings';
+
 // UI Components
 export { default as Toast } from './ui/Toast';
 export { Iconos } from './ui/Iconos';
