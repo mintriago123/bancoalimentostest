@@ -27,26 +27,26 @@ const InventoryFilters = ({
   filteredCount,
   totalCount
 }: InventoryFiltersProps) => (
-  <div className="bg-white p-4 rounded-lg shadow-sm border">
+  <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm">
     <div className="flex flex-col lg:flex-row lg:items-center gap-4">
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
         <input
           type="text"
           placeholder="Buscar productos, depósitos..."
           value={filters.search}
           onChange={(event) => onSearchChange(event.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+          className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-2 text-sm shadow-inner focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400"
         />
       </div>
 
       <div className="flex items-center space-x-2">
-        <Warehouse className="text-gray-500 w-5 h-5" />
-        <span className="text-sm font-medium text-gray-700">Depósito:</span>
+        <Warehouse className="text-slate-500 w-5 h-5" />
+        <span className="text-sm font-medium text-slate-600">Depósito:</span>
         <select
           value={filters.depositoId}
           onChange={(event) => onDepositoChange(event.target.value)}
-          className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-inner focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400"
         >
           <option value="todos">Todos</option>
           {depositos.map(deposito => (
@@ -58,12 +58,12 @@ const InventoryFilters = ({
       </div>
 
       <div className="flex items-center space-x-2">
-        <Filter className="text-gray-500 w-5 h-5" />
-        <span className="text-sm font-medium text-gray-700">Stock:</span>
+        <Filter className="text-slate-500 w-5 h-5" />
+        <span className="text-sm font-medium text-slate-600">Stock:</span>
         <select
           value={filters.stockLevel}
           onChange={(event) => onStockChange(event.target.value as InventarioFilters['stockLevel'])}
-          className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-inner focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400"
         >
           {STOCK_FILTER_OPTIONS.map(option => (
             <option key={option.value} value={option.value}>
@@ -76,15 +76,20 @@ const InventoryFilters = ({
       <button
         type="button"
         onClick={onRefresh}
-        className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+        className="inline-flex items-center rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-600"
       >
-        <RefreshCw className="w-4 h-4 mr-2" />
+        <RefreshCw className="mr-2 h-4 w-4" />
         Actualizar
       </button>
     </div>
 
-    <div className="mt-2 text-sm text-gray-600">
+    <div className="mt-3 flex items-center justify-between text-sm text-slate-500">
       Mostrando {filteredCount} de {totalCount} productos
+      {totalCount === 0 && (
+        <span className="ml-2 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600">
+          Sin registros
+        </span>
+      )}
     </div>
   </div>
 );

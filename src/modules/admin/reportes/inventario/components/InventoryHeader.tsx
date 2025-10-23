@@ -2,45 +2,66 @@
  * @fileoverview Encabezado y métricas principales del inventario.
  */
 
+import { AlertTriangle, Gauge, Layers, PackageCheck, PackageMinus, PackagePlus } from 'lucide-react';
+import StatCard from '@/modules/admin/shared/components/StatCard';
 import type { InventarioStats } from '../types';
 
 interface InventoryHeaderProps {
   stats: InventarioStats;
 }
 
-const CARDS: Array<{
-  key: keyof InventarioStats;
-  label: string;
-  color: string;
-  bg: string;
-}> = [
-  { key: 'totalProductos', label: 'Productos', color: 'text-gray-600', bg: 'bg-gray-50 border-gray-200' },
-  { key: 'stockBajo', label: 'Stock Bajo', color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
-  { key: 'stockNormal', label: 'Stock Normal', color: 'text-yellow-600', bg: 'bg-yellow-50 border-yellow-200' },
-  { key: 'stockAlto', label: 'Stock Alto', color: 'text-green-600', bg: 'bg-green-50 border-green-200' },
-  { key: 'totalUnidades', label: 'Total Unidades', color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' }
-];
-
 const InventoryHeader = ({ stats }: InventoryHeaderProps) => (
-  <div className="flex justify-between items-start">
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900">Gestión de Inventario</h1>
-      <p className="text-sm text-gray-600 mt-1">
-        Administra el stock de productos en todos los depósitos
-      </p>
+  <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,3fr)] lg:items-start">
+    <div className="rounded-2xl border border-emerald-100 bg-emerald-500/10 p-5 shadow-sm">
+      <div className="flex items-center gap-3">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-500">
+          <PackagePlus className="h-6 w-6" aria-hidden="true" />
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-500">Visión general</p>
+          <p className="text-sm text-slate-600">
+            Administra el stock disponible y anticipa necesidades de reabastecimiento.
+          </p>
+        </div>
+      </div>
     </div>
 
-    <div className="grid grid-cols-5 gap-4 text-center">
-      {CARDS.map(card => (
-        <div key={card.label} className={`${card.bg} p-3 rounded-lg border`}>
-          <div className={`text-2xl font-bold ${card.color}`}>
-            {stats[card.key]}
-          </div>
-          <div className={`text-xs ${card.color}`}>
-            {card.label}
-          </div>
-        </div>
-      ))}
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <StatCard
+        label="Productos únicos"
+        value={stats.totalProductos}
+        accent="slate"
+        icon={<Layers className="h-5 w-5" />}
+        sublabel="P. gestionados"
+      />
+      <StatCard
+        label="Stock bajo"
+        value={stats.stockBajo}
+        accent="red"
+        icon={<AlertTriangle className="h-5 w-5" />}
+        sublabel="Reponer cuanto antes"
+      />
+      <StatCard
+        label="Stock óptimo"
+        value={stats.stockNormal}
+        accent="yellow"
+        icon={<Gauge className="h-5 w-5" />}
+        sublabel="Niveles saludables"
+      />
+      <StatCard
+        label="Stock alto"
+        value={stats.stockAlto}
+        accent="green"
+        icon={<PackageCheck className="h-5 w-5" />}
+        sublabel="Capacidad disponible"
+      />
+      <StatCard
+        label="Unidades totales"
+        value={stats.totalUnidades}
+        accent="blue"
+        icon={<PackageMinus className="h-5 w-5" />}
+        sublabel="Inventario acumulado"
+      />
     </div>
   </div>
 );

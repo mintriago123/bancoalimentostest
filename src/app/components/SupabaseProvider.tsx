@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
+import { ConfirmProvider } from '@/modules/admin/shared/hooks/useConfirm';
 
 type SupabaseContext = {
   supabase: SupabaseClient;
@@ -53,7 +54,9 @@ export default function SupabaseProvider({
 
   return (
     <Context.Provider value={{ supabase, user, isLoading }}>
-      {children}
+      <ConfirmProvider>
+        {children}
+      </ConfirmProvider>
     </Context.Provider>
   );
 }
@@ -64,4 +67,4 @@ export const useSupabase = () => {
     throw new Error('useSupabase debe ser usado dentro de SupabaseProvider');
   }
   return context;
-}; 
+};

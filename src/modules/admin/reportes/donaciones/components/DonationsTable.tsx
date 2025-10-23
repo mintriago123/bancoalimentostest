@@ -58,7 +58,7 @@ const DonationsTable = ({
 }: DonationsTableProps) => {
   if (donations.length === 0) {
     return (
-      <div className="bg-white shadow-md rounded-lg">
+      <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
         <div className="p-8 text-center">
           {totalCount === 0 ? (
             <>
@@ -86,11 +86,12 @@ const DonationsTable = ({
   }
 
   return (
-    <div className="bg-white shadow-md rounded-lg overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
       <div className="overflow-x-auto">
-        <table className="min-w-full">
-          <thead className="bg-gray-50">
-            <tr>
+        <div className="max-h-[70vh] overflow-y-auto">
+          <table className="min-w-full">
+            <thead className="sticky top-0 z-10 bg-gray-50">
+              <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Donante
               </th>
@@ -114,7 +115,7 @@ const DonationsTable = ({
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-200">
             {donations.map(donation => {
               const isProcessing = processingId === donation.id;
               // Extract expiration color selection into a separate statement to avoid nested ternary
@@ -127,7 +128,7 @@ const DonationsTable = ({
                 }
               }
               return (
-                <tr key={donation.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={donation.id} className="transition-colors duration-150 hover:bg-slate-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
@@ -257,8 +258,9 @@ const DonationsTable = ({
                 </tr>
               );
             })}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
