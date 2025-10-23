@@ -52,12 +52,12 @@ export class MovementDataService {
 
       // Función helper para agregar movimientos evitando duplicados
       const addMovements = (items: MovementItem[]) => {
-        items.forEach(item => {
+        for (const item of items) {
           if (!seenIds.has(item.id)) {
             seenIds.add(item.id);
             movements.push(item);
           }
-        });
+        }
       };
 
       // Cargar movimientos del sistema actual
@@ -388,13 +388,13 @@ export class MovementDataService {
    * @returns Cantidad válida o valor por defecto
    */
   private validateQuantity(cantidad: unknown): number {
-    if (typeof cantidad === 'number' && !isNaN(cantidad) && cantidad >= 0) {
+    if (typeof cantidad === 'number' && !Number.isNaN(cantidad) && cantidad >= 0) {
       return cantidad;
     }
     
     if (typeof cantidad === 'string') {
-      const parsed = parseFloat(cantidad);
-      if (!isNaN(parsed) && parsed >= 0) {
+      const parsed = Number.parseFloat(cantidad);
+      if (!Number.isNaN(parsed) && parsed >= 0) {
         return parsed;
       }
     }
@@ -412,7 +412,7 @@ export class MovementDataService {
   private validateDate(fecha: unknown): string {
     if (typeof fecha === 'string' && fecha.trim()) {
       const date = new Date(fecha);
-      if (!isNaN(date.getTime())) {
+      if (!Number.isNaN(date.getTime())) {
         return date.toISOString();
       }
     }

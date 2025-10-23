@@ -147,12 +147,14 @@ export class ExportService {
         });
       }
 
-      options?.merges?.forEach(range => {
-        merges.push({
-          s: { r: rowIndex, c: range.start },
-          e: { r: rowIndex, c: range.end }
-        });
-      });
+      if (options?.merges) {
+        for (const range of options.merges) {
+          merges.push({
+            s: { r: rowIndex, c: range.start },
+            e: { r: rowIndex, c: range.end }
+          });
+        }
+      }
 
       return rowIndex;
     };
@@ -307,9 +309,9 @@ export class ExportService {
     const filterDetailRowIndexes: number[] = [];
 
     if (filterDescriptions.length > 0) {
-      filterDescriptions.forEach(item => {
+      for (const item of filterDescriptions) {
         filterDetailRowIndexes.push(registerRow([item], { mergeAcross: true }));
-      });
+      }
     }
 
     registerRow([''], { mergeAcross: true }); // Separador
@@ -340,7 +342,7 @@ export class ExportService {
         tipo: 'ingreso'
       });
     } else {
-      data.forEach(item => {
+      for (const item of data) {
         const rowIndex = registerRow([
           formatDate(item.fecha_movimiento),
           MOVEMENT_TYPE_LABELS[item.tipo_movimiento],
@@ -356,7 +358,7 @@ export class ExportService {
           index: rowIndex, 
           tipo: item.tipo_movimiento 
         });
-      });
+      }
     }
 
     registerRow([''], { mergeAcross: true }); // Separador

@@ -18,16 +18,16 @@ import {
   useMovementsData, 
   useReportFilters, 
   useExportReport 
-} from './hooks/useMovementsData';
+} from '../../../../modules/admin/reportes/movimientos/hooks/useMovementsData';
 
 // Importar componentes modulares
-import ReportHeader from './components/ReportHeader';
-import MovementFilters from './components/MovementFilters';
-import MovementTable from './components/MovementTable';
-import MovementSummary from './components/MovementSummary';
+import ReportHeader from '@/modules/admin/reportes/movimientos/components/ReportHeader';
+import MovementFilters from '@/modules/admin/reportes/movimientos/components/MovementFilters';
+import MovementTable from '@/modules/admin/reportes/movimientos/components/MovementTable';
+import MovementSummary from '@/modules/admin/reportes/movimientos/components/MovementSummary';
 
 // Importar constantes
-import { SYSTEM_MESSAGES } from './constants';
+import { SYSTEM_MESSAGES } from '@/modules/admin/reportes/movimientos/constants';
 
 /**
  * Componente de estado de error para mostrar errores de manera consistente

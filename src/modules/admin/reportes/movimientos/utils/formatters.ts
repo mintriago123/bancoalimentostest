@@ -125,7 +125,7 @@ const passesDateFilter = (item: MovementItem, filters: ReportFilters): boolean =
         return false;
       }
       
-      /* Configurar para incluir todo el día final (hasta 23:59:59.999) */
+      /* Configurar para incluir el día final (hasta 23:59:59.999) */
       endDate.setHours(23, 59, 59, 999);
       
       if (movementDate > endDate) {
@@ -186,7 +186,7 @@ export const buildFilterDescriptions = (filters: ReportFilters): string[] => {
 
   if (filters.tipo_movimiento) {
     const label = MOVEMENT_TYPE_LABELS[filters.tipo_movimiento];
-    descriptions.push(`Tipo: ${label}`);
+    descriptions.push(`Tipo: ${label.toLowerCase()}`);
   }
 
   if (filters.producto?.trim()) {
@@ -235,10 +235,10 @@ export const buildMovementSummary = (data: MovementItem[]): MovementSummary => {
   let totalEgresosQuantity = 0;
   
   // Procesar cada movimiento
-  data.forEach(item => {
+  for (const item of data) {
     // Validar estructura del item
     if (!item || typeof item !== 'object') {
-      return;
+      continue;
     }
 
     const cantidad = Number(item.cantidad) || 0;
@@ -260,7 +260,7 @@ export const buildMovementSummary = (data: MovementItem[]): MovementSummary => {
     if (productKey) {
       productTotals.set(productKey, (productTotals.get(productKey) || 0) + cantidad);
     }
-  });
+  }
 
   // Calcular métricas derivadas
   const totalRecords = data.length;
@@ -361,8 +361,8 @@ export const sanitizeText = (text: unknown): string => {
 
   return text
     .trim() // Eliminar espacios al inicio y final
-    .replace(/<[^>]*>/g, '') // Eliminar tags HTML
-    .replace(/[<>'"&]/g, '') // Eliminar caracteres potencialmente peligrosos
+    .replaceAll(/<[^>]*>/g, '') // Eliminar tags HTML
+    .replaceAll(/[<>'"&]/g, '') // Eliminar caracteres potencialmente peligrosos
     .substring(0, 500); // Limitar longitud para prevenir ataques
 };
 

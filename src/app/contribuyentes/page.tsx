@@ -657,7 +657,7 @@ export default function ContribuyentesPage() {
               />
               <div className="p-8 bg-gradient-to-r from-blue-50 to-blue-100">
                 <p className="text-center text-gray-700 text-xl font-medium leading-relaxed">
-                  "Trabajando juntos para crear soluciones tecnológicas con impacto social positivo"
+                 &quot;Trabajando juntos para crear soluciones tecnológicas con impacto social positivo&quot;
                 </p>
               </div>
             </div>
