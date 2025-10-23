@@ -188,6 +188,7 @@ CREATE TABLE public.usuarios (
   cedula text,
   direccion text,
   telefono text,
+  email text,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   representante text,
