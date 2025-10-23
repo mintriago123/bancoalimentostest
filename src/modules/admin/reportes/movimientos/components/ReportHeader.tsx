@@ -1,155 +1,86 @@
 /**
- * @fileoverview Componente de encabezado para reportes de movimientos
- * Proporciona navegación, acciones principales y información contextual
- * del reporte de movimientos de inventario.
- * 
- * @author Sistema de Banco de Alimentos
- * @version 1.0.0
+ * @fileoverview Encabezado estilizado para el reporte de movimientos.
  */
 
 import React from 'react';
-import Link from 'next/link';
-import { ArrowLeft, RefreshCw, Download, TrendingUp } from 'lucide-react';
-import { NAVIGATION_ROUTES } from '../constants';
+import { Download, RefreshCw, TrendingUp } from 'lucide-react';
 import { formatDate } from '../utils/formatters';
 
-/**
- * Props para el componente ReportHeader
- */
 interface ReportHeaderProps {
-  /** Título del reporte */
-  title?: string;
-  
-  /** Descripción del reporte */
   description?: string;
-  
-  /** Indica si está cargando */
   loading?: boolean;
-  
-  /** Timestamp de última actualización */
   lastUpdate?: string;
-  
-  /** Callback para actualizar datos */
   onRefresh?: () => void;
-  
-  /** Callback para exportar datos */
   onExport?: () => void;
-  
-  /** Indica si la exportación está disponible */
   canExport?: boolean;
-  
-  /** URL de navegación hacia atrás */
-  backUrl?: string;
-  
-  /** Texto del enlace de navegación hacia atrás */
-  backText?: string;
 }
 
-/**
- * Componente de encabezado para reportes
- * Incluye navegación, título, acciones y metadatos
- */
 export const ReportHeader: React.FC<ReportHeaderProps> = ({
-  title = 'Reporte de Movimientos',
   description = 'Historial de ingresos y egresos de productos',
   loading = false,
   lastUpdate,
   onRefresh,
   onExport,
-  canExport = false,
-  backUrl = NAVIGATION_ROUTES.inicio,
-  backText = 'Volver al Inicio'
+  canExport = false
 }) => {
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-      {/* Sección principal del encabezado */}
-      <div className="flex items-center justify-between mb-6">
-        {/* Lado izquierdo: Navegación y título */}
-        <div className="flex items-center space-x-4">
-          {/* Enlace de navegación hacia atrás */}
-          <Link
-            href={backUrl}
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 rounded-md p-1"
-            aria-label={backText}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" aria-hidden="true" />
-            {backText}
-          </Link>
-
-          {/* Título y descripción */}
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <TrendingUp className="h-8 w-8 text-green-600" aria-hidden="true" />
+    <div className="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
+          <div className="flex items-center gap-3 rounded-2xl border border-indigo-100 bg-indigo-500/10 px-4 py-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/15">
+              <TrendingUp className="h-6 w-6 text-indigo-500" aria-hidden="true" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {title}
-              </h1>
-              <p className="text-gray-600 text-sm">
-                {description}
-              </p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500">Visión general</p>
+              <p className="text-sm text-slate-500">{description}</p>
             </div>
           </div>
         </div>
 
-        {/* Lado derecho: Acciones */}
-        <div className="flex items-center space-x-3">
-          {/* Botón de actualizar */}
+        <div className="flex flex-wrap gap-3">
           {onRefresh && (
             <button
               type="button"
               onClick={onRefresh}
               disabled={loading}
-              className={`
-                inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg
-                transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2
-                ${loading
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500'
-                }
-              `.trim()}
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                loading
+                  ? 'cursor-not-allowed bg-slate-200 text-slate-400'
+                  : 'bg-slate-900 text-white shadow-sm hover:bg-slate-700 focus:ring-slate-500'
+              }`}
               aria-label="Actualizar datos del reporte"
             >
-              <RefreshCw 
-                className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} 
-                aria-hidden="true" 
-              />
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
               Actualizar
             </button>
           )}
 
-          {/* Botón de exportar */}
           {onExport && (
             <button
               type="button"
               onClick={onExport}
               disabled={loading || !canExport}
-              className={`
-                inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg
-                transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2
-                ${loading || !canExport
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500'
-                }
-              `.trim()}
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                loading || !canExport
+                  ? 'cursor-not-allowed bg-slate-200 text-slate-400'
+                  : 'bg-gradient-to-r from-indigo-500 to-sky-500 text-white shadow-sm hover:from-indigo-600 hover:to-sky-600 focus:ring-indigo-500'
+              }`}
               aria-label="Exportar reporte a Excel"
             >
-              <Download className="h-4 w-4 mr-2" aria-hidden="true" />
+              <Download className="h-4 w-4" aria-hidden="true" />
               Exportar Excel
             </button>
           )}
         </div>
       </div>
 
-      {/* Información de última actualización */}
       {lastUpdate && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="text-sm text-gray-500">
-            <span className="font-medium">Última actualización:</span>{' '}
-            <time dateTime={lastUpdate} className="font-mono">
-              {formatDate(lastUpdate)}
-            </time>
-          </div>
+        <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3 text-sm text-slate-500">
+          <span className="font-medium text-slate-600">Última actualización:</span>{' '}
+          <time dateTime={lastUpdate} className="font-mono text-slate-700">
+            {formatDate(lastUpdate)}
+          </time>
         </div>
       )}
     </div>

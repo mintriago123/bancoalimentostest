@@ -373,72 +373,52 @@ export default function Sidebar({
         
         {/* Menú de perfil expandible cuando no está colapsado */}
         {!isCollapsed && (
-          <div className="mt-4">
-            <div className="relative group rounded-2xl border border-indigo-100 bg-gradient-to-br from-white via-indigo-50/80 to-white shadow-sm transition-shadow duration-300 hover:shadow-md">
-              <div className="pointer-events-none absolute -inset-x-6 inset-y-4 rounded-full bg-indigo-200/30 blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-              <button
-                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className="relative z-10 flex w-full items-center justify-between px-4 py-3 text-left"
-              >
-                <div>
-                  <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-indigo-700">
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[11px] text-indigo-600 shadow-inner" aria-hidden="true">✨</span>
-                    <span>Opciones de cuenta</span>
-                  </span>
-                  <p className="mt-1 text-[11px] font-medium text-slate-500">
-                    Personaliza tu perfil y ajusta la seguridad de tu cuenta.
-                  </p>
-                </div>
-                <span className="flex items-center gap-2 text-xs font-semibold text-indigo-600">
-                  <span className="hidden sm:inline">Gestionar</span>
-                  {isProfileMenuOpen ? (
-                    <ChevronUpIcon className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronDownIcon className="h-3.5 w-3.5" />
-                  )}
-                </span>
-              </button>
-
-              {isProfileMenuOpen && (
-                <div className="relative z-10 border-t border-indigo-50/80 bg-white/90 p-2 backdrop-blur-sm">
-                  <div className="space-y-2 rounded-xl border border-indigo-50 bg-indigo-50/50 p-2 shadow-inner">
-                    <button
-                      onClick={() => {
-                        if (isAdmin) {
-                          router.push('/admin/perfil');
-                        } else if (isDonante) {
-                          router.push('/donante/perfil');
-                        } else {
-                          router.push('/user/perfil');
-                        }
-                      }}
-                      className="w-full flex items-center rounded-lg bg-white/80 px-3 py-2 text-left text-[13px] font-medium text-slate-600 shadow-sm transition-all duration-200 hover:translate-x-1 hover:bg-white hover:shadow-md"
-                    >
-                      <UserIcon className="mr-2 h-4 w-4 text-indigo-400" />
-                      <span>Mi Perfil</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (isAdmin) {
-                          router.push('/admin/configuracion');
-                        } else if (isDonante) {
-                          router.push('/donante/configuracion');
-                        } else {
-                          router.push('/user/configuracion');
-                        }
-                      }}
-                      className="w-full flex items-center rounded-lg bg-white/80 px-3 py-2 text-left text-[13px] font-medium text-slate-600 shadow-sm transition-all duration-200 hover:translate-x-1 hover:bg-white hover:shadow-md"
-                    >
-                      <Cog6ToothIcon className="mr-2 h-4 w-4 text-indigo-400" />
-                      <span>Configuración</span>
-                    </button>
-                  </div>
-                </div>
+          <div className="mt-3">
+            <button
+              onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+              className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100"
+            >
+              <span className="text-xs text-gray-600 font-medium">Opciones de cuenta</span>
+              {isProfileMenuOpen ? (
+                <ChevronUpIcon className="w-3 h-3 text-gray-500" />
+              ) : (
+                <ChevronDownIcon className="w-3 h-3 text-gray-500" />
               )}
-            </div>
-
+            </button>
+            
             {isProfileMenuOpen && (
-              <div className="pointer-events-none mt-3 h-0.5 w-full rounded-full bg-gradient-to-r from-indigo-300/60 via-purple-200/60 to-pink-200/60" />
+              <div className="mt-2 space-y-1 bg-gray-50 rounded-lg p-2">
+                <button
+                  onClick={() => {
+                    if (isAdmin) {
+                      router.push('/admin/perfil');
+                    } else if (isDonante) {
+                      router.push('/donante/perfil');
+                    } else {
+                      router.push('/user/perfil');
+                    }
+                  }}
+                  className="w-full flex items-center px-3 py-2 text-left rounded-md hover:bg-white hover:shadow-sm transition-all duration-200"
+                >
+                  <UserIcon className="w-4 h-4 mr-2 text-gray-500" />
+                  <span className="text-xs text-gray-700 font-medium">Mi Perfil</span>
+                </button>
+                <button
+                  onClick={() => {
+                    if (isAdmin) {
+                      router.push('/admin/configuracion');
+                    } else if (isDonante) {
+                      router.push('/donante/configuracion');
+                    } else {
+                      router.push('/user/configuracion');
+                    }
+                  }}
+                  className="w-full flex items-center px-3 py-2 text-left rounded-md hover:bg-white hover:shadow-sm transition-all duration-200"
+                >
+                  <Cog6ToothIcon className="w-4 h-4 mr-2 text-gray-500" />
+                  <span className="text-xs text-gray-700 font-medium">Configuración</span>
+                </button>
+              </div>
             )}
           </div>
         )}

@@ -9,8 +9,11 @@
 
 import React from 'react';
 import { TrendingUp, TrendingDown, Package, BarChart3 } from 'lucide-react';
+import StatCard from '@/modules/admin/shared/components/StatCard';
 import type { MovementSummary as MovementSummaryData } from '../types';
 import { formatNumber } from '../utils/formatters';
+
+type Accent = 'blue' | 'green' | 'red' | 'yellow';
 
 /**
  * Props para el componente MovementSummaryCard
@@ -31,8 +34,6 @@ interface MovementSummaryCardProps {
   /** Color del tema (success, danger, info, warning) */
   variant?: 'success' | 'danger' | 'info' | 'warning';
   
-  /** Información adicional para tooltip */
-  tooltip?: string;
 }
 
 /**
@@ -44,57 +45,24 @@ const MovementSummaryCard: React.FC<MovementSummaryCardProps> = ({
   description,
   icon,
   variant = 'info',
-  tooltip
 }) => {
-  const variantStyles = {
-    success: {
-      textColor: 'text-green-600',
-      bgColor: 'bg-green-50',
-      iconColor: 'text-green-500'
-    },
-    danger: {
-      textColor: 'text-red-600',
-      bgColor: 'bg-red-50',
-      iconColor: 'text-red-500'
-    },
-    info: {
-      textColor: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      iconColor: 'text-blue-500'
-    },
-    warning: {
-      textColor: 'text-yellow-600',
-      bgColor: 'bg-yellow-50',
-      iconColor: 'text-yellow-500'
-    }
-  };
-
-  const styles = variantStyles[variant];
+  let accent: Accent = 'blue';
+  if (variant === 'success') {
+    accent = 'green';
+  } else if (variant === 'danger') {
+    accent = 'red';
+  } else if (variant === 'warning') {
+    accent = 'yellow';
+  }
 
   return (
-    <div 
-      className={`${styles.bgColor} p-6 rounded-lg border border-opacity-20`}
-      title={tooltip}
-    >
-      <div className="flex items-center">
-        <div className={`p-2 rounded-lg ${styles.iconColor}`}>
-          {icon}
-        </div>
-        <div className="ml-4 flex-1">
-          <div className="text-sm font-medium text-gray-600">
-            {title}
-          </div>
-          <div className={`text-2xl font-bold ${styles.textColor}`}>
-            {typeof value === 'number' ? formatNumber(value) : value}
-          </div>
-          {description && (
-            <div className="text-sm text-gray-500 mt-1">
-              {description}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    <StatCard
+      label={title}
+      value={typeof value === 'number' ? formatNumber(value) : value}
+      accent={accent}
+      icon={icon}
+      sublabel={description}
+    />
   );
 };
 
@@ -137,7 +105,7 @@ export const MovementSummary: React.FC<MovementSummaryProps> = ({
   }
 
   return (
-    <div className={`bg-white p-6 rounded-lg shadow-sm border border-gray-200 ${className}`}>
+    <div className={`rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm ${className}`}>
         {/* Primera fila - 4 métricas principales */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <MovementSummaryCard

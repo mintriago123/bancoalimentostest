@@ -5,6 +5,7 @@ import DashboardLayout from '@/app/components/DashboardLayout';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import Toast from '@/app/components/ui/Toast';
 import { useToast } from '@/app/hooks/useToast';
+import { useConfirm } from '@/modules/admin/shared/hooks/useConfirm';
 import SolicitudesHeader from '@/modules/admin/reportes/solicitudes/components/SolicitudesHeader';
 import SolicitudesFilters from '@/modules/admin/reportes/solicitudes/components/SolicitudesFilters';
 import SolicitudesTable from '@/modules/admin/reportes/solicitudes/components/SolicitudesTable';
@@ -40,6 +41,7 @@ const ErrorState = ({
 export default function SolicitudesPage() {
   const { supabase } = useSupabase();
   const { toasts, showSuccess, showError, showWarning, hideToast } = useToast();
+  const confirm = useConfirm();
 
   const [solicitudSeleccionada, setSolicitudSeleccionada] = useState<Solicitud | null>(null);
   const [mostrarModal, setMostrarModal] = useState(false);
@@ -88,6 +90,40 @@ export default function SolicitudesPage() {
   }, [resetInventario]);
 
   const handleEstadoChange = useCallback(async (solicitud: Solicitud, estado: 'aprobada' | 'rechazada', comentario?: string) => {
+    const prompts: Record<'aprobada' | 'rechazada', {
+      title: string;
+      description: string;
+      confirmLabel: string;
+      variant: 'default' | 'danger' | 'warning';
+    }> = {
+      aprobada: {
+        title: `Aprobar solicitud de ${solicitud.usuarios?.nombre ?? 'solicitante'}`,
+        description: `Se descontarán ${solicitud.cantidad} unidades de ${solicitud.tipo_alimento} del inventario disponible.`,
+        confirmLabel: 'Aprobar y descontar',
+        variant: 'warning'
+      },
+      rechazada: {
+        title: `Rechazar solicitud de ${solicitud.usuarios?.nombre ?? 'solicitante'}`,
+        description: 'El solicitante será notificado del rechazo y la solicitud no se atenderá.',
+        confirmLabel: 'Rechazar',
+        variant: 'danger'
+      }
+    };
+
+    const prompt = prompts[estado];
+
+    const confirmed = await confirm({
+      title: prompt.title,
+      description: prompt.description,
+      confirmLabel: prompt.confirmLabel,
+      cancelLabel: 'Cancelar',
+      variant: prompt.variant
+    });
+
+    if (!confirmed) {
+      return false;
+    }
+
     const result = await updateEstado(solicitud, estado, comentario);
 
     if (!result.success) {
@@ -103,7 +139,7 @@ export default function SolicitudesPage() {
 
     await refetch();
     return true;
-  }, [updateEstado, refetch, showError, showSuccess, showWarning]);
+  }, [updateEstado, refetch, showError, showSuccess, showWarning, confirm]);
 
   const handleOpenModal = useCallback((solicitud: Solicitud) => {
     setSolicitudSeleccionada(solicitud);
@@ -113,6 +149,18 @@ export default function SolicitudesPage() {
   }, [loadInventario]);
 
   const handleRevertir = useCallback(async (solicitud: Solicitud) => {
+    const confirmed = await confirm({
+      title: `Revertir solicitud de ${solicitud.usuarios?.nombre ?? 'solicitante'}`,
+      description: 'La solicitud volverá al estado pendiente y el solicitante podrá ser notificado para un nuevo seguimiento.',
+      confirmLabel: 'Revertir',
+      cancelLabel: 'Cancelar',
+      variant: 'warning'
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
     const result = await revertir(solicitud.id);
 
     if (!result.success) {
@@ -122,7 +170,7 @@ export default function SolicitudesPage() {
 
     showSuccess(result.message);
     await refetch();
-  }, [revertir, refetch, showError, showSuccess]);
+  }, [revertir, refetch, showError, showSuccess, confirm]);
 
   const handleModalAprobar = useCallback(async () => {
     if (!solicitudSeleccionada) return;

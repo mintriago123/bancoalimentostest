@@ -2,37 +2,59 @@
  * @fileoverview Encabezado con métricas principales de solicitudes.
  */
 
+import { Ban, CheckCircle, Clock, Inbox } from 'lucide-react';
+import StatCard from '@/modules/admin/shared/components/StatCard';
 import type { SolicitudCounters } from '../types';
 
 interface SolicitudesHeaderProps {
   counters: SolicitudCounters;
 }
 
-const cards: Array<{ key: keyof SolicitudCounters; label: string; color: string; bg: string }> = [
-  { key: 'total', label: 'Total', color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
-  { key: 'pendiente', label: 'Pendientes', color: 'text-yellow-600', bg: 'bg-yellow-50 border-yellow-200' },
-  { key: 'aprobada', label: 'Aprobadas', color: 'text-green-600', bg: 'bg-green-50 border-green-200' },
-  { key: 'rechazada', label: 'Rechazadas', color: 'text-red-600', bg: 'bg-red-50 border-red-200' }
-];
-
 const SolicitudesHeader = ({ counters }: SolicitudesHeaderProps) => (
-  <div className="flex justify-between items-start">
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900">Gestión de Solicitudes</h1>
-      <p className="text-sm text-gray-600 mt-1">
-        Administra y gestiona las solicitudes de alimentos recibidas.
-      </p>
+  <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,2fr)] lg:items-start">
+    <div className="rounded-2xl border border-sky-100 bg-sky-500/10 p-5 shadow-sm">
+      <div className="flex items-center gap-3">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/15 text-sky-500">
+          <Inbox className="h-6 w-6" aria-hidden="true" />
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-sky-500">Visión general</p>
+          <p className="text-sm text-slate-600">
+            Atiende las solicitudes de alimentos y garantiza respuestas oportunas.
+          </p>
+        </div>
+      </div>
     </div>
 
-    <div className="grid grid-cols-4 gap-4 text-center">
-      {cards.map(card => (
-        <div key={card.key} className={`${card.bg} p-3 rounded-lg border`}>
-          <div className={`text-2xl font-bold ${card.color}`}>
-            {counters[card.key]}
-          </div>
-          <div className={`text-xs ${card.color}`}>{card.label}</div>
-        </div>
-      ))}
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <StatCard
+        label="Solicitudes"
+        value={counters.total}
+        accent="blue"
+        icon={<Inbox className="h-5 w-5" />}
+        sublabel="Registros recibidos"
+      />
+      <StatCard
+        label="Pendientes"
+        value={counters.pendiente}
+        accent="yellow"
+        icon={<Clock className="h-5 w-5" />}
+        sublabel="En revisión"
+      />
+      <StatCard
+        label="Aprobadas"
+        value={counters.aprobada}
+        accent="green"
+        icon={<CheckCircle className="h-5 w-5" />}
+        sublabel="En proceso de entrega"
+      />
+      <StatCard
+        label="Rechazadas"
+        value={counters.rechazada}
+        accent="red"
+        icon={<Ban className="h-5 w-5" />}
+        sublabel="No procedentes"
+      />
     </div>
   </div>
 );

@@ -5,6 +5,7 @@ import DashboardLayout from '@/app/components/DashboardLayout';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import Toast from '@/app/components/ui/Toast';
 import { useToast } from '@/app/hooks/useToast';
+import { useConfirm } from '@/modules/admin/shared/hooks/useConfirm';
 import DonationsHeader from '@/modules/admin/reportes/donaciones/components/DonationsHeader';
 import DonationsFilters from '@/modules/admin/reportes/donaciones/components/DonationsFilters';
 import DonationsTable from '@/modules/admin/reportes/donaciones/components/DonationsTable';
@@ -23,6 +24,7 @@ const LoadingState = () => (
 export default function DonationsReportPage() {
   const { supabase } = useSupabase();
   const { toasts, showSuccess, showError, showWarning, hideToast } = useToast();
+  const confirm = useConfirm();
 
   const {
     donations,
@@ -46,6 +48,52 @@ export default function DonationsReportPage() {
   const hasError = loadingState === 'error';
 
   const handleChangeEstado = useCallback(async (donation: Donation, estado: DonationEstado) => {
+    const prompts: Record<DonationEstado, {
+      title: string;
+      description: string;
+      confirmLabel: string;
+      variant: 'default' | 'danger' | 'warning';
+    }> = {
+      Pendiente: {
+        title: `Marcar donación de ${donation.nombre_donante || 'donante'} como pendiente`,
+        description: `La donación de ${donation.cantidad} ${donation.unidad_simbolo} de ${donation.tipo_producto} volverá al estado pendiente para ser reprogramada.`,
+        confirmLabel: 'Mover a pendiente',
+        variant: 'warning'
+      },
+      Recogida: {
+        title: `Confirmar recogida de ${donation.tipo_producto}`,
+        description: `Se notificará al equipo logístico que la donación de ${donation.nombre_donante || 'el donante'} está lista para recogerse.`,
+        confirmLabel: 'Marcar como recogida',
+        variant: 'warning'
+      },
+      Entregada: {
+        title: `Confirmar entrega de ${donation.tipo_producto}`,
+        description: 'La donación se marcará como entregada y el impacto quedará registrado.',
+        confirmLabel: 'Marcar como entregada',
+        variant: 'default'
+      },
+      Cancelada: {
+        title: `Cancelar donación de ${donation.tipo_producto}`,
+        description: 'La donación se cancelará y no aparecerá como disponible en el inventario.',
+        confirmLabel: 'Cancelar donación',
+        variant: 'danger'
+      }
+    };
+
+    const prompt = prompts[estado];
+
+    const confirmed = await confirm({
+      title: prompt.title,
+      description: prompt.description,
+      confirmLabel: prompt.confirmLabel,
+      cancelLabel: 'Cancelar',
+      variant: prompt.variant
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
     const result = await updateEstado(donation, estado);
 
     if (!result.success) {
@@ -60,7 +108,7 @@ export default function DonationsReportPage() {
     }
 
     await refetch();
-  }, [updateEstado, showError, showSuccess, showWarning, refetch]);
+  }, [updateEstado, showError, showSuccess, showWarning, refetch, confirm]);
 
   const tableContent = useMemo(() => {
     if (isLoading) {

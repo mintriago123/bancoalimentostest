@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import DashboardLayout from '@/app/components/DashboardLayout';
+import { useConfirm } from '@/modules/admin/shared/hooks/useConfirm';
 import {
   Clock,
   CheckCircle,
@@ -20,6 +21,7 @@ import {
 
 export default function MisSolicitudesPage() {
   const { supabase, user } = useSupabase();
+  const confirm = useConfirm();
   const [solicitudes, setSolicitudes] = useState<any[]>([]);
   const [mensaje, setMensaje] = useState('');
   const [editandoId, setEditandoId] = useState<number | null>(null);
@@ -55,17 +57,23 @@ export default function MisSolicitudesPage() {
     fetchSolicitudes();
   }, [supabase, user, filtroEstado]);
 
-  const handleEliminar = async (id: number) => {
-    const confirmacion = window.confirm('¿Estás seguro de eliminar esta solicitud?');
-    if (!confirmacion) return;
+  const handleEliminar = async (solicitud: any) => {
+    const confirmed = await confirm({
+      title: 'Eliminar solicitud',
+      description: `Se eliminará la solicitud de ${solicitud.tipo_alimento ?? 'alimentos'} con cantidad ${solicitud.cantidad}. Esta acción no se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+      variant: 'danger'
+    });
+    if (!confirmed) return;
 
-    const { error } = await supabase.from('solicitudes').delete().eq('id', id);
+    const { error } = await supabase.from('solicitudes').delete().eq('id', solicitud.id);
 
     if (!error) {
-      setSolicitudes((prev) => prev.filter((s) => s.id !== id));
+      setSolicitudes((prev) => prev.filter((s) => s.id !== solicitud.id));
       setMensaje('Solicitud eliminada.');
       setTimeout(() => setMensaje(''), 3000);
-      if (editandoId === id) setEditandoId(null);
+      if (editandoId === solicitud.id) setEditandoId(null);
     } else {
       setMensaje('Error al eliminar la solicitud.');
       setTimeout(() => setMensaje(''), 3000);
@@ -188,7 +196,7 @@ export default function MisSolicitudesPage() {
                 {(solicitud.estado.toUpperCase() === 'rechazada' ||
                   solicitud.estado.toUpperCase() === 'pendiente') && (
                   <button
-                    onClick={() => handleEliminar(solicitud.id)}
+                    onClick={() => handleEliminar(solicitud)}
                     className="text-red-500 hover:text-red-700"
                     title="Eliminar solicitud"
                   >

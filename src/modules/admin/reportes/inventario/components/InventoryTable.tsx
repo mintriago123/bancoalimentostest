@@ -54,7 +54,7 @@ const InventoryTable = ({
 }: InventoryTableProps) => {
   if (items.length === 0) {
     return (
-      <div className="bg-white shadow-md rounded-lg">
+      <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
         <div className="p-8 text-center">
           {totalItems === 0 ? (
             <>
@@ -82,11 +82,12 @@ const InventoryTable = ({
   }
 
   return (
-    <div className="bg-white shadow-md rounded-lg overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
       <div className="overflow-x-auto">
-        <table className="min-w-full">
-          <thead className="bg-gray-50">
-            <tr>
+        <div className="max-h-[70vh] overflow-y-auto">
+          <table className="min-w-full">
+            <thead className="sticky top-0 z-10 bg-gray-50">
+              <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Producto
               </th>
@@ -104,13 +105,13 @@ const InventoryTable = ({
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-200">
             {items.map(item => {
               const stockLevel = determineStockLevel(item.cantidad_disponible);
               const isProcessing = processingId === item.id_inventario;
 
               return (
-                <tr key={item.id_inventario} className="hover:bg-gray-50 transition-colors">
+                <tr key={item.id_inventario} className="transition-colors duration-150 hover:bg-slate-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <Package className="w-10 h-10 text-gray-400 mr-3" />
@@ -189,8 +190,9 @@ const InventoryTable = ({
                 </tr>
               );
             })}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

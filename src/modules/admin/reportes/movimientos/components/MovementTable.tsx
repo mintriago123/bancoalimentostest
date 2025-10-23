@@ -51,8 +51,8 @@ const MovementRow: React.FC<{
   };
 
   const rowClassName = `
-    hover:bg-gray-50 transition-colors duration-150
-    ${onClick ? 'cursor-pointer focus:bg-gray-100' : ''}
+    transition-colors duration-150 hover:bg-slate-50
+    ${onClick ? 'cursor-pointer focus:bg-slate-100' : ''}
   `.trim();
 
   const badgeClassName = `
@@ -141,7 +141,7 @@ export const MovementTable: React.FC<MovementTableProps> = ({
   // Estado de carga
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
         <div className="flex items-center justify-center py-12">
           <div className="flex items-center space-x-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
@@ -155,7 +155,7 @@ export const MovementTable: React.FC<MovementTableProps> = ({
   // Estado sin datos
   if (data.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
         <div className="text-center py-12">
           <TrendingUp className="mx-auto h-12 w-12 text-gray-400" aria-hidden="true" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">
@@ -171,10 +171,11 @@ export const MovementTable: React.FC<MovementTableProps> = ({
 
   // Tabla con datos
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <div className="max-h-[70vh] overflow-y-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="sticky top-0 z-10 bg-gray-50">
             <tr>
               <th 
                 scope="col" 
@@ -225,8 +226,8 @@ export const MovementTable: React.FC<MovementTableProps> = ({
                 Observaciones
               </th>
             </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+            </thead>
+            <tbody className="bg-white divide-y divide-slate-200">
             {data.map((movement) => (
               <MovementRow
                 key={movement.id}
@@ -234,17 +235,18 @@ export const MovementTable: React.FC<MovementTableProps> = ({
                 onClick={onRowClick}
               />
             ))}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
-      
+
       {/* Información de conteo */}
       <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
         <div className="text-sm text-gray-700">
-          Mostrando{' '}
-          <span className="font-medium">{data.length}</span>
-          {' '}movimiento{data.length !== 1 ? 's' : ''}
-        </div>
+            Mostrando{' '}
+            <span className="font-medium">{data.length}</span>
+            {' '}movimiento{data.length === 1 ? '' : 's'}
+          </div>
       </div>
     </div>
   );

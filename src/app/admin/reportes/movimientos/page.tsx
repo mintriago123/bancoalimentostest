@@ -112,7 +112,6 @@ export default function MovementsReportPage() {
       <div className="space-y-6">
         {/* Encabezado del reporte */}
         <ReportHeader
-          title="Reporte de Movimientos"
           description="Análisis completo de ingresos y egresos de inventario"
           loading={isLoading}
           lastUpdate={lastUpdate}
