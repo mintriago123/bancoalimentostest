@@ -40,6 +40,8 @@ export async function middleware(request: NextRequest) {
         // Redirigir al dashboard según el rol
         if (perfil.rol === 'ADMINISTRADOR') {
           return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+        } else if (perfil.rol === 'OPERADOR') {
+          return NextResponse.redirect(new URL('/operador/dashboard', request.url));
         } else if (perfil.rol === 'DONANTE') {
           return NextResponse.redirect(new URL('/donante/dashboard', request.url));
         } else {
@@ -57,7 +59,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Para rutas protegidas, verificar autenticación y autorización
-    if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/donante') || pathname.startsWith('/user')) {
+    if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/operador') || pathname.startsWith('/donante') || pathname.startsWith('/user')) {
       if (!isAuthenticated) {
         const url = new URL('/auth/iniciar-sesion', request.url);
         url.searchParams.set('callbackUrl', pathname);
@@ -86,7 +88,20 @@ export async function middleware(request: NextRequest) {
         // Verificar autorización por rol
         if (pathname.startsWith('/admin') && rolUsuario !== 'ADMINISTRADOR') {
           // Redirigir al dashboard correspondiente según el rol
-          if (rolUsuario === 'DONANTE') {
+          if (rolUsuario === 'OPERADOR') {
+            return NextResponse.redirect(new URL('/operador/dashboard', request.url));
+          } else if (rolUsuario === 'DONANTE') {
+            return NextResponse.redirect(new URL('/donante/dashboard', request.url));
+          } else {
+            return NextResponse.redirect(new URL('/user/dashboard', request.url));
+          }
+        }
+
+        if (pathname.startsWith('/operador') && rolUsuario !== 'OPERADOR') {
+          // Redirigir al dashboard correspondiente según el rol
+          if (rolUsuario === 'ADMINISTRADOR') {
+            return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+          } else if (rolUsuario === 'DONANTE') {
             return NextResponse.redirect(new URL('/donante/dashboard', request.url));
           } else {
             return NextResponse.redirect(new URL('/user/dashboard', request.url));
@@ -97,6 +112,8 @@ export async function middleware(request: NextRequest) {
           // Redirigir al dashboard correspondiente según el rol
           if (rolUsuario === 'ADMINISTRADOR') {
             return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+          } else if (rolUsuario === 'OPERADOR') {
+            return NextResponse.redirect(new URL('/operador/dashboard', request.url));
           } else {
             return NextResponse.redirect(new URL('/user/dashboard', request.url));
           }
@@ -106,6 +123,8 @@ export async function middleware(request: NextRequest) {
           // Redirigir al dashboard correspondiente según el rol
           if (rolUsuario === 'ADMINISTRADOR') {
             return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+          } else if (rolUsuario === 'OPERADOR') {
+            return NextResponse.redirect(new URL('/operador/dashboard', request.url));
           } else if (rolUsuario === 'DONANTE') {
             return NextResponse.redirect(new URL('/donante/dashboard', request.url));
           }
@@ -115,6 +134,8 @@ export async function middleware(request: NextRequest) {
         if (pathname === '/dashboard') {
           if (rolUsuario === 'ADMINISTRADOR') {
             return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+          } else if (rolUsuario === 'OPERADOR') {
+            return NextResponse.redirect(new URL('/operador/dashboard', request.url));
           } else if (rolUsuario === 'DONANTE') {
             return NextResponse.redirect(new URL('/donante/dashboard', request.url));
           } else {

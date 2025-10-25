@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 
 interface NotificacionesDropdownProps {
   readonly isCollapsed?: boolean;
-  readonly roleColor?: 'red' | 'green' | 'blue';
+  readonly roleColor?: 'red' | 'orange' | 'green' | 'blue';
 }
 
 export default function NotificacionesDropdown({ isCollapsed = false, roleColor = 'blue' }: NotificacionesDropdownProps) {
