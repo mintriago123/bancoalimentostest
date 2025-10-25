@@ -103,6 +103,36 @@ const menuItems: MenuItem[] = [
     ]
   },
   
+  // Items para Operadores
+  {
+    name: 'Dashboard Operador',
+    href: '/operador/dashboard',
+    icon: HomeIcon,
+    description: 'Panel principal de operador',
+    operadorOnly: true
+  },
+  {
+    name: 'Gestionar Solicitudes',
+    href: '/operador/solicitudes',
+    icon: ClipboardDocumentListIcon,
+    description: 'Aprobar/Rechazar solicitudes',
+    operadorOnly: true
+  },
+  {
+    name: 'Gestionar Donaciones',
+    href: '/operador/donaciones',
+    icon: PlusCircleIcon,
+    description: 'Actualizar estados de donaciones',
+    operadorOnly: true
+  },
+  {
+    name: 'Ajustar Inventario',
+    href: '/operador/inventario',
+    icon: ChartBarIcon,
+    description: 'Control de stock disponible',
+    operadorOnly: true
+  },
+  
   // Items para Donantes
   {
     name: 'Dashboard',
