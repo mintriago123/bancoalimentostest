@@ -21,7 +21,7 @@ CHECK (rol = ANY (ARRAY['ADMINISTRADOR'::text, 'DONANTE'::text, 'SOLICITANTE'::t
 -- Opción 1: Convertir un usuario específico por su email
 UPDATE public.usuarios 
 SET rol = 'OPERADOR', updated_at = NOW()
-WHERE email = 'kristhianbello12@gmail.com';
+WHERE email = 'ejemplo@bancodealimentos.com';
 
 -- Opción 2: Convertir un usuario específico por su ID
 -- UPDATE public.usuarios 
