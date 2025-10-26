@@ -11,6 +11,16 @@ export const RUTAS_PUBLICAS = [
   
 ] as const;
 
+// Roles del sistema
+export const ROLES = {
+  ADMINISTRADOR: 'ADMINISTRADOR',
+  OPERADOR: 'OPERADOR',
+  DONANTE: 'DONANTE',
+  SOLICITANTE: 'SOLICITANTE'
+} as const;
+
+export type RolUsuario = typeof ROLES[keyof typeof ROLES];
+
 // Clases de estilo reutilizables
 export const CLASES_ESTILO = {
   input: "block w-full px-4 py-3 text-gray-900 placeholder-gray-500 bg-white/70 border border-gray-300/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm transition-all duration-200",

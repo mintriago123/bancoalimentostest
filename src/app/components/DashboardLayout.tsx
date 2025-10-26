@@ -8,7 +8,7 @@ import { Bars3Icon } from '@heroicons/react/24/outline';
 
 interface DashboardLayoutProps {
   readonly children: React.ReactNode;
-  readonly requiredRole?: 'ADMINISTRADOR' | 'DONANTE' | 'SOLICITANTE' | 'ANY';
+  readonly requiredRole?: 'ADMINISTRADOR' | 'OPERADOR' | 'DONANTE' | 'SOLICITANTE' | 'ANY';
   readonly title?: string;
   readonly description?: string;
 }
@@ -33,7 +33,7 @@ export const useSidebar = () => useContext(SidebarContext);
 
 interface DashboardLayoutProps {
   readonly children: React.ReactNode;
-  readonly requiredRole?: 'ADMINISTRADOR' | 'DONANTE' | 'SOLICITANTE' | 'ANY';
+  readonly requiredRole?: 'ADMINISTRADOR' | 'OPERADOR' | 'DONANTE' | 'SOLICITANTE' | 'ANY';
   readonly title?: string;
   readonly description?: string;
 }
@@ -65,6 +65,7 @@ export default function DashboardLayout({
   const getRedirectUrl = (userRole: string) => {
     switch (userRole) {
       case 'ADMINISTRADOR': return '/admin/dashboard';
+      case 'OPERADOR': return '/operador/dashboard';
       case 'DONANTE': return '/donante/dashboard';
       default: return '/user/dashboard';
     }

@@ -32,6 +32,7 @@ interface MenuItem {
   icon: React.ComponentType<{ className?: string }>;
   description?: string;
   adminOnly?: boolean;
+  operadorOnly?: boolean;
   donanteOnly?: boolean;
   solicitanteOnly?: boolean;
   subItems?: SubMenuItem[];
@@ -66,27 +67,6 @@ const menuItems: MenuItem[] = [
     description: 'Ver y gestionar el catálogo de alimentos',
     adminOnly: true
   },
-  // {
-  //   name: 'Solicitudes',
-  //   href: '/admin/solicitudes',
-  //   icon: DocumentTextIcon,
-  //   description: 'Ver todas las solicitudes',
-  //   adminOnly: true
-  // },
-  // {
-  //   name: 'Donaciones',
-  //   href: '/admin/donaciones',
-  //   icon: ClipboardDocumentListIcon,
-  //   description: 'Gestionar donaciones',
-  //   adminOnly: true
-  // },
-  // {
-  //   name: 'Inventario',
-  //   href: '/admin/inventario',
-  //   icon: ChartBarIcon,
-  //   description: 'Gestionar inventario y depósitos',
-  //   adminOnly: true
-  // },
   {
     name: 'Reportes',
     href: '/admin/reportes',
@@ -94,10 +74,6 @@ const menuItems: MenuItem[] = [
     description: 'Estadísticas y análisis',
     adminOnly: true,
     subItems: [
-      // {
-      //   name: 'Dashboard de Reportes',
-      //   href: '/admin/reportes',
-      //   description: 'Panel principal de estadísticas'
       // },
       {
         name: 'Inventario',
@@ -125,6 +101,36 @@ const menuItems: MenuItem[] = [
       //   description: 'Reportes generados anteriormente'
       // }
     ]
+  },
+  
+  // Items para Operadores
+  {
+    name: 'Dashboard Operador',
+    href: '/operador/dashboard',
+    icon: HomeIcon,
+    description: 'Panel principal de operador',
+    operadorOnly: true
+  },
+  {
+    name: 'Gestionar Solicitudes',
+    href: '/operador/solicitudes',
+    icon: ClipboardDocumentListIcon,
+    description: 'Aprobar/Rechazar solicitudes',
+    operadorOnly: true
+  },
+  {
+    name: 'Gestionar Donaciones',
+    href: '/operador/donaciones',
+    icon: PlusCircleIcon,
+    description: 'Actualizar estados de donaciones',
+    operadorOnly: true
+  },
+  {
+    name: 'Ajustar Inventario',
+    href: '/operador/inventario',
+    icon: ChartBarIcon,
+    description: 'Control de stock disponible',
+    operadorOnly: true
   },
   
   // Items para Donantes
@@ -220,12 +226,14 @@ export default function Sidebar({
   }, [externalSetIsCollapsed]);
 
   const isAdmin = userRole === 'ADMINISTRADOR';
+  const isOperador = userRole === 'OPERADOR';
   const isDonante = userRole === 'DONANTE';
   const isSolicitante = userRole === 'SOLICITANTE';
 
   // Filtrar items según el rol
   const filteredMenuItems = menuItems.filter(item => {
     if (item.adminOnly && !isAdmin) return false;
+    if (item.operadorOnly && !isOperador) return false;
     if (item.donanteOnly && !isDonante) return false;
     if (item.solicitanteOnly && !isSolicitante) return false;
     return true;
@@ -246,10 +254,12 @@ export default function Sidebar({
   const isActiveRoute = (href: string) => {
     if (href === '/user/dashboard' && pathname === '/user/dashboard') return true;
     if (href === '/admin/dashboard' && pathname === '/admin/dashboard') return true;
+    if (href === '/operador/dashboard' && pathname === '/operador/dashboard') return true;
     if (href === '/donante/dashboard' && pathname === '/donante/dashboard') return true;
     return pathname.startsWith(href) && 
            href !== '/user/dashboard' && 
            href !== '/admin/dashboard' && 
+           href !== '/operador/dashboard' && 
            href !== '/donante/dashboard';
   };
 
@@ -274,6 +284,7 @@ export default function Sidebar({
     if (!isActive) return 'text-gray-700 hover:bg-gray-50 hover:text-gray-900';
     
     if (isAdmin) return 'bg-red-50 text-red-700 border border-red-200';
+    if (isOperador) return 'bg-orange-50 text-orange-700 border border-orange-200';
     if (isDonante) return 'bg-green-50 text-green-700 border border-green-200';
     return 'bg-blue-50 text-blue-700 border border-blue-200'; // Solicitante
   };
@@ -282,18 +293,21 @@ export default function Sidebar({
     if (!isActive) return 'text-gray-500 group-hover:text-gray-700';
     
     if (isAdmin) return 'text-red-600';
+    if (isOperador) return 'text-orange-600';
     if (isDonante) return 'text-green-600';
     return 'text-blue-600'; // Solicitante
   };
 
   const getRoleLabel = () => {
     if (isAdmin) return 'Admin Panel';
+    if (isOperador) return 'Panel Operador';
     if (isDonante) return 'Panel Donante';
     return 'Banco Alimentos'; // Solicitante
   };
 
   const getAvatarColor = () => {
     if (isAdmin) return 'bg-red-500 text-white';
+    if (isOperador) return 'bg-orange-500 text-white';
     if (isDonante) return 'bg-green-500 text-white';
     return 'bg-blue-500 text-white'; // Solicitante
   };
@@ -392,6 +406,8 @@ export default function Sidebar({
                   onClick={() => {
                     if (isAdmin) {
                       router.push('/admin/perfil');
+                    } else if (isOperador) {
+                      router.push('/operador/perfil');
                     } else if (isDonante) {
                       router.push('/donante/perfil');
                     } else {
@@ -407,6 +423,8 @@ export default function Sidebar({
                   onClick={() => {
                     if (isAdmin) {
                       router.push('/admin/configuracion');
+                    } else if (isOperador) {
+                      router.push('/operador/configuracion');
                     } else if (isDonante) {
                       router.push('/donante/configuracion');
                     } else {
@@ -427,7 +445,7 @@ export default function Sidebar({
       {/* Sección de Notificaciones */}
       <div className="px-4 py-2 border-b border-gray-100 bg-white">
   <NotificacionesDropdown isCollapsed={isCollapsed} roleColor={
-    isAdmin ? 'red' : isDonante ? 'green' : 'blue'
+    isAdmin ? 'red' : isOperador ? 'orange' : isDonante ? 'green' : 'blue'
   } />
       </div>
 
