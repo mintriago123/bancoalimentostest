@@ -9,6 +9,93 @@ CREATE TABLE public.alimentos (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT alimentos_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.backup_detalles_solicitud (
+  id_detalle uuid,
+  id_solicitud uuid,
+  id_producto uuid,
+  cantidad_solicitada numeric,
+  cantidad_entregada numeric,
+  fecha_respuesta timestamp with time zone,
+  comentario_admin text
+);
+CREATE TABLE public.backup_donaciones (
+  id integer,
+  user_id uuid,
+  nombre_donante text,
+  ruc_donante text,
+  cedula_donante text,
+  direccion_donante_completa text,
+  telefono text,
+  email text,
+  representante_donante text,
+  tipo_persona_donante text,
+  alimento_id integer,
+  tipo_producto text,
+  categoria_comida text,
+  es_producto_personalizado boolean,
+  cantidad numeric,
+  unidad_id integer,
+  unidad_nombre text,
+  unidad_simbolo text,
+  fecha_vencimiento date,
+  fecha_disponible date,
+  direccion_entrega text,
+  horario_preferido text,
+  observaciones text,
+  impacto_estimado_personas integer,
+  impacto_equivalente text,
+  estado text,
+  creado_en timestamp with time zone,
+  actualizado_en timestamp with time zone
+);
+CREATE TABLE public.backup_inventario (
+  id_inventario uuid,
+  id_deposito uuid,
+  id_producto uuid,
+  cantidad_disponible numeric,
+  fecha_actualizacion timestamp without time zone
+);
+CREATE TABLE public.backup_movimiento_inventario_cabecera (
+  id_movimiento uuid,
+  fecha_movimiento timestamp without time zone,
+  id_donante uuid,
+  id_solicitante uuid,
+  estado_movimiento text,
+  observaciones text
+);
+CREATE TABLE public.backup_movimiento_inventario_detalle (
+  id_detalle uuid,
+  id_movimiento uuid,
+  id_producto uuid,
+  cantidad numeric,
+  tipo_transaccion text,
+  rol_usuario text,
+  observacion_detalle text
+);
+CREATE TABLE public.backup_productos_donados (
+  id_producto uuid,
+  id_usuario uuid,
+  nombre_producto text,
+  descripcion text,
+  fecha_donacion timestamp with time zone,
+  cantidad numeric,
+  unidad_medida text,
+  fecha_caducidad timestamp with time zone
+);
+CREATE TABLE public.backup_solicitudes (
+  id uuid,
+  usuario_id uuid,
+  tipo_alimento text,
+  cantidad numeric,
+  comentarios text,
+  latitud double precision,
+  longitud double precision,
+  estado text,
+  created_at timestamp with time zone,
+  fecha_respuesta timestamp with time zone,
+  comentario_admin text,
+  unidad_id bigint
+);
 CREATE TABLE public.configuracion_notificaciones (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   usuario_id uuid,
@@ -181,18 +268,18 @@ CREATE TABLE public.unidades (
 );
 CREATE TABLE public.usuarios (
   id uuid NOT NULL,
-  rol text,
+  rol text CHECK (rol = ANY (ARRAY['ADMINISTRADOR'::text, 'DONANTE'::text, 'SOLICITANTE'::text, 'OPERADOR'::text])),
   tipo_persona text,
   nombre text,
   ruc text,
   cedula text,
   direccion text,
   telefono text,
-  email text,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   representante text,
   estado character varying DEFAULT 'activo'::character varying CHECK (estado::text = ANY (ARRAY['activo'::character varying::text, 'bloqueado'::character varying::text, 'desactivado'::character varying::text])),
+  email text,
   CONSTRAINT usuarios_pkey PRIMARY KEY (id),
   CONSTRAINT usuarios_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );

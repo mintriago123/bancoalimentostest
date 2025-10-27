@@ -14,7 +14,15 @@ import { SYSTEM_MESSAGES } from '../constants';
 const logger = {
   info: (message: string, details?: unknown) => console.info(`[DonationActionService] ${message}`, details),
   warn: (message: string, details?: unknown) => console.warn(`[DonationActionService] ${message}`, details),
-  error: (message: string, error?: unknown) => console.error(`[DonationActionService] ${message}`, error)
+  error: (message: string, error?: unknown) => {
+    console.error(`[DonationActionService] ${message}`, error);
+    if (error instanceof Error) {
+      console.error('Stack:', error.stack);
+      console.error('Message:', error.message);
+    } else if (error && typeof error === 'object') {
+      console.error('Error details:', JSON.stringify(error, null, 2));
+    }
+  }
 };
 
 const NO_ROWS_CODE = 'PGRST116';
@@ -92,13 +100,27 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
 
   const integrateWithInventory = async (donation: Donation): Promise<DonationInventoryIntegrationResult> => {
     try {
+      logger.info('Iniciando integración con inventario', { donationId: donation.id, tipoProducto: donation.tipo_producto });
+      
       const productoId = await obtenerOCrearProducto(donation);
+      logger.info('Producto obtenido/creado', { productoId });
+      
       const depositoId = await obtenerOCrearDeposito();
+      logger.info('Depósito obtenido/creado', { depositoId });
+      
       await actualizarInventario(productoId, depositoId, donation);
+      logger.info('Inventario actualizado exitosamente', { productoId, depositoId, cantidad: donation.cantidad });
 
       return { productoId, depositoId };
     } catch (error) {
       logger.error('Error integrando donación con inventario', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      logger.error('Detalle del error de integración:', { 
+        errorMessage, 
+        donationId: donation.id,
+        tipoProducto: donation.tipo_producto,
+        cantidad: donation.cantidad
+      });
       return {
         error: SYSTEM_MESSAGES.integrationWarning,
         productoId: undefined,
@@ -108,111 +130,144 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
   };
 
   const obtenerOCrearProducto = async (donation: Donation): Promise<number> => {
-    const { data: existingProduct, error: searchError } = await supabaseClient
-      .from('productos_donados')
-      .select('id_producto')
-      .eq('nombre_producto', donation.tipo_producto)
-      .eq('descripcion', donation.categoria_comida)
-      .maybeSingle();
+    try {
+      const { data: existingProduct, error: searchError } = await supabaseClient
+        .from('productos_donados')
+        .select('id_producto')
+        .eq('nombre_producto', donation.tipo_producto)
+        .eq('descripcion', donation.categoria_comida)
+        .maybeSingle();
 
-    if (searchError && searchError.code !== NO_ROWS_CODE) {
-      throw searchError;
+      if (searchError && searchError.code !== NO_ROWS_CODE) {
+        logger.error('Error buscando producto existente', searchError);
+        throw new Error(`Error al buscar producto: ${searchError.message}`);
+      }
+
+      if (existingProduct) {
+        return existingProduct.id_producto;
+      }
+
+      const { data: newProduct, error: insertError } = await supabaseClient
+        .from('productos_donados')
+        .insert({
+          nombre_producto: donation.tipo_producto,
+          descripcion: donation.categoria_comida,
+          unidad_medida: donation.unidad_simbolo,
+          fecha_caducidad: donation.fecha_vencimiento ?? null,
+          fecha_donacion: new Date().toISOString(),
+          id_usuario: donation.user_id // Agregar el ID del donante original
+        })
+        .select('id_producto')
+        .single();
+
+      if (insertError || !newProduct) {
+        logger.error('Error creando nuevo producto', insertError);
+        throw new Error(`Error al crear producto: ${insertError?.message || 'Producto no retornado'}`);
+      }
+
+      return newProduct.id_producto;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Error desconocido al obtener o crear producto');
     }
-
-    if (existingProduct) {
-      return existingProduct.id_producto;
-    }
-
-    const { data: newProduct, error: insertError } = await supabaseClient
-      .from('productos_donados')
-      .insert({
-        nombre_producto: donation.tipo_producto,
-        descripcion: donation.categoria_comida,
-        unidad_medida: donation.unidad_simbolo,
-        fecha_caducidad: donation.fecha_vencimiento ?? null,
-        fecha_donacion: new Date().toISOString()
-      })
-      .select('id_producto')
-      .single();
-
-    if (insertError || !newProduct) {
-      throw insertError;
-    }
-
-    return newProduct.id_producto;
   };
 
   const obtenerOCrearDeposito = async (): Promise<string> => {
-    const { data: depositoPrincipal, error } = await supabaseClient
-      .from('depositos')
-      .select('id_deposito')
-      .limit(1)
-      .maybeSingle();
+    try {
+      const { data: depositoPrincipal, error } = await supabaseClient
+        .from('depositos')
+        .select('id_deposito')
+        .limit(1)
+        .maybeSingle();
 
-    if (!error && depositoPrincipal) {
-      return depositoPrincipal.id_deposito;
+      if (!error && depositoPrincipal) {
+        return depositoPrincipal.id_deposito;
+      }
+
+      if (error && error.code !== NO_ROWS_CODE) {
+        logger.error('Error buscando depósito existente', error);
+        throw new Error(`Error al buscar depósito: ${error.message}`);
+      }
+
+      const { data: newDeposito, error: insertError } = await supabaseClient
+        .from('depositos')
+        .insert({
+          nombre: 'Depósito Principal',
+          descripcion: 'Depósito principal para donaciones'
+        })
+        .select('id_deposito')
+        .single();
+
+      if (insertError || !newDeposito) {
+        logger.error('Error creando nuevo depósito', insertError);
+        throw new Error(`Error al crear depósito: ${insertError?.message || 'Depósito no retornado'}`);
+      }
+
+      return newDeposito.id_deposito;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Error desconocido al obtener o crear depósito');
     }
-
-    const { data: newDeposito, error: insertError } = await supabaseClient
-      .from('depositos')
-      .insert({
-        nombre: 'Depósito Principal',
-        descripcion: 'Depósito principal para donaciones'
-      })
-      .select('id_deposito')
-      .single();
-
-    if (insertError || !newDeposito) {
-      throw insertError;
-    }
-
-    return newDeposito.id_deposito;
   };
 
   const actualizarInventario = async (productoId: number, depositoId: string, donation: Donation) => {
-    const { data: existingInventory, error: inventoryError } = await supabaseClient
-      .from('inventario')
-      .select('id_inventario, cantidad_disponible')
-      .eq('id_producto', productoId)
-      .eq('id_deposito', depositoId)
-      .maybeSingle();
-
-    if (inventoryError && inventoryError.code !== NO_ROWS_CODE) {
-      throw inventoryError;
-    }
-
-    if (existingInventory) {
-      const nuevaCantidad = (existingInventory.cantidad_disponible ?? 0) + donation.cantidad;
-      const { error: updateError } = await supabaseClient
+    try {
+      const { data: existingInventory, error: inventoryError } = await supabaseClient
         .from('inventario')
-        .update({
-          cantidad_disponible: nuevaCantidad,
-          fecha_actualizacion: new Date().toISOString()
-        })
-        .eq('id_inventario', existingInventory.id_inventario);
+        .select('id_inventario, cantidad_disponible')
+        .eq('id_producto', productoId)
+        .eq('id_deposito', depositoId)
+        .maybeSingle();
 
-      if (updateError) {
-        throw updateError;
+      if (inventoryError && inventoryError.code !== NO_ROWS_CODE) {
+        logger.error('Error buscando inventario existente', inventoryError);
+        throw new Error(`Error al buscar inventario: ${inventoryError.message}`);
       }
 
-      logger.info(SYSTEM_MESSAGES.inventoryIncrement(donation.cantidad, donation.unidad_simbolo, donation.tipo_producto));
-      return;
+      if (existingInventory) {
+        const nuevaCantidad = (existingInventory.cantidad_disponible ?? 0) + donation.cantidad;
+        const { error: updateError } = await supabaseClient
+          .from('inventario')
+          .update({
+            cantidad_disponible: nuevaCantidad,
+            fecha_actualizacion: new Date().toISOString()
+          })
+          .eq('id_inventario', existingInventory.id_inventario);
+
+        if (updateError) {
+          logger.error('Error actualizando cantidad en inventario', updateError);
+          throw new Error(`Error al actualizar inventario: ${updateError.message}`);
+        }
+
+        logger.info(SYSTEM_MESSAGES.inventoryIncrement(donation.cantidad, donation.unidad_simbolo, donation.tipo_producto));
+        return;
+      }
+
+      const { error: insertError } = await supabaseClient
+        .from('inventario')
+        .insert({
+          id_deposito: depositoId,
+          id_producto: productoId,
+          cantidad_disponible: donation.cantidad,
+          fecha_actualizacion: new Date().toISOString()
+        });
+
+      if (insertError) {
+        logger.error('Error creando registro de inventario', insertError);
+        throw new Error(`Error al crear registro de inventario: ${insertError.message}`);
+      }
+
+      logger.info(SYSTEM_MESSAGES.inventoryCreate(donation.cantidad, donation.unidad_simbolo, donation.tipo_producto));
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Error desconocido al actualizar inventario');
     }
-
-    const { error: insertError } = await supabaseClient
-      .from('inventario')
-      .insert({
-        id_deposito: depositoId,
-        id_producto: productoId,
-        cantidad_disponible: donation.cantidad,
-        fecha_actualizacion: new Date().toISOString()
-      });
-
-    if (insertError) {
-      throw insertError;
-    }
-
-    logger.info(SYSTEM_MESSAGES.inventoryCreate(donation.cantidad, donation.unidad_simbolo, donation.tipo_producto));
   };
 
   const registerDonationMovement = async (donation: Donation, productoId: number): Promise<ServiceResult<void>> => {
