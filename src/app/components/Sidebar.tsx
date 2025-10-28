@@ -251,12 +251,19 @@ export default function Sidebar({
         headers: {
           'Content-Type': 'application/json',
         },
+      }).catch(() => {
+        // Suprimir errores de fetch durante logout
       });
       
       // 3. Forzar recarga completa para limpiar todo el estado
       window.location.href = '/auth/iniciar-sesion';
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      // Solo loggear si no es un error esperado
+      if (error && typeof error === 'object' && 'code' in error) {
+        if (error.code !== 'ECONNRESET') {
+          console.error('Error al cerrar sesión:', error);
+        }
+      }
       // Incluso si hay error, redirigir
       window.location.href = '/auth/iniciar-sesion';
     }

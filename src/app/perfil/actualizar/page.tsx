@@ -61,12 +61,19 @@ export default function ActualizarPerfil() {
         headers: {
           'Content-Type': 'application/json',
         },
+      }).catch(() => {
+        // Suprimir errores de fetch durante logout
       });
       
       // 3. Forzar recarga completa
       window.location.href = '/auth/iniciar-sesion';
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      // Solo loggear si no es un error esperado
+      if (error && typeof error === 'object' && 'code' in error) {
+        if (error.code !== 'ECONNRESET') {
+          console.error('Error al cerrar sesión:', error);
+        }
+      }
       window.location.href = '/auth/iniciar-sesion';
     }
   };

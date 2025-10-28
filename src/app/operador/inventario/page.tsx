@@ -10,6 +10,7 @@ import OperadorInventoryTable from '@/modules/operador/inventario/components/Ope
 import OperadorInventoryFilters from '@/modules/operador/inventario/components/OperadorInventoryFilters';
 import OperadorInventoryStats from '@/modules/operador/inventario/components/OperadorInventoryStats';
 import OperadorInventoryAlerts from '@/modules/operador/inventario/components/OperadorInventoryAlerts';
+import OperadorInventoryDetailModal from '@/modules/operador/inventario/components/OperadorInventoryDetailModal';
 import type { InventarioItem, AlertaInventario } from '@/modules/operador/inventario/types';
 import { Package2, AlertTriangle, BarChart3 } from 'lucide-react';
 
@@ -25,6 +26,8 @@ export default function OperadorInventarioPage() {
   const { toasts, showSuccess, showError, hideToast } = useToast();
   const [currentView, setCurrentView] = useState<'inventario' | 'alertas' | 'estadisticas'>('inventario');
   const [selectedAlerta, setSelectedAlerta] = useState<AlertaInventario | null>(null);
+  const [selectedItem, setSelectedItem] = useState<InventarioItem | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const {
     inventario,
@@ -80,9 +83,14 @@ export default function OperadorInventarioPage() {
   }, [handleUpdateCantidad]);
 
   const handleViewDetails = useCallback((item: InventarioItem) => {
-    // Por ahora solo mostramos un mensaje, aquí iría un modal con detalles
-    showSuccess(`Ver detalles de: ${item.producto.nombre_producto}`);
-  }, [showSuccess]);
+    setSelectedItem(item);
+    setIsDetailModalOpen(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setIsDetailModalOpen(false);
+    setSelectedItem(null);
+  }, []);
 
   const handleAlertaClick = useCallback((alerta: AlertaInventario) => {
     setSelectedAlerta(alerta);
@@ -296,6 +304,13 @@ export default function OperadorInventarioPage() {
           />
         ))}
       </div>
+
+      {/* Modal de Detalles */}
+      <OperadorInventoryDetailModal
+        item={selectedItem}
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseModal}
+      />
     </DashboardLayout>
   );
 }

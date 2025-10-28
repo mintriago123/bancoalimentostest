@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import DashboardLayout from '@/app/components/DashboardLayout';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import Toast from '@/app/components/ui/Toast';
@@ -10,6 +10,7 @@ import InventoryFilters from '@/modules/admin/reportes/inventario/components/Inv
 import InventoryTable from '@/modules/admin/reportes/inventario/components/InventoryTable';
 import InventoryDepositSummary from '@/modules/admin/reportes/inventario/components/InventoryDepositSummary';
 import InventoryErrorState from '@/modules/admin/reportes/inventario/components/InventoryErrorState';
+import InventoryDetailModal from '@/modules/admin/reportes/inventario/components/InventoryDetailModal';
 import { useInventoryData } from '@/modules/admin/reportes/inventario/hooks/useInventoryData';
 import { useInventoryActions } from '@/modules/admin/reportes/inventario/hooks/useInventoryActions';
 import type { InventarioItem } from '@/modules/admin/reportes/inventario/types';
@@ -24,6 +25,8 @@ const LoadingState = () => (
 export default function InventoryReportPage() {
   const { supabase } = useSupabase();
   const { toasts, showSuccess, showError, hideToast } = useToast();
+  const [selectedItem, setSelectedItem] = useState<InventarioItem | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const {
     inventario,
@@ -72,6 +75,16 @@ export default function InventoryReportPage() {
     await handleUpdateCantidad(item, nuevaCantidad);
   }, [handleUpdateCantidad]);
 
+  const handleViewDetails = useCallback((item: InventarioItem) => {
+    setSelectedItem(item);
+    setIsDetailModalOpen(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setIsDetailModalOpen(false);
+    setSelectedItem(null);
+  }, []);
+
   const tableContent = useMemo(() => {
     if (isLoading) {
       return <LoadingState />;
@@ -89,6 +102,7 @@ export default function InventoryReportPage() {
         onResetFilters={resetFilters}
         onDecrease={handleDecrease}
         onIncrease={handleIncrease}
+        onViewDetails={handleViewDetails}
         processingId={processingId}
       />
     );
@@ -151,6 +165,12 @@ export default function InventoryReportPage() {
           />
         ))}
       </div>
+
+      <InventoryDetailModal
+        item={selectedItem}
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseModal}
+      />
     </DashboardLayout>
   );
 }

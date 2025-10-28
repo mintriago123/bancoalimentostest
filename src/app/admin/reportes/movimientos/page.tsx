@@ -9,7 +9,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import DashboardLayout from '@/app/components/DashboardLayout';
 
@@ -25,9 +25,13 @@ import ReportHeader from '@/modules/admin/reportes/movimientos/components/Report
 import MovementFilters from '@/modules/admin/reportes/movimientos/components/MovementFilters';
 import MovementTable from '@/modules/admin/reportes/movimientos/components/MovementTable';
 import MovementSummary from '@/modules/admin/reportes/movimientos/components/MovementSummary';
+import MovementDetailModal from '@/modules/admin/reportes/movimientos/components/MovementDetailModal';
 
 // Importar constantes
 import { SYSTEM_MESSAGES } from '@/modules/admin/reportes/movimientos/constants';
+
+// Importar tipos
+import type { MovementItem } from '@/modules/admin/reportes/movimientos/types';
 
 /**
  * Componente de estado de error para mostrar errores de manera consistente
@@ -70,6 +74,8 @@ const ErrorState: React.FC<{
  */
 export default function MovementsReportPage() {
   const { supabase } = useSupabase();
+  const [selectedMovement, setSelectedMovement] = useState<MovementItem | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // Hook para gestión de filtros
   const {
@@ -102,6 +108,17 @@ export default function MovementsReportPage() {
   // Determinar si está cargando
   const isLoading = loadingState === 'loading';
   const hasError = loadingState === 'error';
+
+  // Manejadores para el modal
+  const handleRowClick = useCallback((movement: MovementItem) => {
+    setSelectedMovement(movement);
+    setIsDetailModalOpen(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setIsDetailModalOpen(false);
+    setSelectedMovement(null);
+  }, []);
 
   return (
     <DashboardLayout
@@ -153,6 +170,7 @@ export default function MovementsReportPage() {
             ? SYSTEM_MESSAGES.noFilteredData 
             : SYSTEM_MESSAGES.noData
           }
+          onRowClick={handleRowClick}
         />
 
         {/* Resumen estadístico - solo mostrar si hay datos */}
@@ -163,6 +181,12 @@ export default function MovementsReportPage() {
           />
         )}
       </div>
+
+      <MovementDetailModal
+        movement={selectedMovement}
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseModal}
+      />
     </DashboardLayout>
   );
 }

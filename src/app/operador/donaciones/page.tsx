@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import DashboardLayout from '@/app/components/DashboardLayout';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import Toast from '@/app/components/ui/Toast';
@@ -10,6 +10,7 @@ import DonationsHeader from '@/modules/admin/reportes/donaciones/components/Dona
 import DonationsFilters from '@/modules/admin/reportes/donaciones/components/DonationsFilters';
 import DonationsTable from '@/modules/admin/reportes/donaciones/components/DonationsTable';
 import DonationsErrorState from '@/modules/admin/reportes/donaciones/components/DonationsErrorState';
+import DonationDetailModal from '@/modules/admin/reportes/donaciones/components/DonationDetailModal';
 import { useDonationsData } from '@/modules/admin/reportes/donaciones/hooks/useDonationsData';
 import { useDonationActions } from '@/modules/admin/reportes/donaciones/hooks/useDonationActions';
 import type { Donation, DonationEstado } from '@/modules/admin/reportes/donaciones/types';
@@ -25,6 +26,8 @@ export default function OperadorDonationsPage() {
   const { supabase } = useSupabase();
   const { toasts, showSuccess, showError, showWarning, hideToast } = useToast();
   const confirm = useConfirm();
+  const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const {
     donations,
@@ -110,6 +113,16 @@ export default function OperadorDonationsPage() {
     await refetch();
   }, [updateEstado, showError, showSuccess, showWarning, refetch, confirm]);
 
+  const handleViewDetails = useCallback((donation: Donation) => {
+    setSelectedDonation(donation);
+    setIsDetailModalOpen(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setIsDetailModalOpen(false);
+    setSelectedDonation(null);
+  }, []);
+
   const tableContent = useMemo(() => {
     if (isLoading) {
       return <LoadingState />;
@@ -122,6 +135,7 @@ export default function OperadorDonationsPage() {
         hasActiveFilters={hasFiltersApplied}
         onResetFilters={resetFilters}
         onChangeEstado={handleChangeEstado}
+        onViewDetails={handleViewDetails}
         processingId={processingId}
         messages={{
           noData: messages.noData,
@@ -191,6 +205,12 @@ export default function OperadorDonationsPage() {
           />
         ))}
       </div>
+
+      <DonationDetailModal
+        donation={selectedDonation}
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseModal}
+      />
     </DashboardLayout>
   );
 }

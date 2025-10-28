@@ -27,6 +27,7 @@ interface InventoryTableProps {
   onResetFilters: () => void;
   onDecrease: (item: InventarioItem) => void;
   onIncrease: (item: InventarioItem) => void;
+  onViewDetails?: (item: InventarioItem) => void;
   processingId?: string;
 }
 
@@ -50,6 +51,7 @@ const InventoryTable = ({
   onResetFilters,
   onDecrease,
   onIncrease,
+  onViewDetails,
   processingId
 }: InventoryTableProps) => {
   if (items.length === 0) {
@@ -179,9 +181,10 @@ const InventoryTable = ({
                       </button>
                       <button
                         type="button"
-                        className="text-gray-600 hover:text-gray-500 px-2 py-1 rounded border border-gray-200 hover:bg-gray-50 text-xs transition-colors"
-                        title="Ver detalles"
-                        disabled
+                        onClick={onViewDetails ? () => onViewDetails(item) : undefined}
+                        disabled={!onViewDetails}
+                        className="text-gray-600 hover:text-gray-500 px-2 py-1 rounded border border-gray-200 hover:bg-gray-50 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={onViewDetails ? 'Ver detalles' : 'Detalles no disponibles'}
                       >
                         <Eye className="w-4 h-4" />
                       </button>

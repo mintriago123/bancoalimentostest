@@ -10,10 +10,21 @@ export async function middleware(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
 
-    const {
-      data: { user },
-      error
-    } = await supabase.auth.getUser();
+    // Obtener usuario y suprimir errores esperados de refresh token
+    let user = null;
+    let error = null;
+    
+    try {
+      const result = await supabase.auth.getUser();
+      user = result.data.user;
+      error = result.error;
+    } catch (err: any) {
+      // Suprimir logs de errores esperados (refresh token no encontrado)
+      if (err?.code !== 'refresh_token_not_found') {
+        console.error('Error de autenticación en middleware:', err);
+      }
+      error = err;
+    }
 
     // Si hay error al obtener el usuario, asumir que no está autenticado
     const isAuthenticated = !!(user && !error);
@@ -195,7 +206,11 @@ export async function middleware(request: NextRequest) {
     }
 
     return supabaseResponse;
-  } catch {
+  } catch (error: any) {
+    // Suprimir logs de errores esperados
+    if (error?.code !== 'refresh_token_not_found' && error?.code !== 'ECONNRESET') {
+      console.error('Error inesperado en middleware:', error);
+    }
     // Si hay error, permitir el acceso y manejar la autenticación en el cliente
     return supabaseResponse;
   }

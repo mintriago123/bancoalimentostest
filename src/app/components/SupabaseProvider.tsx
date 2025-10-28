@@ -25,9 +25,18 @@ export default function SupabaseProvider({
   useEffect(() => {
     // Obtener la sesión inicial
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      setIsLoading(false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+      } catch (error: any) {
+        // Suprimir errores esperados de tokens inválidos
+        if (error?.code !== 'refresh_token_not_found') {
+          console.error('Error obteniendo sesión:', error);
+        }
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     getInitialSession();
@@ -36,7 +45,10 @@ export default function SupabaseProvider({
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state change:', event, session);
+      // Solo loggear en desarrollo si es necesario
+      if (process.env.NODE_ENV === 'development' && event !== 'TOKEN_REFRESHED') {
+        console.log('🔐 Auth:', event);
+      }
       
       // Si es un evento de SIGNED_OUT, limpiar el estado inmediatamente
       if (event === 'SIGNED_OUT') {
