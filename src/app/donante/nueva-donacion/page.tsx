@@ -19,32 +19,11 @@ import {
   useCatalogData,
   useUserProfile,
   useMultiStepForm,
-  useDonationSubmit,
   useFormValidation
 } from '@/app/hooks';
-
-// Define los horarios disponibles para la recolección
-const HORARIOS_DISPONIBLES = [
-  { value: '08:00-10:00', label: '08:00 AM - 10:00 AM' },
-  { value: '10:00-12:00', label: '10:00 AM - 12:00 PM' },
-  { value: '12:00-14:00', label: '12:00 PM - 02:00 PM' },
-  { value: '14:00-16:00', label: '02:00 PM - 04:00 PM' },
-  { value: '16:00-18:00', label: '04:00 PM - 06:00 PM' },
-  { value: '18:00-20:00', label: '06:00 PM - 08:00 PM' },
-];
-
-// Interfaces para los tipos de datos
-interface Alimento {
-  id: number;
-  nombre: string;
-  categoria: string;
-}
-
-interface Unidad {
-  id: number;
-  nombre: string;
-  simbolo: string;
-}
+import { useNuevaDonacionSubmit } from '@/modules/donante/nueva-donacion/hooks';
+import { HORARIOS_DISPONIBLES } from '@/modules/donante/nueva-donacion/constants/horarios';
+import { calcularImpacto } from '@/modules/donante/nueva-donacion/utils/impactoCalculator';
 
 export default function NuevaDonacionPage() {
   const { supabase, user: currentUser, isLoading: authLoading } = useSupabase();
@@ -59,7 +38,7 @@ export default function NuevaDonacionPage() {
   const { userProfile } = useUserProfile(supabase, currentUser, authLoading);
 
   // Hook para envío de donación
-  const { enviando, mensaje, enviarDonacion, limpiarMensaje } = useDonationSubmit(supabase, currentUser, userProfile);
+  const { enviando, mensaje, enviarDonacion, limpiarMensaje } = useNuevaDonacionSubmit(supabase, currentUser, userProfile);
 
   // Hook para validación de formulario
   const { mensajeValidacion, setMensajeValidacion, limpiarMensajeValidacion } = useFormValidation();
@@ -140,47 +119,13 @@ export default function NuevaDonacionPage() {
     return unidad || null;
   };
 
-  // Cálculo de impacto estimado
-  const calcularImpacto = () => {
-    const cantidad = parseFloat(formulario.cantidad) || 0;
+  // Cálculo de impacto estimado usando la utilidad
+  const calcularImpactoEstimado = () => {
     const unidadSeleccionada = getUnidadSeleccionada();
-    let personasAlimentadas = 0;
-    let comidaEquivalente = '';
-
-    if (unidadSeleccionada) {
-      const simbolo = unidadSeleccionada.simbolo.toLowerCase();
-
-      if (simbolo.includes('kg')) {
-        personasAlimentadas = Math.floor(cantidad * 2);
-        comidaEquivalente = `${Math.round(cantidad * 3)} porciones aproximadamente`;
-      } else if (simbolo.includes('l') || simbolo.includes('lt')) {
-        personasAlimentadas = Math.floor(cantidad * 1.5);
-        comidaEquivalente = `${cantidad} litros de bebida`;
-      } else if (simbolo.includes('caja')) {
-        personasAlimentadas = Math.floor(cantidad * 4);
-        comidaEquivalente = `${cantidad} cajas de alimentos`;
-      } else if (simbolo.includes('und') || simbolo.includes('pza') || simbolo.includes('unidad')) {
-        personasAlimentadas = Math.floor(cantidad * 0.5);
-        comidaEquivalente = `${cantidad} unidades`;
-      } else if (simbolo.includes('g') && !simbolo.includes('kg')) {
-        const cantidadEnKg = cantidad / 1000;
-        personasAlimentadas = Math.floor(cantidadEnKg * 2);
-        comidaEquivalente = `${Math.round(cantidadEnKg * 3)} porciones aproximadamente`;
-      } else if (simbolo.includes('ml') && !simbolo.includes('l')) {
-        const cantidadEnL = cantidad / 1000;
-        personasAlimentadas = Math.floor(cantidadEnL * 1.5);
-        comidaEquivalente = `${cantidadEnL.toFixed(1)} litros de bebida`;
-      } else {
-        personasAlimentadas = Math.floor(cantidad);
-        comidaEquivalente = `${cantidad} ${unidadSeleccionada.nombre}`;
-      }
-
-      if (cantidad > 0 && personasAlimentadas === 0) {
-        personasAlimentadas = 1;
-      }
+    if (!unidadSeleccionada) {
+      return { personasAlimentadas: 0, comidaEquivalente: '' };
     }
-
-    return { personasAlimentadas, comidaEquivalente };
+    return calcularImpacto(formulario.cantidad, unidadSeleccionada.simbolo);
   };
 
   const manejarCambio = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -238,7 +183,7 @@ export default function NuevaDonacionPage() {
       return;
     }
 
-    const impacto = calcularImpacto();
+    const impacto = calcularImpactoEstimado();
     const productoInfo = getProductoSeleccionado();
     const unidadInfo = getUnidadSeleccionada();
 
@@ -375,7 +320,7 @@ export default function NuevaDonacionPage() {
               <ImpactEquivalenceTable />
 
               <ImpactCalculator
-                impacto={calcularImpacto()}
+                impacto={calcularImpactoEstimado()}
                 mostrar={!!(formulario.cantidad && formulario.unidad_id)}
               />
             </div>
@@ -439,7 +384,7 @@ export default function NuevaDonacionPage() {
         );
 
       case 3:
-        const { personasAlimentadas, comidaEquivalente } = calcularImpacto();
+        const { personasAlimentadas, comidaEquivalente } = calcularImpactoEstimado();
         const productoFinal = getProductoSeleccionado();
         const unidadFinal = getUnidadSeleccionada();
         return (
