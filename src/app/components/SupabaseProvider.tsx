@@ -36,8 +36,16 @@ export default function SupabaseProvider({
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-      setIsLoading(false);
+      console.log('Auth state change:', event, session);
+      
+      // Si es un evento de SIGNED_OUT, limpiar el estado inmediatamente
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setIsLoading(false);
+      } else {
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();

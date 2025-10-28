@@ -82,7 +82,8 @@ export default function DashboardLayout({
     }
 
     if (!user) {
-      router.push('/auth/iniciar-sesion');
+      // No hay usuario, redirigir a login
+      window.location.href = '/auth/iniciar-sesion';
       return;
     }
 
@@ -96,7 +97,9 @@ export default function DashboardLayout({
 
         if (error) {
           console.error('Error cargando perfil:', error);
-          router.push('/auth/iniciar-sesion');
+          // Si hay error al cargar el perfil, cerrar sesión y redirigir
+          await supabase.auth.signOut();
+          window.location.href = '/auth/iniciar-sesion';
           return;
         }
 
@@ -109,7 +112,8 @@ export default function DashboardLayout({
         setPerfil(data);
       } catch (error) {
         console.error('Error:', error);
-        router.push('/auth/iniciar-sesion');
+        await supabase.auth.signOut();
+        window.location.href = '/auth/iniciar-sesion';
       } finally {
         setLoading(false);
       }

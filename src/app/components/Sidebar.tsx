@@ -242,12 +242,23 @@ export default function Sidebar({
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      // 1. Primero cerrar sesión en el cliente
       await supabase.auth.signOut();
-      router.push('/auth/iniciar-sesion');
+      
+      // 2. Luego llamar a la API para limpiar cookies del servidor
+      await fetch('/api/auth/signout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      // 3. Forzar recarga completa para limpiar todo el estado
+      window.location.href = '/auth/iniciar-sesion';
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
-    } finally {
-      setIsLoggingOut(false);
+      // Incluso si hay error, redirigir
+      window.location.href = '/auth/iniciar-sesion';
     }
   };
 

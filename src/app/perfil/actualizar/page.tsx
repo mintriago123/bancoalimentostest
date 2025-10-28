@@ -51,8 +51,24 @@ export default function ActualizarPerfil() {
   // Manejo de Cerrar sesión
   const manejarCerrarSesion = async () => {
     setEstaCargando(true);
-    await supabase.auth.signOut();
-    router.push("/auth/iniciar-sesion");
+    try {
+      // 1. Cerrar sesión en el cliente
+      await supabase.auth.signOut();
+      
+      // 2. Llamar a la API para limpiar cookies del servidor
+      await fetch('/api/auth/signout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      // 3. Forzar recarga completa
+      window.location.href = '/auth/iniciar-sesion';
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      window.location.href = '/auth/iniciar-sesion';
+    }
   };
 
   const manejarEnvio = async (e: React.FormEvent) => {
