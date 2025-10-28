@@ -229,8 +229,10 @@ CREATE TABLE public.productos_donados (
   cantidad numeric,
   unidad_medida text,
   fecha_caducidad timestamp with time zone,
+  alimento_id bigint,
   CONSTRAINT productos_donados_pkey PRIMARY KEY (id_producto),
-  CONSTRAINT productos_donados_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id)
+  CONSTRAINT productos_donados_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id),
+  CONSTRAINT productos_donados_alimento_id_fkey FOREIGN KEY (alimento_id) REFERENCES public.alimentos(id)
 );
 CREATE TABLE public.solicitudes (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
