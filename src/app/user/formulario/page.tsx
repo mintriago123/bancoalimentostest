@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSupabase } from "@/app/components/SupabaseProvider";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import MapboxMap from "@/app/components/MapboxMap";
+import { useInventoryStock } from "@/modules/user/hooks/useInventoryStock";
 import {
   MapPin,
   Calendar,
@@ -17,6 +18,10 @@ import {
   IdCard,
   Search,
   X,
+  Package,
+  AlertTriangle,
+  CheckCircle,
+  Info,
 } from "lucide-react";
 
 export default function FormularioSolicitante() {
@@ -45,6 +50,17 @@ export default function FormularioSolicitante() {
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
   const [alimentoSeleccionado, setAlimentoSeleccionado] = useState<any>(null);
   const [filtroCategoria, setFiltroCategoria] = useState("");
+
+  // Hook para inventario
+  const {
+    stockInfo,
+    loadingState: inventoryLoadingState,
+    errorMessage: inventoryErrorMessage,
+    checkStock,
+    clearStock,
+    isStockSufficient,
+    getStockMessage
+  } = useInventoryStock(supabase);
 
   useEffect(() => {
     if (user) {
@@ -160,6 +176,9 @@ export default function FormularioSolicitante() {
     setAlimentoId(alimento.id);
     setBusquedaAlimento(alimento.nombre);
     setMostrarDropdown(false);
+    
+    // Consultar inventario automáticamente
+    checkStock(alimento.nombre);
   };
 
   // Limpiar selección de alimento
@@ -170,6 +189,9 @@ export default function FormularioSolicitante() {
     setBusquedaAlimento("");
     setMostrarDropdown(true);
     filtrarAlimentos("", filtroCategoria);
+    
+    // Limpiar información de inventario
+    clearStock();
   };
 
   // Manejar cambio de categoría
@@ -183,6 +205,9 @@ export default function FormularioSolicitante() {
       setTipoAlimento("");
       setAlimentoId(null);
       setBusquedaAlimento("");
+      
+      // Limpiar información de inventario
+      clearStock();
     }
 
     // Filtrar y mostrar el dropdown
@@ -226,6 +251,13 @@ export default function FormularioSolicitante() {
 
     if (!user || !userData || !tipoAlimento || !cantidad || cantidadNum <= 0 || !unidadId) {
       setMensaje("Por favor completa todos los campos requeridos.");
+      setLoading(false);
+      return;
+    }
+
+    // Verificar stock disponible si hay información de inventario
+    if (stockInfo && stockInfo.producto_encontrado && !isStockSufficient(cantidadNum)) {
+      setMensaje(`No hay suficiente stock disponible. Solo hay ${stockInfo.total_disponible} unidades disponibles y has solicitado ${cantidadNum}.`);
       setLoading(false);
       return;
     }
@@ -458,6 +490,80 @@ export default function FormularioSolicitante() {
                   </div>
                 </div>
 
+                {/* Información de Stock */}
+                {alimentoSeleccionado && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h4 className="flex items-center text-sm font-medium text-gray-700 mb-3">
+                      <Package className="w-4 h-4 mr-2" />
+                      Inventario Disponible
+                    </h4>
+                    
+                    {inventoryLoadingState === 'loading' && (
+                      <div className="flex items-center text-blue-600 text-sm">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                        Consultando inventario...
+                      </div>
+                    )}
+                    
+                    {inventoryLoadingState === 'error' && inventoryErrorMessage && (
+                      <div className="flex items-center text-red-600 text-sm">
+                        <AlertTriangle className="w-4 h-4 mr-2" />
+                        {inventoryErrorMessage}
+                      </div>
+                    )}
+                    
+                    {inventoryLoadingState === 'success' && stockInfo && (
+                      <div className="space-y-2">
+                        {stockInfo.producto_encontrado ? (
+                          <>
+                            <div className={`flex items-center text-sm font-medium ${
+                              stockInfo.total_disponible > 0 ? 'text-green-700' : 'text-red-700'
+                            }`}>
+                              {stockInfo.total_disponible > 0 ? (
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                              ) : (
+                                <AlertTriangle className="w-4 h-4 mr-2" />
+                              )}
+                              {getStockMessage(parseFloat(cantidad) || undefined)}
+                            </div>
+                            
+                            {stockInfo.depositos.length > 0 && (
+                              <div className="mt-3">
+                                <p className="text-xs text-gray-600 mb-2 font-medium">
+                                  Distribución por depósito:
+                                </p>
+                                <div className="space-y-1">
+                                  {stockInfo.depositos.map((deposito, index) => (
+                                    <div key={index} className="flex justify-between text-xs text-gray-600 bg-white px-2 py-1 rounded">
+                                      <span>{deposito.deposito}</span>
+                                      <span className="font-medium">{deposito.cantidad_disponible} unidades</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {!!cantidad && parseFloat(cantidad) > 0 && stockInfo.total_disponible > 0 && (
+                              <div className="mt-2 p-2 bg-white rounded border-l-4 border-blue-400">
+                                <p className="text-xs text-blue-700">
+                                  💡 {isStockSufficient(parseFloat(cantidad)) 
+                                    ? "Hay suficiente stock para tu solicitud" 
+                                    : `Cantidad disponible insuficiente. Considera reducir a máximo ${stockInfo.total_disponible} unidades`}
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="flex items-center text-amber-600 text-sm">
+                            <Info className="w-4 h-4 mr-2" />
+                            Este producto no está disponible en el inventario actual
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Grid de Cantidad y Unidad */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -475,12 +581,42 @@ export default function FormularioSolicitante() {
                       required
                       min="0.1"
                       step="0.1"
-                      className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
+                      max={stockInfo && stockInfo.producto_encontrado ? stockInfo.total_disponible : undefined}
+                      className={`w-full border-2 rounded-lg px-4 py-3 focus:outline-none transition-colors ${
+                        !!cantidad && parseFloat(cantidad) > 0 && !!stockInfo && stockInfo.producto_encontrado
+                          ? isStockSufficient(parseFloat(cantidad))
+                            ? 'border-green-500 focus:border-green-600'
+                            : 'border-red-500 focus:border-red-600'
+                          : 'border-gray-300 focus:border-blue-500'
+                      }`}
                       placeholder="0"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Ingresa la cantidad necesaria
-                    </p>
+                    <div className="mt-1 space-y-1">
+                      <p className="text-xs text-gray-500">
+                        Ingresa la cantidad necesaria
+                      </p>
+                      {!!cantidad && parseFloat(cantidad) > 0 && !!stockInfo && stockInfo.producto_encontrado && (
+                        <p className={`text-xs font-medium ${
+                          isStockSufficient(parseFloat(cantidad)) 
+                            ? 'text-green-600' 
+                            : 'text-red-600'
+                        }`}>
+                          {isStockSufficient(parseFloat(cantidad))
+                            ? '✓ Cantidad disponible en inventario'
+                            : `⚠️ Excede el stock disponible (${stockInfo.total_disponible} unidades máximo)`
+                          }
+                        </p>
+                      )}
+                      {!!stockInfo && stockInfo.producto_encontrado && stockInfo.total_disponible > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setCantidad(stockInfo.total_disponible.toString())}
+                          className="text-xs text-blue-600 hover:text-blue-700 underline"
+                        >
+                          Usar máximo disponible ({stockInfo.total_disponible})
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div>
@@ -541,13 +677,23 @@ export default function FormularioSolicitante() {
 
               <button
                 type="submit"
-                disabled={loading}
-                className={`w-full flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors font-semibold ${
-                  loading ? "opacity-50 cursor-not-allowed" : ""
+                disabled={
+                  loading || 
+                  (!!cantidad && parseFloat(cantidad) > 0 && !!stockInfo && stockInfo.producto_encontrado && !isStockSufficient(parseFloat(cantidad)))
+                }
+                className={`w-full flex items-center justify-center px-6 py-3 rounded-lg shadow-md transition-colors font-semibold ${
+                  loading || (!!cantidad && parseFloat(cantidad) > 0 && !!stockInfo && stockInfo.producto_encontrado && !isStockSufficient(parseFloat(cantidad)))
+                    ? "bg-gray-400 text-gray-200 cursor-not-allowed" 
+                    : "bg-blue-600 text-white hover:bg-blue-700"
                 }`}
               >
                 {loading ? (
                   "Enviando Solicitud..."
+                ) : (!!cantidad && parseFloat(cantidad) > 0 && !!stockInfo && stockInfo.producto_encontrado && !isStockSufficient(parseFloat(cantidad))) ? (
+                  <>
+                    <AlertTriangle className="w-5 h-5 mr-2" />
+                    Stock Insuficiente
+                  </>
                 ) : (
                   <>
                     <Send className="w-5 h-5 mr-2" />
