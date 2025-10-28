@@ -40,6 +40,8 @@ export const MESSAGES = {
     ERROR_LOAD: 'Error al cargar las solicitudes.',
     EMPTY: 'No hay solicitudes para mostrar.',
     STOCK_INSUFFICIENT: 'No hay suficiente stock disponible.',
+    NO_STOCK_AVAILABLE: 'No hay productos disponibles en inventario en este momento.',
+    NO_CATEGORY_AVAILABLE: 'No hay categorías con productos disponibles.',
   },
   PERFIL: {
     SUCCESS_UPDATE: 'Perfil actualizado correctamente',

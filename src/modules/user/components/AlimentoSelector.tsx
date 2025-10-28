@@ -4,8 +4,9 @@
 // ============================================================================
 
 import React from 'react';
-import { ShoppingBasket, X, Search } from 'lucide-react';
+import { ShoppingBasket, X, Search, AlertCircle } from 'lucide-react';
 import { Alimento } from '../types';
+import { MESSAGES } from '../constants';
 
 interface AlimentoSelectorProps {
   alimentos: Alimento[];
@@ -47,22 +48,33 @@ export function AlimentoSelector({
         >
           Categoría de Alimentos
         </label>
-        <select
-          id="filtroCategoria"
-          className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
-          value={filtroCategoria}
-          onChange={onCategoriaChange}
-        >
-          <option value="">Todas las categorías</option>
-          {categorias.map((categoria) => (
-            <option key={categoria} value={categoria}>
-              {categoria}
-            </option>
-          ))}
-        </select>
-        <p className="text-sm text-gray-500 mt-1">
-          Filtra por categoría para encontrar alimentos más fácilmente
-        </p>
+        {categorias.length === 0 ? (
+          <div className="w-full border-2 border-amber-300 bg-amber-50 rounded-lg px-4 py-3 flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-amber-600" />
+            <span className="text-sm text-amber-700">
+              {MESSAGES.SOLICITUD.NO_CATEGORY_AVAILABLE}
+            </span>
+          </div>
+        ) : (
+          <>
+            <select
+              id="filtroCategoria"
+              className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
+              value={filtroCategoria}
+              onChange={onCategoriaChange}
+            >
+              <option value="">Todas las categorías</option>
+              {categorias.map((categoria) => (
+                <option key={categoria} value={categoria}>
+                  {categoria}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-gray-500 mt-1">
+              Filtra por categoría para encontrar alimentos más fácilmente
+            </p>
+          </>
+        )}
       </div>
 
       {/* Buscador de Productos */}
@@ -121,10 +133,13 @@ export function AlimentoSelector({
                   {filtroCategoria && ` en la categoría "${filtroCategoria}"`}
                 </div>
               ) : (
-                <div className="p-3 text-gray-500 text-center">
-                  {filtroCategoria
-                    ? `Escribe para buscar productos en "${filtroCategoria}"...`
-                    : 'Escribe para buscar productos...'}
+                <div className="p-3 text-amber-600 text-center flex items-center justify-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>
+                    {filtroCategoria 
+                      ? `Escribe para buscar productos en "${filtroCategoria}"...` 
+                      : MESSAGES.SOLICITUD.NO_STOCK_AVAILABLE}
+                  </span>
                 </div>
               )}
             </div>
@@ -137,6 +152,14 @@ export function AlimentoSelector({
               {alimentosFiltrados.length !== 1 ? 's' : ''} disponible
               {alimentosFiltrados.length !== 1 ? 's' : ''}
               {filtroCategoria && ` en "${filtroCategoria}"`}
+            </p>
+          )}
+          
+          {/* Mensaje cuando no hay productos en absoluto */}
+          {!busqueda && !filtroCategoria && alimentosFiltrados.length === 0 && !mostrarDropdown && (
+            <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              {MESSAGES.SOLICITUD.NO_STOCK_AVAILABLE}
             </p>
           )}
         </div>

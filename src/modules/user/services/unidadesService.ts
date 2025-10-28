@@ -15,11 +15,17 @@ export class UnidadesService {
     try {
       const { data, error } = await this.supabase
         .from('unidades')
-        .select('id, nombre, simbolo, tipo')
-        .order('nombre');
+        .select('*')
+        .order('nombre', { ascending: true });
 
-      return { data, error };
+      if (error) {
+        console.error('Error fetching unidades:', error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
     } catch (error) {
+      console.error('Exception fetching unidades:', error);
       return { data: null, error };
     }
   }

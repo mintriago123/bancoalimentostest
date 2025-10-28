@@ -39,12 +39,12 @@ export function useAlimentos(
       setLoading('loading');
       setError(null);
 
-      // Obtener alimentos
+      // Obtener alimentos con stock disponible
       const { data: alimentosData, error: alimentosError } =
-        await service.getAlimentos();
+        await service.getAlimentosConStock();
 
       if (alimentosError || !alimentosData) {
-        setError('Error al cargar los alimentos');
+        setError('Error al cargar los alimentos disponibles');
         setLoading('error');
         return;
       }
@@ -52,11 +52,19 @@ export function useAlimentos(
       setAlimentos(alimentosData);
       setAlimentosFiltrados(alimentosData);
 
-      // Extraer categorías únicas
-      const categoriasUnicas = [
-        ...new Set(alimentosData.map((a) => a.categoria)),
-      ].sort();
-      setCategorias(categoriasUnicas);
+      // Obtener categorías solo de productos con stock
+      const { data: categoriasData, error: categoriasError } =
+        await service.getCategoriasConStock();
+
+      if (categoriasError || !categoriasData) {
+        // Si falla, extraer categorías de los alimentos obtenidos
+        const categoriasUnicas = [
+          ...new Set(alimentosData.map((a) => a.categoria)),
+        ].sort();
+        setCategorias(categoriasUnicas);
+      } else {
+        setCategorias(categoriasData);
+      }
 
       setLoading('success');
     };
