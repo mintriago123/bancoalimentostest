@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { MapPin } from 'lucide-react';
-import MapboxMap from '@/app/components/MapboxMap';
+import MapboxMap from './MapboxMap';
 import { Ubicacion } from '../types';
 
 interface UbicacionCardProps {

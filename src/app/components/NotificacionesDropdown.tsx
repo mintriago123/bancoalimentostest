@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { BellIcon, XMarkIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { BellIcon as BellSolidIcon } from '@heroicons/react/24/solid';
-import { useNotificaciones } from '@/app/hooks/useNotificaciones';
+import { useSupabase } from '@/app/components/SupabaseProvider';
+import { useNotificaciones } from '@/modules/shared';
 import { useRouter } from 'next/navigation';
 
 interface NotificacionesDropdownProps {
@@ -15,6 +16,7 @@ export default function NotificacionesDropdown({ isCollapsed = false, roleColor 
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { supabase, user } = useSupabase();
   
   const {
     notificaciones,
@@ -23,7 +25,7 @@ export default function NotificacionesDropdown({ isCollapsed = false, roleColor 
     marcarComoLeida,
     marcarTodasComoLeidas,
     eliminarNotificacion
-  } = useNotificaciones();
+  } = useNotificaciones(supabase, user);
 
   // Cerrar dropdown al hacer click fuera
   useEffect(() => {

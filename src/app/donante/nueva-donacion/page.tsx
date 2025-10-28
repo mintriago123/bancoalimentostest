@@ -12,18 +12,16 @@ import {
   CustomProductForm,
   ImpactCalculator,
   ImpactEquivalenceTable,
-  DonationSummary
-} from '@/app/components';
-import {
+  DonationSummary,
   useProductSelector,
   useCatalogData,
   useUserProfile,
   useMultiStepForm,
-  useFormValidation
-} from '@/app/hooks';
-import { useNuevaDonacionSubmit } from '@/modules/donante/nueva-donacion/hooks';
-import { HORARIOS_DISPONIBLES } from '@/modules/donante/nueva-donacion/constants/horarios';
-import { calcularImpacto } from '@/modules/donante/nueva-donacion/utils/impactoCalculator';
+  useFormValidation,
+  useNuevaDonacionSubmit,
+  HORARIOS_DISPONIBLES,
+  calcularImpacto
+} from '@/modules/donante';
 
 export default function NuevaDonacionPage() {
   const { supabase, user: currentUser, isLoading: authLoading } = useSupabase();

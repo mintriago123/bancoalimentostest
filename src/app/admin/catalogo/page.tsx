@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import DashboardLayout from '@/app/components/DashboardLayout';
 import { useSupabase } from '@/app/components/SupabaseProvider';
-import { useToast } from '@/app/hooks/useToast';
+import { useToast } from '@/modules/shared';
 import CatalogHeader from '@/modules/admin/catalogo/components/CatalogHeader';
 import CatalogFilters from '@/modules/admin/catalogo/components/CatalogFilters';
 import CatalogTable from '@/modules/admin/catalogo/components/CatalogTable';

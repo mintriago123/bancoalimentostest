@@ -1,6 +1,7 @@
 'use client';
 
-import { DashboardLayout, UserSettings } from '@/app/components';
+import { DashboardLayout } from '@/app/components';
+import { UserSettings } from '@/modules/shared';
 
 export default function UserConfiguracionPage() {
   return (

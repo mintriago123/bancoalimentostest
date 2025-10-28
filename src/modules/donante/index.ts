@@ -8,6 +8,7 @@ export * from './donaciones/hooks';
 export * from './donaciones/types';
 
 // Nueva Donación exports
+export * from './nueva-donacion/components';
 export * from './nueva-donacion/hooks';
 export * from './nueva-donacion/types';
 export * from './nueva-donacion/constants/horarios';

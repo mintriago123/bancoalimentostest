@@ -2,12 +2,12 @@
 
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import DashboardLayout from '@/app/components/DashboardLayout';
-import { useUserProfile } from '@/app/hooks';
+import { usePerfilData } from '@/modules/donante/perfil/hooks';
 import { DashboardCardsGrid } from '@/modules/donante/dashboard/components';
 
 export default function UsuarioDashboardPage() {
-  const { supabase, user, isLoading: authLoading } = useSupabase();
-  const { userProfile, loadingUser } = useUserProfile(supabase, user, authLoading);
+  const { supabase, user } = useSupabase();
+  const { profile, isLoading: loadingUser } = usePerfilData(supabase, user);
 
   return (
     <DashboardLayout
@@ -23,7 +23,7 @@ export default function UsuarioDashboardPage() {
           </div>
         </div>
       ) : (
-        <DashboardCardsGrid nombre={userProfile?.nombre} />
+        <DashboardCardsGrid nombre={profile?.nombre} />
       )}
     </DashboardLayout>
   );

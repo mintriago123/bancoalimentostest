@@ -3,8 +3,12 @@
 import { useEffect } from 'react';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import DashboardLayout from '@/app/components/DashboardLayout';
-import { useModal, useDonationStats, useFilter } from '@/app/hooks';
-import { useDonacionesData } from '@/modules/donante/donaciones/hooks';
+import { 
+  useModal, 
+  useDonationStats, 
+  useFilter,
+  useDonacionesData 
+} from '@/modules/donante/donaciones/hooks';
 import {
   DonacionesHeader,
   DonacionesStats,

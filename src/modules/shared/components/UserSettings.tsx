@@ -2,17 +2,16 @@
 
 import React from 'react';
 import { useSupabase } from '@/app/components/SupabaseProvider';
+import { Alert } from '@/app/components';
 import {
   UserIcon,
   BellIcon,
   EyeIcon,
   EyeSlashIcon,
-  CheckCircleIcon,
-  ExclamationCircleIcon,
   KeyIcon,
   GlobeAltIcon
 } from '@heroicons/react/24/outline';
-import { usePasswordChange, useUserPreferences, useMessage } from '@/app/hooks';
+import { usePasswordChange, useUserPreferences, useMessage } from '@/modules/shared';
 
 type Props = {
   title?: string;
@@ -94,23 +93,11 @@ export default function UserSettings({
       )}
 
       {message && (
-        <div
-          className={`mb-6 p-4 rounded-lg flex items-center ${
-            message.type === 'success'
-              ? 'bg-green-50 text-green-700 border border-green-200'
-              : message.type === 'warning'
-                ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-                : message.type === 'info'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                  : 'bg-red-50 text-red-700 border border-red-200'
-          }`}
-        >
-          {message.type === 'success' ? (
-            <CheckCircleIcon className="w-5 h-5 mr-2" />
-          ) : (
-            <ExclamationCircleIcon className="w-5 h-5 mr-2" />
-          )}
-          {message.text}
+        <div className="mb-6">
+          <Alert
+            tipo={message.type}
+            mensaje={message.text}
+          />
         </div>
       )}
 

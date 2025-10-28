@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Package, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { LoadingSpinner } from '@/app/components';
 import { StockInfo, LoadingState } from '../types';
 
 interface InventarioInfoProps {
@@ -37,7 +38,9 @@ export function InventarioInfo({
 
       {loadingState === 'loading' && (
         <div className="flex items-center text-blue-600 text-sm">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+          <div className="inline-block mr-2">
+            <LoadingSpinner size="sm" color="blue" />
+          </div>
           Consultando inventario...
         </div>
       )}

@@ -2,34 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/app/components/DashboardLayout';
-import { useNotificaciones } from '@/app/hooks/useNotificaciones';
-import { BellIcon, EnvelopeIcon, SpeakerWaveIcon } from '@heroicons/react/24/outline';
-
-// Componente Switch personalizado
-interface SwitchProps {
-  readonly checked: boolean;
-  readonly onChange: (checked: boolean) => void;
-  readonly disabled?: boolean;
-}
-
-function Switch({ checked, onChange, disabled = false }: SwitchProps) {
-  return (
-    <button
-      type="button"
-      onClick={() => !disabled && onChange(!checked)}
-      disabled={disabled}
-      className={`${
-        checked ? 'bg-blue-600' : 'bg-gray-200'
-      } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50`}
-    >
-      <span
-        className={`${
-          checked ? 'translate-x-6' : 'translate-x-1'
-        } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-      />
-    </button>
-  );
-}
+import { useSupabase } from '@/app/components/SupabaseProvider';
+import { LoadingSpinner, Alert } from '@/app/components';
+import { useNotificaciones } from '@/modules/shared';
+import {
+  ConfiguracionCategoriaItem,
+  AccionesRapidas,
+  InformacionNotificaciones
+} from '@/modules/shared/components/notificaciones';
 
 interface ConfiguracionCategoria {
   categoria: string;
@@ -69,7 +49,8 @@ const CATEGORIAS_CONFIG: Omit<ConfiguracionCategoria, 'email_activo' | 'push_act
 ];
 
 export default function ConfiguracionNotificacionesPage() {
-  const { configuracion, actualizarConfiguracion, loading } = useNotificaciones();
+  const { supabase, user } = useSupabase();
+  const { configuracion, actualizarConfiguracion, loading } = useNotificaciones(supabase, user);
   const [configuraciones, setConfiguraciones] = useState<ConfiguracionCategoria[]>([]);
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState<{ tipo: 'success' | 'error', texto: string } | null>(null);
@@ -192,10 +173,7 @@ export default function ConfiguracionNotificacionesPage() {
   if (loading) {
     return (
       <DashboardLayout title="Configuración de Notificaciones">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600">Cargando configuración...</span>
-        </div>
+        <LoadingSpinner mensaje="Cargando configuración..." />
       </DashboardLayout>
     );
   }
@@ -208,35 +186,19 @@ export default function ConfiguracionNotificacionesPage() {
       <div className="space-y-6">
         {/* Mensaje de estado */}
         {mensaje && (
-          <div className={`p-4 rounded-md ${
-            mensaje.tipo === 'success' 
-              ? 'bg-green-50 text-green-700 border border-green-200' 
-              : 'bg-red-50 text-red-700 border border-red-200'
-          }`}>
-            {mensaje.texto}
-          </div>
+          <Alert
+            tipo={mensaje.tipo}
+            mensaje={mensaje.texto}
+            onClose={() => setMensaje(null)}
+          />
         )}
 
         {/* Acciones globales */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
-          <div className="flex gap-4">
-            <button
-              onClick={handleActivarTodas}
-              disabled={guardando}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
-            >
-              {guardando ? 'Guardando...' : 'Activar Todas'}
-            </button>
-            <button
-              onClick={handleDesactivarTodas}
-              disabled={guardando}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors"
-            >
-              {guardando ? 'Guardando...' : 'Desactivar Todas'}
-            </button>
-          </div>
-        </div>
+        <AccionesRapidas
+          onActivarTodas={handleActivarTodas}
+          onDesactivarTodas={handleDesactivarTodas}
+          guardando={guardando}
+        />
 
         {/* Configuración por categoría */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -249,76 +211,18 @@ export default function ConfiguracionNotificacionesPage() {
 
           <div className="divide-y divide-gray-200">
             {configuraciones.map((config) => (
-              <div key={config.categoria} className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-base font-medium text-gray-900">
-                      {config.nombre}
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {config.descripcion}
-                    </p>
-                  </div>
-
-                  <div className="ml-6 grid grid-cols-3 gap-6">
-                    {/* Email */}
-                    <div className="flex flex-col items-center space-y-2">
-                      <EnvelopeIcon className="h-5 w-5 text-gray-400" />
-                      <span className="text-xs font-medium text-gray-700">Email</span>
-                      <Switch
-                        checked={config.email_activo}
-                        onChange={(checked: boolean) => 
-                          handleCambiarConfiguracion(config.categoria, 'email_activo', checked)
-                        }
-                        disabled={guardando}
-                      />
-                    </div>
-
-                    {/* Push */}
-                    <div className="flex flex-col items-center space-y-2">
-                      <BellIcon className="h-5 w-5 text-gray-400" />
-                      <span className="text-xs font-medium text-gray-700">Push</span>
-                      <Switch
-                        checked={config.push_activo}
-                        onChange={(checked: boolean) => 
-                          handleCambiarConfiguracion(config.categoria, 'push_activo', checked)
-                        }
-                        disabled={guardando}
-                      />
-                    </div>
-
-                    {/* Sonido */}
-                    <div className="flex flex-col items-center space-y-2">
-                      <SpeakerWaveIcon className="h-5 w-5 text-gray-400" />
-                      <span className="text-xs font-medium text-gray-700">Sonido</span>
-                      <Switch
-                        checked={config.sonido_activo}
-                        onChange={(checked: boolean) => 
-                          handleCambiarConfiguracion(config.categoria, 'sonido_activo', checked)
-                        }
-                        disabled={guardando}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ConfiguracionCategoriaItem
+                key={config.categoria}
+                config={config}
+                onCambiar={handleCambiarConfiguracion}
+                guardando={guardando}
+              />
             ))}
           </div>
         </div>
 
         {/* Información adicional */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-base font-medium text-blue-900 mb-2">
-            ℹ️ Información sobre las Notificaciones
-          </h3>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>• <strong>Email:</strong> Recibirás notificaciones en tu correo electrónico</li>
-            <li>• <strong>Push:</strong> Notificaciones en tiempo real mientras usas la aplicación</li>
-            <li>• <strong>Sonido:</strong> Reproducir sonido al recibir notificaciones push</li>
-            <li>• Los cambios se guardan automáticamente</li>
-            <li>• Puedes cambiar estas configuraciones en cualquier momento</li>
-          </ul>
-        </div>
+        <InformacionNotificaciones />
       </div>
     </DashboardLayout>
   );

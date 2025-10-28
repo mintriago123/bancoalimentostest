@@ -2,7 +2,7 @@
 
 import DashboardLayout from '@/app/components/DashboardLayout';
 import { useSupabase } from '@/app/components/SupabaseProvider';
-import { useToast } from '@/app/hooks/useToast';
+import { useToast } from '@/modules/shared';
 import { useConfirm } from '@/modules/admin/shared/hooks/useConfirm';
 import UsersHeader from '@/modules/admin/usuarios/components/UsersHeader';
 import UsersFilters from '@/modules/admin/usuarios/components/UsersFilters';

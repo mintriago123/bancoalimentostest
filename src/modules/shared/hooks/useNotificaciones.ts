@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSupabase } from '@/app/components/SupabaseProvider';
+import { SupabaseClient, User } from '@supabase/supabase-js';
 
 interface Notificacion {
   id: string;
@@ -22,8 +22,7 @@ interface ConfiguracionNotificacion {
   sonido_activo: boolean;
 }
 
-export function useNotificaciones() {
-  const { supabase, user } = useSupabase();
+export function useNotificaciones(supabase: SupabaseClient, user: User | null) {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [configuracion, setConfiguracion] = useState<ConfiguracionNotificacion[]>([]);
   const [loading, setLoading] = useState(true);

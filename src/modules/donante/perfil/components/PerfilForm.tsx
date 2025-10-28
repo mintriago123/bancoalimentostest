@@ -6,6 +6,7 @@ import {
   IdentificationIcon,
   CheckCircleIcon,
 } from '@heroicons/react/24/outline';
+import { LoadingSpinner } from '@/app/components';
 import { PerfilFormData, UserProfile } from '../types';
 
 interface PerfilFormProps {
@@ -130,7 +131,9 @@ export function PerfilForm({
         >
           {isSaving ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              <div className="inline-block mr-2">
+                <LoadingSpinner size="sm" color="gray" />
+              </div>
               Guardando...
             </>
           ) : (

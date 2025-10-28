@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
-import { useProfileForm, useProfileUpdate } from '@/app/hooks';
+import { useProfileForm, useProfileUpdate } from '@/modules/shared';
 
 export default function ActualizarPerfil() {
   const router = useRouter();

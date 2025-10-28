@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { ToastType } from '@/app/components/ui/Toast';
+
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 interface ToastNotification {
   id: number;

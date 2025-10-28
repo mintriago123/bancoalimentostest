@@ -8,7 +8,7 @@ import {
   useProfileForm,
   useDateFormatter,
   useProfileUpdate,
-} from "@/app/hooks";
+} from "@/modules/shared";
 
 export default function CompletarPerfil() {
   const router = useRouter();

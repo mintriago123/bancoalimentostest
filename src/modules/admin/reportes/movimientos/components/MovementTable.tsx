@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { TrendingUp } from 'lucide-react';
+import { LoadingSpinner } from '@/app/components';
 import type { MovementItem } from '../types';
 import { MOVEMENT_TYPE_LABELS, MOVEMENT_BADGE_STYLES } from '../constants';
 import { formatDate, formatNumber } from '../utils/formatters';
@@ -142,12 +143,7 @@ export const MovementTable: React.FC<MovementTableProps> = ({
   if (loading) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
-        <div className="flex items-center justify-center py-12">
-          <div className="flex items-center space-x-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-            <span className="text-gray-600">Cargando datos...</span>
-          </div>
-        </div>
+        <LoadingSpinner size="md" color="green" mensaje="Cargando datos..." />
       </div>
     );
   }

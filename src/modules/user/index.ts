@@ -24,15 +24,7 @@ export * from './hooks/useUbicacion';
 export * from './hooks/useDatosBasicosUsuario';
 
 // Components
-export { SolicitudCard } from './components/SolicitudCard';
-export { SolicitudesList } from './components/SolicitudesList';
-export { DashboardUserCards } from './components/DashboardUserCards';
-export { UserInfoCard } from './components/UserInfoCard';
-export { UbicacionCard } from './components/UbicacionCard';
-export { AlimentoSelector } from './components/AlimentoSelector';
-export { InventarioInfo } from './components/InventarioInfo';
-export { CantidadUnidadInputs } from './components/CantidadUnidadInputs';
-export { ComentariosInput } from './components/ComentariosInput';
+export * from './components';
 
 // Utils
 export * from './utils';

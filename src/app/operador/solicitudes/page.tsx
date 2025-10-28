@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import DashboardLayout from '@/app/components/DashboardLayout';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import Toast from '@/app/components/ui/Toast';
-import { useToast } from '@/app/hooks/useToast';
+import { useToast } from '@/modules/shared';
 import { useConfirm } from '@/modules/admin/shared/hooks/useConfirm';
 import SolicitudesHeader from '@/modules/admin/reportes/solicitudes/components/SolicitudesHeader';
 import SolicitudesFilters from '@/modules/admin/reportes/solicitudes/components/SolicitudesFilters';

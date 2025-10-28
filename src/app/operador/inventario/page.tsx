@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import DashboardLayout from '@/app/components/DashboardLayout';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import Toast from '@/app/components/ui/Toast';
-import { useToast } from '@/app/hooks/useToast';
+import { useToast } from '@/modules/shared';
 import { useOperadorInventoryData } from '@/modules/operador/inventario/hooks/useInventoryData';
 import OperadorInventoryTable from '@/modules/operador/inventario/components/OperadorInventoryTable';
 import OperadorInventoryFilters from '@/modules/operador/inventario/components/OperadorInventoryFilters';
