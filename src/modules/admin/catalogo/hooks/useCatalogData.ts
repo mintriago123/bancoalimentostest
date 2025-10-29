@@ -103,13 +103,17 @@ export const useCatalogData = (supabaseClient: SupabaseClient) => {
     return result;
   }, [service, loadFoods]);
 
-  const deleteFood = useCallback(async (foodId: number) => {
-    const result = await service.deleteFood(foodId);
+  const deleteFood = useCallback(async (foodId: number, cascade: boolean = false) => {
+    const result = await service.deleteFood(foodId, cascade);
     if (result.success) {
       await loadFoods();
     }
     return result;
   }, [service, loadFoods]);
+
+  const checkFoodUsage = useCallback(async (foodId: number) => {
+    return await service.checkFoodUsage(foodId);
+  }, [service]);
 
   const resetFilters = useCallback(() => {
     setFilters(DEFAULT_FILTERS);
@@ -134,6 +138,7 @@ export const useCatalogData = (supabaseClient: SupabaseClient) => {
     resetFilters,
     createFood,
     updateFood,
-    deleteFood
+    deleteFood,
+    checkFoodUsage
   };
 };

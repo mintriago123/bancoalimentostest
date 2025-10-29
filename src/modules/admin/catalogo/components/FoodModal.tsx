@@ -48,6 +48,11 @@ const FoodModal = ({ open, mode, initialData, onClose, onSubmit }: FoodModalProp
     event.preventDefault();
     if (!nombre.trim()) return;
 
+    // Si es categoría personalizada, validar que se haya ingresado
+    if (categoria === 'personalizada' && !categoriaPersonalizada.trim()) {
+      return;
+    }
+
     setSubmitting(true);
     await onSubmit({ nombre, categoria, categoriaPersonalizada });
     setSubmitting(false);
@@ -55,7 +60,7 @@ const FoodModal = ({ open, mode, initialData, onClose, onSubmit }: FoodModalProp
 
   if (!open) return null;
 
-  const showCustomField = categoria === 'Otros' || categoria === 'personalizada';
+  const showCustomField = categoria === 'personalizada';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">

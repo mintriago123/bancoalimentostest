@@ -29,13 +29,15 @@ export default function AdminCatalogPage() {
     resetFilters,
     createFood,
     updateFood,
-    deleteFood
+    deleteFood,
+    checkFoodUsage
   } = useCatalogData(supabase);
 
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [selectedFood, setSelectedFood] = useState<FoodRecord | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [usageInfo, setUsageInfo] = useState<{ totalDonaciones: number; totalProductos: number } | null>(null);
 
   const openCreateModal = () => {
     setSelectedFood(null);
@@ -49,8 +51,17 @@ export default function AdminCatalogPage() {
     setFormOpen(true);
   };
 
-  const openDeleteModal = (food: FoodRecord) => {
+  const openDeleteModal = async (food: FoodRecord) => {
     setSelectedFood(food);
+    
+    // Verificar el uso del alimento
+    const result = await checkFoodUsage(food.id);
+    if (result.success && result.data) {
+      setUsageInfo(result.data);
+    } else {
+      setUsageInfo(null);
+    }
+    
     setDeleteOpen(true);
   };
 
@@ -74,13 +85,40 @@ export default function AdminCatalogPage() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (cascade: boolean, password?: string) => {
     if (!selectedFood) return;
-    const result = await deleteFood(selectedFood.id);
+
+    // Si es eliminación en cascada, validar la contraseña del usuario
+    if (cascade) {
+      if (!password) {
+        showError('Debes ingresar tu contraseña para confirmar la eliminación');
+        return;
+      }
+
+      // Validar la contraseña usando Supabase Auth
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) {
+        showError('No se pudo verificar tu identidad');
+        return;
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: password
+      });
+
+      if (signInError) {
+        showError('Contraseña incorrecta. Verifica e intenta nuevamente.');
+        return;
+      }
+    }
+
+    const result = await deleteFood(selectedFood.id, cascade);
 
     if (result.success) {
-      showSuccess('Alimento eliminado');
+      showSuccess('Alimento eliminado correctamente');
       setDeleteOpen(false);
+      setUsageInfo(null);
     } else {
       showError(result.error ?? 'No fue posible eliminar el alimento');
     }
@@ -149,6 +187,7 @@ export default function AdminCatalogPage() {
       <DeleteConfirmModal
         open={deleteOpen}
         food={selectedFood}
+        usageInfo={usageInfo}
         onClose={() => setDeleteOpen(false)}
         onConfirm={handleDelete}
       />
