@@ -159,17 +159,20 @@ export default function CompletarPerfil() {
       return;
     }
 
-    // Validar formato de cédula o RUC
-    if (form.tipo_persona === "Natural") {
-      if (!validarCedulaEcuatoriana(form.cedula)) {
-        setError("El formato de la cédula no es válido. Por favor, verifica que sea una cédula ecuatoriana correcta.");
-        return;
+    // Validar formato de cédula o RUC SOLO si la API no validó exitosamente
+    // nombreBloqueado = true significa que la API validó correctamente
+    if (!nombreBloqueado) {
+      if (form.tipo_persona === "Natural") {
+        if (!validarCedulaEcuatoriana(form.cedula)) {
+          setError("El formato de la cédula no es válido. Por favor, verifica que sea una cédula ecuatoriana correcta.");
+          return;
+        }
       }
-    }
-    if (form.tipo_persona === "Juridica") {
-      if (!validarRucEcuatoriano(form.ruc)) {
-        setError("El formato del RUC no es válido. Por favor, verifica que sea un RUC ecuatoriano correcto.");
-        return;
+      if (form.tipo_persona === "Juridica") {
+        if (!validarRucEcuatoriano(form.ruc)) {
+          setError("El formato del RUC no es válido. Por favor, verifica que sea un RUC ecuatoriano correcto.");
+          return;
+        }
       }
     }
 
