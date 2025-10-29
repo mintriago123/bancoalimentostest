@@ -208,9 +208,11 @@ CREATE TABLE public.movimiento_inventario_detalle (
   tipo_transaccion text NOT NULL CHECK (tipo_transaccion = ANY (ARRAY['ingreso'::text, 'egreso'::text, 'baja'::text])),
   rol_usuario text NOT NULL CHECK (rol_usuario = ANY (ARRAY['donante'::text, 'beneficiario'::text, 'distribuidor'::text])),
   observacion_detalle text,
+  unidad_id bigint,
   CONSTRAINT movimiento_inventario_detalle_pkey PRIMARY KEY (id_detalle),
   CONSTRAINT movimiento_inventario_detalle_id_movimiento_fkey FOREIGN KEY (id_movimiento) REFERENCES public.movimiento_inventario_cabecera(id_movimiento),
-  CONSTRAINT movimiento_inventario_detalle_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos_donados(id_producto)
+  CONSTRAINT movimiento_inventario_detalle_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos_donados(id_producto),
+  CONSTRAINT movimiento_inventario_detalle_unidad_id_fkey FOREIGN KEY (unidad_id) REFERENCES public.unidades(id)
 );
 CREATE TABLE public.notificaciones (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -240,9 +242,11 @@ CREATE TABLE public.productos_donados (
   unidad_medida text,
   fecha_caducidad timestamp with time zone,
   alimento_id bigint,
+  unidad_id bigint,
   CONSTRAINT productos_donados_pkey PRIMARY KEY (id_producto),
   CONSTRAINT productos_donados_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id),
-  CONSTRAINT productos_donados_alimento_id_fkey FOREIGN KEY (alimento_id) REFERENCES public.alimentos(id)
+  CONSTRAINT productos_donados_alimento_id_fkey FOREIGN KEY (alimento_id) REFERENCES public.alimentos(id),
+  CONSTRAINT productos_donados_unidad_id_fkey FOREIGN KEY (unidad_id) REFERENCES public.unidades(id)
 );
 CREATE TABLE public.solicitudes (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
