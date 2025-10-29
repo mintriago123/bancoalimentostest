@@ -131,11 +131,13 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
 
   const obtenerOCrearProducto = async (donation: Donation): Promise<number> => {
     try {
+      // BÚSQUEDA MÁS ROBUSTA: Solo por nombre de producto y unidad de medida
+      // Esto evita crear duplicados por diferencias en la categoría/descripción
       const { data: existingProduct, error: searchError } = await supabaseClient
         .from('productos_donados')
         .select('id_producto')
         .eq('nombre_producto', donation.tipo_producto)
-        .eq('descripcion', donation.categoria_comida)
+        .eq('unidad_medida', donation.unidad_simbolo)
         .maybeSingle();
 
       if (searchError && searchError.code !== NO_ROWS_CODE) {
@@ -144,9 +146,14 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
       }
 
       if (existingProduct) {
+        logger.info('Producto existente encontrado', { 
+          productoId: existingProduct.id_producto,
+          nombreProducto: donation.tipo_producto 
+        });
         return existingProduct.id_producto;
       }
 
+      // Si no existe, crear nuevo producto
       const { data: newProduct, error: insertError } = await supabaseClient
         .from('productos_donados')
         .insert({
@@ -165,6 +172,10 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
         throw new Error(`Error al crear producto: ${insertError?.message || 'Producto no retornado'}`);
       }
 
+      logger.info('Nuevo producto creado', { 
+        productoId: newProduct.id_producto,
+        nombreProducto: donation.tipo_producto 
+      });
       return newProduct.id_producto;
     } catch (error) {
       if (error instanceof Error) {
