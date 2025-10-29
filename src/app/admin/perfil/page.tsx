@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import DashboardLayout from '@/app/components/DashboardLayout';
+import { formatLongDate } from '@/lib/dateUtils';
 import {
   UserIcon,
   AtSymbolIcon,
@@ -214,16 +215,7 @@ export default function AdminPerfilPage() {
   };
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    try {
-      return new Date(dateString).toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    } catch {
-      return 'N/A';
-    }
+    return formatLongDate(dateString);
   };
 
   if (isLoading) {

@@ -4,6 +4,7 @@
 
 import { UserProfileFormData } from '../types';
 import { FORM_CONFIG, MESSAGES } from '../constants';
+import { formatLongDate } from '@/lib/dateUtils';
 
 /**
  * Validar formulario de perfil de usuario
@@ -38,19 +39,10 @@ export function getUserInitials(name: string): string {
 }
 
 /**
- * Formatear fecha
+ * Formatear fecha en formato largo
  */
 export function formatDate(dateString?: string): string {
-  if (!dateString) return 'N/A';
-  try {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  } catch {
-    return 'N/A';
-  }
+  return formatLongDate(dateString);
 }
 
 /**

@@ -9,6 +9,7 @@
 
 import type { MovementItem, ReportFilters, MovementSummary } from '../types';
 import { LOCALE_CONFIG, MOVEMENT_TYPE_LABELS, DEFAULT_VALUES } from '../constants';
+import { formatDateTime, parseDate } from '@/lib/dateUtils';
 
 /**
  * Formatea un número según la configuración regional española
@@ -29,13 +30,13 @@ export const formatNumber = (num: number): string => {
 };
 
 /**
- * Formatea una fecha según la configuración regional española
+ * Formatea una fecha según la configuración regional española con zona horaria del usuario
  * 
  * @param dateString - Fecha en formato ISO string
  * @returns Fecha formateada legible o valor por defecto si es inválida
  * 
  * @example
- * formatDate("2023-12-25T10:30:00Z") // "25/12/2023, 10:30"
+ * formatDate("2023-12-25T10:30:00Z") // "25/12/2023 10:30"
  * formatDate("") // "—"
  * formatDate(null) // "—"
  */
@@ -44,17 +45,7 @@ export const formatDate = (dateString: string | null | undefined): string => {
     return DEFAULT_VALUES.emptyDate;
   }
 
-  try {
-    const date = new Date(dateString);
-    
-    if (Number.isNaN(date.getTime())) {
-      return dateString; // Retorna el string original si no se puede parsear
-    }
-
-    return date.toLocaleString(LOCALE_CONFIG.locale, LOCALE_CONFIG.dateFormat);
-  } catch {
-    return dateString; // Retorna el string original en caso de error
-  }
+  return formatDateTime(dateString);
 };
 
 /**
@@ -104,7 +95,7 @@ const passesDateFilter = (item: MovementItem, filters: ReportFilters): boolean =
   }
 
   try {
-    const movementDate = new Date(item.fecha_movimiento);
+    const movementDate = parseDate(item.fecha_movimiento);
     
     if (Number.isNaN(movementDate.getTime())) {
       return false;
@@ -112,7 +103,7 @@ const passesDateFilter = (item: MovementItem, filters: ReportFilters): boolean =
 
     // Verificar fecha de inicio
     if (filters.fecha_inicio) {
-      const startDate = new Date(filters.fecha_inicio);
+      const startDate = parseDate(filters.fecha_inicio);
       if (Number.isNaN(startDate.getTime()) || movementDate < startDate) {
         return false;
       }
@@ -120,7 +111,7 @@ const passesDateFilter = (item: MovementItem, filters: ReportFilters): boolean =
 
     // Verificar fecha de fin
     if (filters.fecha_fin) {
-      const endDate = new Date(filters.fecha_fin);
+      const endDate = parseDate(filters.fecha_fin);
       if (Number.isNaN(endDate.getTime())) {
         return false;
       }
@@ -317,8 +308,8 @@ export const validateDateRange = (startDate?: string, endDate?: string): boolean
 
   try {
     if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+      const start = parseDate(startDate);
+      const end = parseDate(endDate);
       
       if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
         return false;
@@ -329,12 +320,12 @@ export const validateDateRange = (startDate?: string, endDate?: string): boolean
 
     // Si solo hay una fecha, validar que sea válida
     if (startDate) {
-      const start = new Date(startDate);
+      const start = parseDate(startDate);
       return !Number.isNaN(start.getTime());
     }
 
     if (endDate) {
-      const end = new Date(endDate);
+      const end = parseDate(endDate);
       return !Number.isNaN(end.getTime());
     }
 

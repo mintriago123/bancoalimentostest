@@ -10,37 +10,37 @@ import type {
   DonationEstadoFilter,
   DonationPersonTypeFilter
 } from '../types';
+import { formatShortDate, parseDate } from '@/lib/dateUtils';
 
 export const formatDate = (value?: string | null) => {
-  if (!value) return 'N/A';
-
-  try {
-    return new Date(value).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  } catch {
-    return value;
-  }
+  return formatShortDate(value);
 };
 
 export const isNearExpiration = (fechaVencimiento?: string | null, days = 7) => {
   if (!fechaVencimiento) return false;
 
-  const today = new Date();
-  const expiration = new Date(fechaVencimiento);
-  if (Number.isNaN(expiration.getTime())) return false;
+  try {
+    const today = new Date();
+    const expiration = parseDate(fechaVencimiento);
+    if (Number.isNaN(expiration.getTime())) return false;
 
-  const diffDays = Math.ceil((expiration.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  return diffDays <= days && diffDays >= 0;
+    const diffDays = Math.ceil((expiration.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return diffDays <= days && diffDays >= 0;
+  } catch {
+    return false;
+  }
 };
 
 export const isExpired = (fechaVencimiento?: string | null) => {
   if (!fechaVencimiento) return false;
-  const expiration = new Date(fechaVencimiento);
-  if (Number.isNaN(expiration.getTime())) return false;
-  return expiration < new Date();
+  
+  try {
+    const expiration = parseDate(fechaVencimiento);
+    if (Number.isNaN(expiration.getTime())) return false;
+    return expiration < new Date();
+  } catch {
+    return false;
+  }
 };
 
 const passesEstadoFilter = (donation: Donation, filter: DonationEstadoFilter) => {

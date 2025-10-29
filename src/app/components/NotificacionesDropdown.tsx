@@ -6,6 +6,7 @@ import { BellIcon as BellSolidIcon } from '@heroicons/react/24/solid';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import { useNotificaciones } from '@/modules/shared';
 import { useRouter } from 'next/navigation';
+import { formatRelativeTime, formatShortDate } from '@/lib/dateUtils';
 
 interface NotificacionesDropdownProps {
   readonly isCollapsed?: boolean;
@@ -188,9 +189,9 @@ export default function NotificacionesDropdown({ isCollapsed = false, roleColor 
     }
   };
 
-  const formatearFecha = (fecha: string) => {
+    const formatearTiempo = (fechaCreacion: string) => {
+    const fechaNotificacion = new Date(fechaCreacion);
     const ahora = new Date();
-    const fechaNotificacion = new Date(fecha);
     const diferencia = ahora.getTime() - fechaNotificacion.getTime();
     
     const minutos = Math.floor(diferencia / (1000 * 60));
@@ -202,10 +203,7 @@ export default function NotificacionesDropdown({ isCollapsed = false, roleColor 
     if (horas < 24) return `Hace ${horas}h`;
     if (dias < 7) return `Hace ${dias}d`;
     
-    return fechaNotificacion.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit'
-    });
+    return formatShortDate(fechaCreacion);
   };
 
   // Utilidad para obtener el color del borde izquierdo según el rol
@@ -296,7 +294,7 @@ export default function NotificacionesDropdown({ isCollapsed = false, roleColor 
             {/* Acciones (botones separados) */}
             <div className="flex items-center justify-between mt-2">
               <span className="text-xs text-gray-500">
-                {formatearFecha(notificacion.fecha_creacion)}
+                {formatearTiempo(notificacion.fecha_creacion)}
               </span>
               
               <div className="flex items-center space-x-1">

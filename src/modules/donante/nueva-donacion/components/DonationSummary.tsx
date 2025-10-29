@@ -1,3 +1,5 @@
+import { formatShortDate } from '@/lib/dateUtils';
+
 interface ProductoInfo {
   nombre: string;
   categoria: string;
@@ -39,7 +41,7 @@ export default function DonationSummary({
         <p><strong>Donante:</strong> {donante}</p>
         <p><strong>Producto:</strong> {producto?.nombre} ({producto?.categoria})</p>
         <p><strong>Cantidad:</strong> {cantidad} {unidad?.simbolo}</p>
-        <p><strong>Fecha disponible:</strong> {new Date(fechaDisponible).toLocaleDateString('es-ES')}</p>
+        <p><strong>Fecha disponible:</strong> {formatShortDate(fechaDisponible)}</p>
         <p><strong>Dirección:</strong> {direccion}</p>
         {horario && horarioLabel && (
           <p><strong>Horario:</strong> {horarioLabel}</p>

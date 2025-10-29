@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import DashboardLayout from '@/app/components/DashboardLayout';
+import { formatShortDate } from '@/lib/dateUtils';
 import {
   UserIcon,
   AtSymbolIcon,
@@ -266,7 +267,7 @@ export default function OperadorPerfilPage() {
                 <div className="flex items-center gap-3 text-gray-600">
                   <CalendarIcon className="w-5 h-5 text-orange-500" />
                   <span className="text-sm">
-                    <strong>Miembro desde:</strong> {new Date(profile.created_at).toLocaleDateString('es-ES')}
+                    <strong>Miembro desde:</strong> {formatShortDate(profile.created_at)}
                   </span>
                 </div>
               )}

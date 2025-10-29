@@ -1,9 +1,22 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import {
+  formatShortDate,
+  formatDateTime,
+  formatLongDate,
+  formatTime,
+  formatRelativeTime,
+  formatDateInUserTimezone,
+  getUserTimezone,
+  formatForDateInput,
+  formatForDateTimeInput,
+} from '@/lib/dateUtils';
 
 export function useDateFormatter() {
   const [formattedDate, setFormattedDate] = useState('');
+  const timezone = getUserTimezone();
 
-  const formatDate = (value: string): string => {
+  // Función para formatear input manual de fechas (dd/mm/yyyy)
+  const formatDateInput = (value: string): string => {
     let cleanValue = value.replace(/\D/g, '');
     if (cleanValue.length > 8) cleanValue = cleanValue.slice(0, 8);
 
@@ -33,7 +46,7 @@ export function useDateFormatter() {
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatDate(e.target.value);
+    const formatted = formatDateInput(e.target.value);
     setFormattedDate(formatted);
     return formatted;
   };
@@ -53,12 +66,55 @@ export function useDateFormatter() {
     setFormattedDate('');
   };
 
+  // Nuevas funciones para formatear fechas de la base de datos
+  const formatDate = useCallback((date: string | Date | null | undefined, formatStr?: string) => {
+    if (formatStr) {
+      return formatDateInUserTimezone(date, formatStr);
+    }
+    return formatShortDate(date);
+  }, []);
+
+  const formatDateTimeStr = useCallback((date: string | Date | null | undefined) => {
+    return formatDateTime(date);
+  }, []);
+
+  const formatLongDateStr = useCallback((date: string | Date | null | undefined) => {
+    return formatLongDate(date);
+  }, []);
+
+  const formatTimeStr = useCallback((date: string | Date | null | undefined) => {
+    return formatTime(date);
+  }, []);
+
+  const formatRelative = useCallback((date: string | Date | null | undefined) => {
+    return formatRelativeTime(date);
+  }, []);
+
+  const formatForInput = useCallback((date: Date | string | null | undefined) => {
+    return formatForDateInput(date);
+  }, []);
+
+  const formatForDateTimeInputStr = useCallback((date: Date | string | null | undefined) => {
+    return formatForDateTimeInput(date);
+  }, []);
+
   return {
+    // Funciones originales para inputs manuales
     formattedDate,
-    formatDate,
+    formatDateInput,
     handleDateChange,
     validateDate,
     normalizeDate,
     resetDate,
+    
+    // Nuevas funciones para formatear fechas de la BD
+    formatDate,
+    formatDateTime: formatDateTimeStr,
+    formatLongDate: formatLongDateStr,
+    formatTime: formatTimeStr,
+    formatRelativeTime: formatRelative,
+    formatForInput,
+    formatForDateTimeInput: formatForDateTimeInputStr,
+    timezone,
   };
 }

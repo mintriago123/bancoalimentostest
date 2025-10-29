@@ -1,0 +1,140 @@
+import { format, parseISO, formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+
+// Zona horaria por defecto (ajusta según tu región)
+const DEFAULT_TIMEZONE = 'America/Mexico_City';
+
+/**
+ * Obtiene la zona horaria del navegador del usuario
+ */
+export function getUserTimezone(): string {
+  if (typeof window === 'undefined') {
+    return DEFAULT_TIMEZONE;
+  }
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_TIMEZONE;
+}
+
+/**
+ * Formatea una fecha UTC a la zona horaria del usuario
+ */
+export function formatDateInUserTimezone(
+  date: string | Date | null | undefined,
+  formatStr: string = 'dd/MM/yyyy HH:mm'
+): string {
+  if (!date) return '-';
+  
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    const timezone = getUserTimezone();
+    return formatInTimeZone(dateObj, timezone, formatStr, { locale: es });
+  } catch (error) {
+    console.error('Error formateando fecha:', error);
+    return '-';
+  }
+}
+
+/**
+ * Formatea una fecha de manera corta (dd/MM/yyyy)
+ */
+export function formatShortDate(date: string | Date | null | undefined): string {
+  return formatDateInUserTimezone(date, 'dd/MM/yyyy');
+}
+
+/**
+ * Formatea una fecha con hora (dd/MM/yyyy HH:mm)
+ */
+export function formatDateTime(date: string | Date | null | undefined): string {
+  return formatDateInUserTimezone(date, 'dd/MM/yyyy HH:mm');
+}
+
+/**
+ * Formatea una fecha de manera larga (ej: "15 de enero de 2024")
+ */
+export function formatLongDate(date: string | Date | null | undefined): string {
+  return formatDateInUserTimezone(date, "d 'de' MMMM 'de' yyyy");
+}
+
+/**
+ * Formatea la hora (HH:mm)
+ */
+export function formatTime(date: string | Date | null | undefined): string {
+  return formatDateInUserTimezone(date, 'HH:mm');
+}
+
+/**
+ * Formatea una fecha relativa (ej: "hace 2 horas")
+ */
+export function formatRelativeTime(date: string | Date | null | undefined): string {
+  if (!date) return '-';
+  
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    const timezone = getUserTimezone();
+    const zonedDate = toZonedTime(dateObj, timezone);
+    
+    return formatDistanceToNow(zonedDate, { 
+      addSuffix: true, 
+      locale: es 
+    });
+  } catch (error) {
+    console.error('Error formateando fecha relativa:', error);
+    return '-';
+  }
+}
+
+/**
+ * Convierte una fecha local a UTC (para enviar a la base de datos)
+ */
+export function toUTC(date: Date): string {
+  return date.toISOString();
+}
+
+/**
+ * Parsea una fecha ISO string a objeto Date en la zona horaria del usuario
+ */
+export function parseDate(dateString: string | null | undefined): Date {
+  if (!dateString) return new Date();
+  
+  try {
+    const timezone = getUserTimezone();
+    return toZonedTime(parseISO(dateString), timezone);
+  } catch (error) {
+    console.error('Error parseando fecha:', error);
+    return new Date();
+  }
+}
+
+/**
+ * Formatea una fecha para inputs de tipo datetime-local
+ * Retorna formato: YYYY-MM-DDTHH:mm
+ */
+export function formatForDateTimeInput(date: Date | string | null | undefined): string {
+  if (!date) return '';
+  
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    const timezone = getUserTimezone();
+    return formatInTimeZone(dateObj, timezone, "yyyy-MM-dd'T'HH:mm");
+  } catch (error) {
+    console.error('Error formateando fecha para input:', error);
+    return '';
+  }
+}
+
+/**
+ * Formatea una fecha para inputs de tipo date
+ * Retorna formato: YYYY-MM-DD
+ */
+export function formatForDateInput(date: Date | string | null | undefined): string {
+  if (!date) return '';
+  
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    const timezone = getUserTimezone();
+    return formatInTimeZone(dateObj, timezone, 'yyyy-MM-dd');
+  } catch (error) {
+    console.error('Error formateando fecha para input:', error);
+    return '';
+  }
+}

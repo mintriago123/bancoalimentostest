@@ -1,6 +1,7 @@
 'use client';
 
 import { EyeIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { useDateFormatter } from '@/modules/shared/hooks/useDateFormatter';
 
 interface NotificacionCardProps {
   readonly notificacion: {
@@ -28,6 +29,8 @@ export function NotificacionCard({
   onMarcarLeida,
   onEliminar
 }: NotificacionCardProps) {
+  const { formatDateTime } = useDateFormatter();
+
   const obtenerIconoTipo = (tipo: string) => {
     switch (tipo) {
       case 'success':
@@ -52,17 +55,6 @@ export function NotificacionCard({
       default:
         return 'text-blue-600 bg-blue-50 border-blue-200';
     }
-  };
-
-  const formatearFecha = (fecha: string) => {
-    const fechaNotificacion = new Date(fecha);
-    return fechaNotificacion.toLocaleString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
   };
 
   return (
@@ -105,7 +97,7 @@ export function NotificacionCard({
             )}
           </div>
           <span className="text-xs text-gray-500">
-            {formatearFecha(notificacion.fecha_creacion)}
+            {formatDateTime(notificacion.fecha_creacion)}
           </span>
         </div>
         

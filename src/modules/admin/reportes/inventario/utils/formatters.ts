@@ -4,18 +4,10 @@
 
 import { STOCK_THRESHOLDS } from '../constants';
 import type { InventarioItem, InventarioStats, StockLevel } from '../types';
+import { formatShortDate } from '@/lib/dateUtils';
 
 export const formatDate = (value?: string | null) => {
-  if (!value) return 'N/A';
-  try {
-    return new Date(value).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  } catch {
-    return value;
-  }
+  return formatShortDate(value);
 };
 
 export const determineStockLevel = (cantidad: number): StockLevel => {

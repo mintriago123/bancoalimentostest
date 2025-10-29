@@ -2,18 +2,8 @@
  * @fileoverview Utilidades de formato para solicitudes.
  */
 
-export const formatDateTime = (value?: string | null) => {
-  if (!value) return 'N/A';
+import { formatDateTime as formatDateTimeUtil } from '@/lib/dateUtils';
 
-  try {
-    return new Date(value).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  } catch {
-    return value;
-  }
+export const formatDateTime = (value?: string | null) => {
+  return formatDateTimeUtil(value);
 };

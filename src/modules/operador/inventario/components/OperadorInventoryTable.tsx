@@ -17,6 +17,7 @@ import {
   XCircle
 } from 'lucide-react';
 import type { InventarioItem } from '../types';
+import { formatShortDate } from '@/lib/dateUtils';
 
 interface OperadorInventoryTableProps {
   items: InventarioItem[];
@@ -55,11 +56,7 @@ const ESTADO_CADUCIDAD_ICONS = {
 
 const formatDate = (dateString: string | null): string => {
   if (!dateString) return 'No disponible';
-  try {
-    return new Date(dateString).toLocaleDateString('es-ES');
-  } catch {
-    return 'Fecha inválida';
-  }
+  return formatShortDate(dateString);
 };
 
 const formatDiasParaVencer = (dias: number | undefined): string => {

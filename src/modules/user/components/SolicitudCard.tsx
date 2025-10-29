@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { Solicitud, SolicitudEditData } from '../types';
+import { useDateFormatter } from '@/modules/shared/hooks/useDateFormatter';
 
 interface SolicitudCardProps {
   solicitud: Solicitud;
@@ -35,6 +36,7 @@ export function SolicitudCard({
   canEdit = true,
   canDelete = true,
 }: SolicitudCardProps) {
+  const { formatDateTime } = useDateFormatter();
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [formEdit, setFormEdit] = useState<SolicitudEditData>({
     cantidad: solicitud.cantidad,
@@ -176,7 +178,7 @@ export function SolicitudCard({
       <div className="flex items-center gap-2 text-sm text-gray-700">
         <Calendar className="w-4 h-4" />
         <p>
-          <strong>Fecha:</strong> {new Date(solicitud.created_at).toLocaleString()}
+          <strong>Fecha:</strong> {formatDateTime(solicitud.created_at)}
         </p>
       </div>
 

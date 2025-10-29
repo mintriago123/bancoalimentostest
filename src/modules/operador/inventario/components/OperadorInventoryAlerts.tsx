@@ -4,6 +4,7 @@
 
 import { AlertTriangle, Clock, XCircle, Package, TrendingDown } from 'lucide-react';
 import type { AlertaInventario } from '../types';
+import { formatShortDate } from '@/lib/dateUtils';
 
 interface OperadorInventoryAlertsProps {
   alertas: AlertaInventario[];
@@ -37,23 +38,14 @@ const PRIORIDAD_STYLES = {
   baja: 'border-l-4 border-l-blue-500'
 } as const;
 
-const formatDate = (dateString: string | null): string => {
-  if (!dateString) return 'No disponible';
-  try {
-    return new Date(dateString).toLocaleDateString('es-ES');
-  } catch {
-    return 'Fecha inválida';
-  }
-};
-
 const getAlertaMessage = (alerta: AlertaInventario): string => {
   switch (alerta.tipo) {
     case 'stock_bajo':
       return `Solo quedan ${alerta.cantidad_actual} unidades en ${alerta.deposito.nombre}`;
     case 'proximo_vencer':
-      return `Vence el ${formatDate(alerta.producto.fecha_caducidad)} en ${alerta.deposito.nombre}`;
+      return `Vence el ${formatShortDate(alerta.producto.fecha_caducidad)} en ${alerta.deposito.nombre}`;
     case 'vencido':
-      return `Producto vencido desde ${formatDate(alerta.producto.fecha_caducidad)} en ${alerta.deposito.nombre}`;
+      return `Producto vencido desde ${formatShortDate(alerta.producto.fecha_caducidad)} en ${alerta.deposito.nombre}`;
     default:
       return 'Requiere atención';
   }

@@ -1,5 +1,6 @@
 import { Eye, Edit, Trash2, Clock, CheckCircle, XCircle, Calendar, Package } from 'lucide-react';
 import { Donacion } from '../types';
+import { useDateFormatter } from '@/modules/shared/hooks/useDateFormatter';
 
 interface DonacionesTableProps {
   donaciones: Donacion[];
@@ -14,6 +15,8 @@ export function DonacionesTable({
   onEditar,
   onEliminar,
 }: DonacionesTableProps) {
+  const { formatDate } = useDateFormatter();
+
   const getEstadoBadge = (estado: string) => {
     const base = 'px-3 py-1 text-xs font-semibold rounded-full border ';
     switch (estado) {
@@ -44,13 +47,6 @@ export function DonacionesTable({
         return null;
     }
   };
-
-  const formatearFechaSolo = (fecha: string) =>
-    new Date(fecha).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
 
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -110,7 +106,7 @@ export function DonacionesTable({
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900">
-                  {formatearFechaSolo(donacion.fecha_disponible)}
+                  {formatDate(donacion.fecha_disponible)}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900">
                   {donacion.impacto_estimado_personas ? (

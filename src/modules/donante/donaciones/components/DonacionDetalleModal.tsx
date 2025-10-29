@@ -1,4 +1,5 @@
 import { Donacion } from '../types';
+import { useDateFormatter } from '@/modules/shared/hooks/useDateFormatter';
 
 interface DonacionDetalleModalProps {
   donacion: Donacion;
@@ -7,14 +8,9 @@ interface DonacionDetalleModalProps {
 }
 
 export function DonacionDetalleModal({ donacion, isOpen, onClose }: DonacionDetalleModalProps) {
-  if (!isOpen) return null;
+  const { formatDate } = useDateFormatter();
 
-  const formatearFechaSolo = (fecha: string) =>
-    new Date(fecha).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+  if (!isOpen) return null;
 
   const getEstadoBadge = (estado: string) => {
     const base = 'px-3 py-1 text-xs font-semibold rounded-full border ';
@@ -54,7 +50,7 @@ export function DonacionDetalleModal({ donacion, isOpen, onClose }: DonacionDeta
                 {donacion.fecha_vencimiento && (
                   <p>
                     <span className="font-medium">Vencimiento:</span>{' '}
-                    {formatearFechaSolo(donacion.fecha_vencimiento)}
+                    {formatDate(donacion.fecha_vencimiento)}
                   </p>
                 )}
               </div>
@@ -65,7 +61,7 @@ export function DonacionDetalleModal({ donacion, isOpen, onClose }: DonacionDeta
               <div className="bg-gray-50 p-3 rounded-md space-y-2">
                 <p>
                   <span className="font-medium">Fecha disponible:</span>{' '}
-                  {formatearFechaSolo(donacion.fecha_disponible)}
+                  {formatDate(donacion.fecha_disponible)}
                 </p>
                 <p>
                   <span className="font-medium">Dirección:</span> {donacion.direccion_entrega}

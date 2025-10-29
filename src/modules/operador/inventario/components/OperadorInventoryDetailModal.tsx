@@ -16,6 +16,7 @@ import {
   XCircle
 } from 'lucide-react';
 import type { InventarioItem } from '../types';
+import { formatLongDate } from '@/lib/dateUtils';
 
 interface OperadorInventoryDetailModalProps {
   item: InventarioItem | null;
@@ -79,15 +80,7 @@ const ESTADO_CADUCIDAD_INFO = {
 
 const formatDate = (dateString: string | null): string => {
   if (!dateString) return 'No disponible';
-  try {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  } catch {
-    return 'Fecha inválida';
-  }
+  return formatLongDate(dateString);
 };
 
 const formatDiasParaVencer = (dias: number | undefined): string => {
