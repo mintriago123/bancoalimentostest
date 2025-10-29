@@ -50,34 +50,46 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
         };
       }
 
-      if (donation.estado === 'Recogida' && nuevoEstado === 'Entregada') {
+      // Integrar con inventario cuando la donación pasa a estado "Entregada"
+      if (nuevoEstado === 'Entregada') {
+        logger.info('Procesando integración con inventario', { 
+          donationId: donation.id, 
+          estadoAnterior: donation.estado, 
+          estadoNuevo: nuevoEstado 
+        });
+        
         const integration = await integrateWithInventory(donation);
+        
         if (integration.error) {
+          logger.error('Error en integración con inventario', integration.error);
           return {
             success: true,
             data: {
-              message: SYSTEM_MESSAGES.stateUpdateSuccess(nuevoEstado),
+              message: `${SYSTEM_MESSAGES.stateUpdateSuccess(nuevoEstado)} pero hubo un error al actualizar el inventario: ${integration.error}`,
               warning: true
             }
           };
         }
 
+        logger.info('Integración exitosa, registrando movimiento', { productoId: integration.productoId });
+        
         const movementResult = await registerDonationMovement(donation, integration.productoId!);
         if (!movementResult.success) {
           logger.warn('Estado actualizado pero el movimiento no pudo registrarse', movementResult.errorDetails);
           return {
             success: true,
             data: {
-              message: SYSTEM_MESSAGES.stateUpdateSuccess(nuevoEstado),
+              message: `${SYSTEM_MESSAGES.stateUpdateSuccess(nuevoEstado)} y agregada al inventario (sin registro de movimiento).`,
               warning: true
             }
           };
         }
 
+        logger.info('Donación procesada completamente: inventario y movimiento registrados');
         return {
           success: true,
           data: {
-            message: `${SYSTEM_MESSAGES.stateUpdateSuccess(nuevoEstado)} y agregada al inventario.`
+            message: `${SYSTEM_MESSAGES.stateUpdateSuccess(nuevoEstado)} y agregada al inventario exitosamente.`
           }
         };
       }
