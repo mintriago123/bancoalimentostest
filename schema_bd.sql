@@ -9,6 +9,16 @@ CREATE TABLE public.alimentos (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT alimentos_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.alimentos_unidades (
+  id bigint NOT NULL DEFAULT nextval('alimentos_unidades_id_seq'::regclass),
+  alimento_id bigint NOT NULL,
+  unidad_id bigint NOT NULL,
+  es_unidad_principal boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT alimentos_unidades_pkey PRIMARY KEY (id),
+  CONSTRAINT alimentos_unidades_alimento_id_fkey FOREIGN KEY (alimento_id) REFERENCES public.alimentos(id),
+  CONSTRAINT alimentos_unidades_unidad_id_fkey FOREIGN KEY (unidad_id) REFERENCES public.unidades(id)
+);
 CREATE TABLE public.backup_detalles_solicitud (
   id_detalle uuid,
   id_solicitud uuid,
