@@ -53,11 +53,22 @@ export interface UserProfileFormData {
 }
 
 // ---------- Alimentos ----------
+export interface UnidadAlimento {
+  unidad_id: number;
+  nombre: string;
+  simbolo: string;
+  tipo_magnitud_id: number;
+  tipo_magnitud_nombre: string;
+  es_base: boolean;
+  es_principal: boolean;
+}
+
 export interface Alimento {
   id: number;
   nombre: string;
   categoria: string;
   descripcion?: string;
+  unidades?: UnidadAlimento[];
 }
 
 // ---------- Unidades de Medida ----------

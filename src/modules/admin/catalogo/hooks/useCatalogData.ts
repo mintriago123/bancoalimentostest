@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createCatalogService } from '../services/catalogService';
-import type { CatalogFilters, CatalogStats, FoodFormValues, FoodRecord } from '../types';
+import type { CatalogFilters, CatalogStats, FoodFormValues, FoodRecord, Unidad } from '../types';
 
 const DEFAULT_FILTERS: CatalogFilters = {
   search: '',
@@ -45,8 +45,10 @@ const applyFilters = (foods: FoodRecord[], filters: CatalogFilters): FoodRecord[
 
 export const useCatalogData = (supabaseClient: SupabaseClient) => {
   const [foods, setFoods] = useState<FoodRecord[]>([]);
+  const [unidades, setUnidades] = useState<Unidad[]>([]);
   const [filters, setFilters] = useState<CatalogFilters>(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(true);
+  const [loadingUnidades, setLoadingUnidades] = useState(true);
   const [error, setError] = useState<string | undefined>();
 
   const service = useMemo(() => createCatalogService(supabaseClient), [supabaseClient]);
@@ -66,9 +68,30 @@ export const useCatalogData = (supabaseClient: SupabaseClient) => {
     setLoading(false);
   }, [service]);
 
+  const loadUnidades = useCallback(async () => {
+    setLoadingUnidades(true);
+    try {
+      const { data, error } = await supabaseClient
+        .from('unidades')
+        .select('id, nombre, simbolo, tipo_magnitud_id, es_base')
+        .order('tipo_magnitud_id', { ascending: true })
+        .order('nombre', { ascending: true });
+
+      if (error) {
+        console.error('Error al cargar unidades:', error);
+      } else {
+        setUnidades(data || []);
+      }
+    } catch (err) {
+      console.error('Error inesperado al cargar unidades:', err);
+    }
+    setLoadingUnidades(false);
+  }, [supabaseClient]);
+
   useEffect(() => {
     void loadFoods();
-  }, [loadFoods]);
+    void loadUnidades();
+  }, [loadFoods, loadUnidades]);
 
   const stats = useMemo(() => computeStats(foods), [foods]);
   const filteredFoods = useMemo(() => applyFilters(foods, filters), [foods, filters]);
@@ -131,7 +154,9 @@ export const useCatalogData = (supabaseClient: SupabaseClient) => {
     stats,
     filters,
     categories,
+    unidades,
     loading,
+    loadingUnidades,
     error,
     setSearch,
     setCategory,

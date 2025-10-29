@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { X } from 'lucide-react';
-import type { FoodFormValues, FoodRecord } from '../types';
+import { X, CheckCircle2 } from 'lucide-react';
+import type { FoodFormValues, FoodRecord, Unidad } from '../types';
 
 const BASE_CATEGORIES = [
   'Granos y Cereales',
@@ -20,15 +20,20 @@ interface FoodModalProps {
   open: boolean;
   mode: 'create' | 'edit';
   initialData?: FoodRecord | null;
+  unidadesDisponibles: Unidad[];
+  loadingUnidades: boolean;
   onClose: () => void;
   onSubmit: (values: FoodFormValues) => Promise<void>;
 }
 
-const FoodModal = ({ open, mode, initialData, onClose, onSubmit }: FoodModalProps) => {
+const FoodModal = ({ open, mode, initialData, unidadesDisponibles, loadingUnidades, onClose, onSubmit }: FoodModalProps) => {
   const [nombre, setNombre] = useState('');
   const [categoria, setCategoria] = useState('');
   const [categoriaPersonalizada, setCategoriaPersonalizada] = useState('');
+  const [unidadesSeleccionadas, setUnidadesSeleccionadas] = useState<number[]>([]);
+  const [unidadPrincipal, setUnidadPrincipal] = useState<number | undefined>();
   const [submitting, setSubmitting] = useState(false);
+  const [mostrarSeccionUnidades, setMostrarSeccionUnidades] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -41,8 +46,36 @@ const FoodModal = ({ open, mode, initialData, onClose, onSubmit }: FoodModalProp
         setCategoria(categoriaActual || '');
         setCategoriaPersonalizada('');
       }
+      
+      // Cargar unidades si estamos editando
+      if (initialData?.unidades) {
+        const unidadesIds = initialData.unidades.map(u => u.unidad_id);
+        setUnidadesSeleccionadas(unidadesIds);
+        const principal = initialData.unidades.find(u => u.es_principal);
+        setUnidadPrincipal(principal?.unidad_id);
+        setMostrarSeccionUnidades(unidadesIds.length > 0);
+      } else {
+        setUnidadesSeleccionadas([]);
+        setUnidadPrincipal(undefined);
+        setMostrarSeccionUnidades(false);
+      }
     }
   }, [open, initialData]);
+
+  const toggleUnidad = (unidadId: number) => {
+    setUnidadesSeleccionadas(prev => {
+      const isSelected = prev.includes(unidadId);
+      if (isSelected) {
+        // Si se deselecciona y era la principal, limpiar principal
+        if (unidadPrincipal === unidadId) {
+          setUnidadPrincipal(undefined);
+        }
+        return prev.filter(id => id !== unidadId);
+      } else {
+        return [...prev, unidadId];
+      }
+    });
+  };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -53,10 +86,32 @@ const FoodModal = ({ open, mode, initialData, onClose, onSubmit }: FoodModalProp
       return;
     }
 
+    // Validar que se haya seleccionado al menos una unidad
+    if (unidadesSeleccionadas.length === 0) {
+      alert('Debes seleccionar al menos una unidad de medida');
+      return;
+    }
+
     setSubmitting(true);
-    await onSubmit({ nombre, categoria, categoriaPersonalizada });
+    await onSubmit({ 
+      nombre, 
+      categoria, 
+      categoriaPersonalizada,
+      unidades_ids: unidadesSeleccionadas,
+      unidad_principal_id: unidadPrincipal
+    });
     setSubmitting(false);
   };
+
+  // Agrupar unidades por tipo de magnitud
+  const unidadesPorTipo = unidadesDisponibles.reduce((acc, unidad) => {
+    const tipo = unidad.tipo_magnitud_id;
+    if (!acc[tipo]) {
+      acc[tipo] = [];
+    }
+    acc[tipo].push(unidad);
+    return acc;
+  }, {} as Record<number, Unidad[]>);
 
   if (!open) return null;
 
@@ -121,6 +176,108 @@ const FoodModal = ({ open, mode, initialData, onClose, onSubmit }: FoodModalProp
               />
             </div>
           )}
+
+          {/* Sección de Unidades de Medida */}
+          <div className="border-t border-slate-200 pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-600">Unidades de Medida *</label>
+                <p className="text-xs text-slate-500 mt-1">
+                  Selecciona las unidades permitidas para este alimento
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMostrarSeccionUnidades(!mostrarSeccionUnidades)}
+                className="text-xs text-indigo-600 hover:text-indigo-700 underline"
+              >
+                {mostrarSeccionUnidades ? 'Ocultar' : 'Mostrar'}
+              </button>
+            </div>
+
+            {mostrarSeccionUnidades && (
+              <div className="space-y-4">
+                {loadingUnidades ? (
+                  <div className="text-sm text-slate-500 text-center py-4">
+                    Cargando unidades...
+                  </div>
+                ) : unidadesDisponibles.length === 0 ? (
+                  <div className="text-sm text-amber-600 text-center py-4">
+                    No hay unidades disponibles. Contacta al administrador.
+                  </div>
+                ) : (
+                  <div className="max-h-64 overflow-y-auto space-y-3 p-3 bg-slate-50 rounded-lg">
+                    {Object.entries(unidadesPorTipo).map(([tipoId, unidades]) => (
+                      <div key={tipoId} className="space-y-2">
+                        <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                          Tipo de magnitud #{tipoId}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {unidades.map(unidad => {
+                            const isSelected = unidadesSeleccionadas.includes(unidad.id);
+                            const isPrincipal = unidadPrincipal === unidad.id;
+                            
+                            return (
+                              <div key={unidad.id} className="relative">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleUnidad(unidad.id)}
+                                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                                    isSelected
+                                      ? 'bg-indigo-100 border-2 border-indigo-500 text-indigo-900'
+                                      : 'bg-white border border-slate-200 text-slate-700 hover:border-indigo-300'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <div className="font-medium">{unidad.nombre}</div>
+                                      <div className="text-xs text-slate-500">
+                                        {unidad.simbolo}
+                                      </div>
+                                    </div>
+                                    {isSelected && (
+                                      <CheckCircle2 className="h-4 w-4 text-indigo-600" />
+                                    )}
+                                  </div>
+                                </button>
+                                {isSelected && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setUnidadPrincipal(unidad.id)}
+                                    className={`absolute -top-1 -right-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                      isPrincipal
+                                        ? 'bg-green-500 text-white'
+                                        : 'bg-slate-300 text-slate-600 hover:bg-green-400'
+                                    }`}
+                                    title={isPrincipal ? 'Unidad principal' : 'Marcar como principal'}
+                                  >
+                                    {isPrincipal ? '★ Principal' : 'Marcar'}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {unidadesSeleccionadas.length > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs font-medium text-blue-900 mb-1">
+                      {unidadesSeleccionadas.length} unidad{unidadesSeleccionadas.length !== 1 ? 'es' : ''} seleccionada{unidadesSeleccionadas.length !== 1 ? 's' : ''}
+                    </p>
+                    {!unidadPrincipal && (
+                      <p className="text-xs text-amber-700">
+                        ⚠️ Recomendado: Marca una unidad como principal
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <button

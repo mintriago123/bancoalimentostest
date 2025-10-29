@@ -38,6 +38,7 @@ export default function FormularioSolicitante() {
     setBusqueda,
     setFiltroCategoria,
     filtrarAlimentos,
+    obtenerUnidadesAlimento,
   } = useAlimentos(supabase);
   const { unidades, loading: loadingUnidades } = useUnidades(supabase);
   const { ubicacion, setUbicacion } = useUbicacion();
@@ -96,6 +97,9 @@ export default function FormularioSolicitante() {
     setBusqueda(alimento.nombre);
     setMostrarDropdown(false);
 
+    // Limpiar unidad seleccionada cuando cambia el alimento
+    setUnidadId("");
+
     // Consultar inventario automáticamente
     checkStock(alimento.nombre);
   };
@@ -142,6 +146,28 @@ export default function FormularioSolicitante() {
     if (stockInfo && stockInfo.producto_encontrado) {
       setCantidad(stockInfo.total_disponible.toString());
     }
+  };
+
+  // Obtener unidades disponibles para el alimento seleccionado
+  const getUnidadesDisponibles = () => {
+    if (!alimentoId) {
+      return [];
+    }
+
+    // Obtener unidades específicas del alimento seleccionado
+    const unidadesAlimento = obtenerUnidadesAlimento(alimentoId);
+    
+    // Si el alimento no tiene unidades configuradas, mostrar todas
+    if (unidadesAlimento.length === 0) {
+      return unidades;
+    }
+
+    // Convertir UnidadAlimento a Unidad
+    return unidadesAlimento.map(u => ({
+      id: u.unidad_id,
+      nombre: u.nombre,
+      simbolo: u.simbolo
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -282,7 +308,7 @@ export default function FormularioSolicitante() {
                 <CantidadUnidadInputs
                   cantidad={cantidad}
                   unidadId={unidadId}
-                  unidades={unidades}
+                  unidades={getUnidadesDisponibles()}
                   loadingUnidades={loadingUnidades === 'loading'}
                   stockInfo={stockInfo}
                   isStockSufficient={isStockSufficient}

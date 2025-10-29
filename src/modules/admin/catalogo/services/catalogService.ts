@@ -1,31 +1,50 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { FoodRecord, FoodFormValues, ServiceResult } from '../types';
+import type { FoodRecord, FoodFormValues, ServiceResult, UnidadAlimento } from '../types';
 
 const normalizeFood = (row: any): FoodRecord => ({
   id: row.id,
   nombre: row.nombre,
-  categoria: row.categoria
+  categoria: row.categoria,
+  unidades: row.unidades || []
 });
 
 export const createCatalogService = (supabaseClient: SupabaseClient) => {
   const fetchFoods = async (): Promise<ServiceResult<FoodRecord[]>> => {
     try {
-      const { data, error } = await supabaseClient
+      // Primero obtener los alimentos
+      const { data: alimentosData, error: alimentosError } = await supabaseClient
         .from('alimentos')
         .select('id, nombre, categoria')
         .order('nombre', { ascending: true });
 
-      if (error) {
+      if (alimentosError) {
         return {
           success: false,
           error: 'No fue posible cargar los alimentos',
-          errorDetails: error
+          errorDetails: alimentosError
         };
       }
 
+      // Luego obtener las unidades asociadas a cada alimento
+      const alimentosConUnidades = await Promise.all(
+        (alimentosData ?? []).map(async (alimento) => {
+          const { data: unidadesData, error: unidadesError } = await supabaseClient
+            .rpc('obtener_unidades_alimento', { p_alimento_id: alimento.id });
+
+          if (unidadesError) {
+            console.error(`Error al cargar unidades para alimento ${alimento.id}:`, unidadesError);
+          }
+
+          return {
+            ...alimento,
+            unidades: (unidadesData ?? []) as UnidadAlimento[]
+          };
+        })
+      );
+
       return {
         success: true,
-        data: (data ?? []).map(normalizeFood)
+        data: alimentosConUnidades.map(normalizeFood)
       };
     } catch (err) {
       return {
@@ -52,16 +71,50 @@ export const createCatalogService = (supabaseClient: SupabaseClient) => {
         };
       }
 
-      const { error } = await supabaseClient.from('alimentos').insert({
-        nombre: values.nombre.trim(),
-        categoria: categoriaFinal
-      });
+      // Validar que se hayan seleccionado unidades
+      if (!values.unidades_ids || values.unidades_ids.length === 0) {
+        return {
+          success: false,
+          error: 'Debes seleccionar al menos una unidad de medida'
+        };
+      }
 
-      if (error) {
+      // Insertar el alimento
+      const { data: alimentoData, error: alimentoError } = await supabaseClient
+        .from('alimentos')
+        .insert({
+          nombre: values.nombre.trim(),
+          categoria: categoriaFinal
+        })
+        .select()
+        .single();
+
+      if (alimentoError || !alimentoData) {
         return {
           success: false,
           error: 'No fue posible registrar el alimento',
-          errorDetails: error
+          errorDetails: alimentoError
+        };
+      }
+
+      // Insertar las relaciones con las unidades
+      const unidadesRelaciones = values.unidades_ids.map(unidadId => ({
+        alimento_id: alimentoData.id,
+        unidad_id: unidadId,
+        es_unidad_principal: values.unidad_principal_id === unidadId
+      }));
+
+      const { error: unidadesError } = await supabaseClient
+        .from('alimentos_unidades')
+        .insert(unidadesRelaciones);
+
+      if (unidadesError) {
+        // Si falla, intentar eliminar el alimento creado
+        await supabaseClient.from('alimentos').delete().eq('id', alimentoData.id);
+        return {
+          success: false,
+          error: 'No fue posible asociar las unidades al alimento',
+          errorDetails: unidadesError
         };
       }
 
@@ -91,7 +144,16 @@ export const createCatalogService = (supabaseClient: SupabaseClient) => {
         };
       }
 
-      const { error } = await supabaseClient
+      // Validar que se hayan seleccionado unidades
+      if (!values.unidades_ids || values.unidades_ids.length === 0) {
+        return {
+          success: false,
+          error: 'Debes seleccionar al menos una unidad de medida'
+        };
+      }
+
+      // Actualizar el alimento
+      const { error: alimentoError } = await supabaseClient
         .from('alimentos')
         .update({
           nombre: values.nombre.trim(),
@@ -99,11 +161,44 @@ export const createCatalogService = (supabaseClient: SupabaseClient) => {
         })
         .eq('id', foodId);
 
-      if (error) {
+      if (alimentoError) {
         return {
           success: false,
           error: 'No fue posible actualizar el alimento',
-          errorDetails: error
+          errorDetails: alimentoError
+        };
+      }
+
+      // Eliminar las relaciones existentes
+      const { error: deleteError } = await supabaseClient
+        .from('alimentos_unidades')
+        .delete()
+        .eq('alimento_id', foodId);
+
+      if (deleteError) {
+        return {
+          success: false,
+          error: 'Error al actualizar las unidades',
+          errorDetails: deleteError
+        };
+      }
+
+      // Insertar las nuevas relaciones
+      const unidadesRelaciones = values.unidades_ids.map(unidadId => ({
+        alimento_id: foodId,
+        unidad_id: unidadId,
+        es_unidad_principal: values.unidad_principal_id === unidadId
+      }));
+
+      const { error: insertError } = await supabaseClient
+        .from('alimentos_unidades')
+        .insert(unidadesRelaciones);
+
+      if (insertError) {
+        return {
+          success: false,
+          error: 'Error al asociar las nuevas unidades',
+          errorDetails: insertError
         };
       }
 

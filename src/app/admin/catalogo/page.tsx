@@ -22,7 +22,9 @@ export default function AdminCatalogPage() {
     stats,
     filters,
     categories,
+    unidades,
     loading,
+    loadingUnidades,
     error,
     setSearch,
     setCategory,
@@ -180,6 +182,8 @@ export default function AdminCatalogPage() {
         open={formOpen}
         mode={formMode}
         initialData={selectedFood}
+        unidadesDisponibles={unidades}
+        loadingUnidades={loadingUnidades}
         onClose={() => setFormOpen(false)}
         onSubmit={handleSubmit}
       />

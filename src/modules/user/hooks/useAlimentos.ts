@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { Alimento, LoadingState } from '../types';
+import { Alimento, LoadingState, UnidadAlimento } from '../types';
 import { AlimentosService } from '../services/alimentosService';
 
 interface UseAlimentosResult {
@@ -19,6 +19,7 @@ interface UseAlimentosResult {
   setBusqueda: (busqueda: string) => void;
   setFiltroCategoria: (categoria: string) => void;
   filtrarAlimentos: (termino: string, categoria?: string) => void;
+  obtenerUnidadesAlimento: (alimentoId: number) => UnidadAlimento[];
 }
 
 export function useAlimentos(
@@ -49,8 +50,29 @@ export function useAlimentos(
         return;
       }
 
-      setAlimentos(alimentosData);
-      setAlimentosFiltrados(alimentosData);
+      // Cargar unidades de cada alimento
+      const alimentosConUnidades = await Promise.all(
+        alimentosData.map(async (alimento) => {
+          const { data: unidadesData, error: unidadesError } = await supabase
+            .rpc('obtener_unidades_alimento', { p_alimento_id: alimento.id });
+
+          if (unidadesError) {
+            console.error(`Error al cargar unidades para alimento ${alimento.id}:`, unidadesError);
+            return {
+              ...alimento,
+              unidades: []
+            };
+          }
+
+          return {
+            ...alimento,
+            unidades: (unidadesData || []) as UnidadAlimento[]
+          };
+        })
+      );
+
+      setAlimentos(alimentosConUnidades);
+      setAlimentosFiltrados(alimentosConUnidades);
 
       // Obtener categorías solo de productos con stock
       const { data: categoriasData, error: categoriasError } =
@@ -59,7 +81,7 @@ export function useAlimentos(
       if (categoriasError || !categoriasData) {
         // Si falla, extraer categorías de los alimentos obtenidos
         const categoriasUnicas = [
-          ...new Set(alimentosData.map((a) => a.categoria)),
+          ...new Set(alimentosConUnidades.map((a) => a.categoria)),
         ].sort();
         setCategorias(categoriasUnicas);
       } else {
@@ -99,6 +121,14 @@ export function useAlimentos(
     [alimentos, filtroCategoria]
   );
 
+  const obtenerUnidadesAlimento = useCallback(
+    (alimentoId: number): UnidadAlimento[] => {
+      const alimento = alimentos.find((a) => a.id === alimentoId);
+      return alimento?.unidades || [];
+    },
+    [alimentos]
+  );
+
   return {
     alimentos,
     alimentosFiltrados,
@@ -110,5 +140,6 @@ export function useAlimentos(
     setBusqueda,
     setFiltroCategoria,
     filtrarAlimentos,
+    obtenerUnidadesAlimento,
   };
 }

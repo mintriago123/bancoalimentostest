@@ -39,7 +39,7 @@ export default function NuevaDonacionPage() {
   const { pasoActual, siguientePaso: avanzarPaso, pasoAnterior, resetearPaso } = useMultiStepForm(3);
 
   // Hook para cargar catálogos
-  const { alimentos, unidades, cargandoAlimentos, cargandoUnidades, categoriasUnicas } = useCatalogData(supabase, authLoading);
+  const { alimentos, unidades, cargandoAlimentos, cargandoUnidades, categoriasUnicas, obtenerUnidadesAlimento } = useCatalogData(supabase, authLoading);
 
   // Hook para perfil de usuario
   const { userProfile } = useUserProfile(supabase, currentUser, authLoading);
@@ -106,6 +106,33 @@ export default function NuevaDonacionPage() {
       }));
     }
   }, [userProfile]);
+
+  // Obtener unidades disponibles para el alimento seleccionado
+  const getUnidadesDisponibles = () => {
+    if (formulario.tipo_producto === 'personalizado') {
+      // Para productos personalizados, mostrar todas las unidades
+      return unidades;
+    }
+
+    if (!formulario.tipo_producto) {
+      return [];
+    }
+
+    // Obtener unidades específicas del alimento seleccionado
+    const unidadesAlimento = obtenerUnidadesAlimento(parseInt(formulario.tipo_producto));
+    
+    // Si el alimento no tiene unidades configuradas, mostrar todas
+    if (unidadesAlimento.length === 0) {
+      return unidades;
+    }
+
+    // Convertir UnidadAlimento a Unidad
+    return unidadesAlimento.map(u => ({
+      id: u.unidad_id,
+      nombre: u.nombre,
+      simbolo: u.simbolo
+    }));
+  };
 
   // Obtener información del producto seleccionado
   const getProductoSeleccionado = () => {
@@ -300,14 +327,18 @@ export default function NuevaDonacionPage() {
                     {cargandoUnidades ? (
                       <option disabled>Cargando unidades...</option>
                     ) : (
-                      unidades.map((unidad) => (
+                      getUnidadesDisponibles().map((unidad) => (
                         <option key={unidad.id} value={unidad.id.toString()}>
                           {unidad.nombre} ({unidad.simbolo})
                         </option>
                       ))
                     )}
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">La unidad afecta el cálculo de impacto</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formulario.tipo_producto 
+                      ? `Unidades permitidas para este alimento` 
+                      : 'Selecciona primero un alimento'}
+                  </p>
                 </div>
               </div>
 
