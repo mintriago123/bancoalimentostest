@@ -23,6 +23,15 @@ import {
   calcularImpacto
 } from '@/modules/donante';
 
+// Función auxiliar para obtener la fecha de hoy en formato YYYY-MM-DD en hora local
+const obtenerFechaHoy = () => {
+  const hoy = new Date();
+  const año = hoy.getFullYear();
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoy.getDate()).padStart(2, '0');
+  return `${año}-${mes}-${dia}`;
+};
+
 export default function NuevaDonacionPage() {
   const { supabase, user: currentUser, isLoading: authLoading } = useSupabase();
 
@@ -155,10 +164,9 @@ export default function NuevaDonacionPage() {
           setMensajeValidacion('Por favor, completa la información de logística.');
           return false;
         }
-        const fechaSeleccionada = new Date(formulario.fecha_disponible);
-        const fechaHoy = new Date();
-        fechaHoy.setHours(0, 0, 0, 0);
-        if (fechaSeleccionada < fechaHoy) {
+        // Comparar las fechas como strings en formato YYYY-MM-DD
+        const fechaHoyString = obtenerFechaHoy();
+        if (formulario.fecha_disponible < fechaHoyString) {
           setMensajeValidacion('La fecha de disponibilidad no puede ser anterior a hoy.');
           return false;
         }
@@ -311,7 +319,7 @@ export default function NuevaDonacionPage() {
                   className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
                   value={formulario.fecha_vencimiento}
                   onChange={manejarCambio}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={obtenerFechaHoy()}
                 />
               </div>
 
@@ -344,7 +352,7 @@ export default function NuevaDonacionPage() {
                   className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
                   value={formulario.fecha_disponible}
                   onChange={manejarCambio}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={obtenerFechaHoy()}
                 />
               </div>
 
