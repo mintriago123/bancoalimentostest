@@ -5,11 +5,10 @@ import DashboardLayout from '@/app/components/DashboardLayout';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import { RefreshCw } from 'lucide-react';
 
-import { useDashboardData } from '@/modules/admin/dashboard/hooks/useDashboardData';
+import { useDashboardData, RequestStatus } from '@/modules/shared/dashboard';
 import DashboardHeader from '@/modules/admin/dashboard/components/DashboardHeader';
 import DashboardSummaryCards from '@/modules/admin/dashboard/components/DashboardSummaryCards';
 import RoleDistribution from '@/modules/admin/dashboard/components/RoleDistribution';
-import RequestStatus from '@/modules/admin/dashboard/components/RequestStatus';
 import UserTypeDistribution from '@/modules/admin/dashboard/components/UserTypeDistribution';
 
 export default function AdminDashboardPage() {

@@ -6,15 +6,17 @@ import { useSupabase } from '@/app/components/SupabaseProvider';
 import Toast from '@/app/components/ui/Toast';
 import { useToast } from '@/modules/shared';
 import { useConfirm } from '@/modules/admin/shared/hooks/useConfirm';
-import SolicitudesHeader from '@/modules/admin/reportes/solicitudes/components/SolicitudesHeader';
-import SolicitudesFilters from '@/modules/admin/reportes/solicitudes/components/SolicitudesFilters';
-import SolicitudesTable from '@/modules/admin/reportes/solicitudes/components/SolicitudesTable';
-import SolicitudDetailModal from '@/modules/admin/reportes/solicitudes/components/SolicitudDetailModal';
-import { useSolicitudesData } from '@/modules/admin/reportes/solicitudes/hooks/useSolicitudesData';
-import { useSolicitudActions } from '@/modules/admin/reportes/solicitudes/hooks/useSolicitudActions';
-import { useInventarioDisponible } from '@/modules/admin/reportes/solicitudes/hooks/useInventarioDisponible';
-import { formatDateTime } from '@/modules/admin/reportes/solicitudes/utils/formatters';
-import type { Solicitud } from '@/modules/admin/reportes/solicitudes/types';
+import {
+  SolicitudesHeader,
+  SolicitudesFilters,
+  SolicitudesTable,
+  SolicitudDetailModal,
+  useSolicitudesData,
+  useSolicitudActions,
+  useInventarioDisponible,
+  formatDateTime
+} from '@/modules/operador/solicitudes';
+import type { Solicitud } from '@/modules/operador/solicitudes';
 
 const ErrorState = ({
   message,
@@ -148,13 +150,6 @@ export default function OperadorSolicitudesPage() {
     void loadInventario(solicitud.tipo_alimento);
   }, [loadInventario]);
 
-  // OPERADORES NO PUEDEN REVERTIR - función dummy que no hace nada
-  // El componente SolicitudesTable solo mostrará el botón si está aprobada/rechazada
-  const handleRevertir = useCallback((_solicitud: Solicitud) => {
-    // Los operadores no pueden revertir, mostrar mensaje
-    showError('No tienes permisos para revertir solicitudes. Contacta a un administrador.');
-  }, [showError]);
-
   const handleModalAprobar = useCallback(async () => {
     if (!solicitudSeleccionada) return;
     const success = await handleEstadoChange(solicitudSeleccionada, 'aprobada', comentarioAdmin);
@@ -195,7 +190,6 @@ export default function OperadorSolicitudesPage() {
         totalSolicitudes={totalSolicitudes}
         onVerDetalle={handleOpenModal}
         onActualizarEstado={(solicitud, estado) => handleEstadoChange(solicitud, estado)}
-        onRevertir={handleRevertir} // Operadores no pueden revertir pero necesitamos la función
         estadoIcons={estadoIcons}
         badgeStyles={badgeStyles}
         formatDate={formatDateTime}
@@ -212,7 +206,6 @@ export default function OperadorSolicitudesPage() {
     totalSolicitudes,
     handleOpenModal,
     handleEstadoChange,
-    handleRevertir,
     estadoIcons,
     badgeStyles,
     processingId,

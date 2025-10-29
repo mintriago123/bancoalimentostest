@@ -6,14 +6,17 @@ import { useSupabase } from '@/app/components/SupabaseProvider';
 import Toast from '@/app/components/ui/Toast';
 import { useToast } from '@/modules/shared';
 import { useConfirm } from '@/modules/admin/shared/hooks/useConfirm';
-import DonationsHeader from '@/modules/admin/reportes/donaciones/components/DonationsHeader';
-import DonationsFilters from '@/modules/admin/reportes/donaciones/components/DonationsFilters';
-import DonationsTable from '@/modules/admin/reportes/donaciones/components/DonationsTable';
-import DonationsErrorState from '@/modules/admin/reportes/donaciones/components/DonationsErrorState';
-import DonationDetailModal from '@/modules/admin/reportes/donaciones/components/DonationDetailModal';
-import { useDonationsData } from '@/modules/admin/reportes/donaciones/hooks/useDonationsData';
-import { useDonationActions } from '@/modules/admin/reportes/donaciones/hooks/useDonationActions';
-import type { Donation, DonationEstado } from '@/modules/admin/reportes/donaciones/types';
+import {
+  DonationsHeader,
+  DonationsFilters,
+  DonationsTable,
+  DonationsErrorState,
+  DonationDetailModal,
+  useDonationsData,
+  useDonationActions,
+  type Donation,
+  type DonationEstado
+} from '@/modules/shared/donaciones';
 
 const LoadingState = () => (
   <div className="text-center py-12">

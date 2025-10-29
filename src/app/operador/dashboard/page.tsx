@@ -5,8 +5,7 @@ import DashboardLayout from '@/app/components/DashboardLayout';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import { RefreshCw } from 'lucide-react';
 
-import { useDashboardData } from '@/modules/admin/dashboard/hooks/useDashboardData';
-import RequestStatus from '@/modules/admin/dashboard/components/RequestStatus';
+import { useDashboardData, RequestStatus } from '@/modules/shared/dashboard';
 
 export default function OperadorDashboardPage() {
   const { supabase } = useSupabase();
