@@ -176,7 +176,9 @@ const OperadorInventoryTable = ({
                             {item.producto.descripcion || 'Sin descripción'}
                           </div>
                           <div className="text-xs text-gray-400">
-                            Unidad: {item.producto.unidad_medida || 'No especificada'}
+                            Unidad: {item.producto.unidad_simbolo 
+                              ? `${item.producto.unidad_nombre} (${item.producto.unidad_simbolo})`
+                              : item.producto.unidad_medida || 'No especificada'}
                           </div>
                         </div>
                       </div>
@@ -201,7 +203,13 @@ const OperadorInventoryTable = ({
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full border text-sm font-medium ${STOCK_LEVEL_STYLES[stockLevel]}`}>
                         {STOCK_LEVEL_ICONS[stockLevel]}
-                        <span>{item.cantidad_disponible} unidades</span>
+                        <span>
+                          {item.cantidad_disponible} {
+                            item.producto.unidad_simbolo || 
+                            item.producto.unidad_medida || 
+                            'unidades'
+                          }
+                        </span>
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
                         Estado: {stockLevel.toUpperCase()}

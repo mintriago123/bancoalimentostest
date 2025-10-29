@@ -18,6 +18,9 @@ export interface ProductoInventario {
   nombre_producto: string;
   descripcion: string | null;
   unidad_medida: string | null;
+  unidad_id: number | null;
+  unidad_nombre: string | null;
+  unidad_simbolo: string | null;
   fecha_caducidad: string | null;
   fecha_donacion: string | null;
 }
@@ -43,8 +46,14 @@ export type SupabaseProductoRelation = {
   nombre_producto?: string | null;
   descripcion?: string | null;
   unidad_medida?: string | null;
+  unidad_id?: number | null;
   fecha_caducidad?: string | null;
   fecha_donacion?: string | null;
+  unidades?: {
+    id?: number | null;
+    nombre?: string | null;
+    simbolo?: string | null;
+  } | null;
 } | null;
 
 export interface SupabaseInventarioRow {

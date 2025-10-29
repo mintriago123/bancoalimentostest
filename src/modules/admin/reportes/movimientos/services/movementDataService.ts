@@ -123,9 +123,16 @@ export class MovementDataService {
             tipo_transaccion,
             rol_usuario,
             observacion_detalle,
+            unidad_id,
             productos_donados!inner(
               nombre_producto,
-              unidad_medida
+              unidad_medida,
+              unidad_id,
+              unidades:unidades(
+                id,
+                nombre,
+                simbolo
+              )
             )
           )
         `)
@@ -303,15 +310,35 @@ export class MovementDataService {
         
         const productoDonado = detalle.productos_donados as { 
           nombre_producto?: string; 
-          unidad_medida?: string; 
+          unidad_medida?: string;
+          unidad_id?: number;
+          unidades?: { id?: number; nombre?: string; simbolo?: string } | { id?: number; nombre?: string; simbolo?: string }[];
         } | null;
+
+        // Priorizar información de unidad estructurada
+        let unidadMedida: string = DEFAULT_VALUES.defaultUnit;
+        
+        if (productoDonado?.unidades) {
+          // Si unidades es un array, tomar el primer elemento
+          const unidadInfo = Array.isArray(productoDonado.unidades) 
+            ? productoDonado.unidades[0] 
+            : productoDonado.unidades;
+          
+          if (unidadInfo?.simbolo) {
+            unidadMedida = unidadInfo.simbolo;
+          } else if (productoDonado.unidad_medida) {
+            unidadMedida = productoDonado.unidad_medida;
+          }
+        } else if (productoDonado?.unidad_medida) {
+          unidadMedida = productoDonado.unidad_medida;
+        }
 
         return {
           id: `current-${movimiento.id_movimiento}-${index}`,
           fecha_movimiento: fechaMovimiento,
           tipo_movimiento: detalle.tipo_transaccion === 'ingreso' ? 'ingreso' : 'egreso',
           nombre_producto: productoDonado?.nombre_producto || DEFAULT_VALUES.unknownProduct,
-          unidad_medida: productoDonado?.unidad_medida || DEFAULT_VALUES.defaultUnit,
+          unidad_medida: unidadMedida,
           cantidad,
           usuario_responsable: usuarioResponsable,
           rol_usuario: rolUsuario,

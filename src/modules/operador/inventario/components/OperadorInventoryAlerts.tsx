@@ -39,9 +39,10 @@ const PRIORIDAD_STYLES = {
 } as const;
 
 const getAlertaMessage = (alerta: AlertaInventario): string => {
+  const unidad = alerta.producto.unidad_simbolo || alerta.producto.unidad_medida || 'unidades';
   switch (alerta.tipo) {
     case 'stock_bajo':
-      return `Solo quedan ${alerta.cantidad_actual} unidades en ${alerta.deposito.nombre}`;
+      return `Solo quedan ${alerta.cantidad_actual} ${unidad} en ${alerta.deposito.nombre}`;
     case 'proximo_vencer':
       return `Vence el ${formatShortDate(alerta.producto.fecha_caducidad)} en ${alerta.deposito.nombre}`;
     case 'vencido':
@@ -172,10 +173,10 @@ const OperadorInventoryAlerts = ({ alertas, onAlertaClick }: OperadorInventoryAl
                   {/* Detalles adicionales */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3 text-xs text-gray-600">
                     <div>
-                      <span className="font-medium">Cantidad actual:</span> {alerta.cantidad_actual} unidades
+                      <span className="font-medium">Cantidad actual:</span> {alerta.cantidad_actual} {alerta.producto.unidad_simbolo || alerta.producto.unidad_medida || 'unidades'}
                     </div>
                     <div>
-                      <span className="font-medium">Unidad:</span> {alerta.producto.unidad_medida || 'No especificada'}
+                      <span className="font-medium">Unidad:</span> {alerta.producto.unidad_nombre || alerta.producto.unidad_medida || 'No especificada'}
                     </div>
                     <div>
                       <span className="font-medium">Depósito:</span> {alerta.deposito.nombre}

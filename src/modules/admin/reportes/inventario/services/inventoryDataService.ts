@@ -36,8 +36,14 @@ export const createInventoryDataService = (supabaseClient: SupabaseClient) => {
             nombre_producto,
             descripcion,
             unidad_medida,
+            unidad_id,
             fecha_caducidad,
-            fecha_donacion
+            fecha_donacion,
+            unidades:unidades(
+              id,
+              nombre,
+              simbolo
+            )
           )
         `)
         .order('fecha_actualizacion', { ascending: false });
@@ -115,6 +121,12 @@ const mapInventarioRowToDomain = (row: SupabaseInventarioRow): InventarioItem =>
   const deposito = normalizeRelation(row.depositos);
   const producto = normalizeRelation(row.productos);
 
+  // Normalizar la información de unidad
+  const unidadInfo = producto?.unidades;
+  const unidadNormalizada = unidadInfo 
+    ? (Array.isArray(unidadInfo) ? unidadInfo[0] : unidadInfo)
+    : null;
+
   return {
     id_inventario: row.id_inventario,
     id_deposito: row.id_deposito,
@@ -131,6 +143,9 @@ const mapInventarioRowToDomain = (row: SupabaseInventarioRow): InventarioItem =>
       nombre_producto: producto?.nombre_producto ?? 'Sin nombre',
       descripcion: producto?.descripcion ?? null,
       unidad_medida: producto?.unidad_medida ?? null,
+      unidad_id: producto?.unidad_id ?? null,
+      unidad_nombre: unidadNormalizada?.nombre ?? null,
+      unidad_simbolo: unidadNormalizada?.simbolo ?? null,
       fecha_caducidad: producto?.fecha_caducidad ?? null,
       fecha_donacion: producto?.fecha_donacion ?? null
     }

@@ -146,7 +146,7 @@ const InventoryTable = ({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full border text-sm font-medium ${STOCK_LEVEL_STYLES[stockLevel]}`}>
                       {STOCK_LEVEL_ICONS[stockLevel]}
-                      <span>{item.cantidad_disponible} unidades</span>
+                      <span>{item.cantidad_disponible} {item.producto.unidad_simbolo || item.producto.unidad_medida || 'unidades'}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

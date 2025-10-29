@@ -58,8 +58,14 @@ export const createOperadorInventoryDataService = (supabaseClient: SupabaseClien
             nombre_producto,
             descripcion,
             unidad_medida,
+            unidad_id,
             fecha_caducidad,
-            fecha_donacion
+            fecha_donacion,
+            unidades:unidades(
+              id,
+              nombre,
+              simbolo
+            )
           )
         `)
         .order('fecha_actualizacion', { ascending: false });
@@ -123,8 +129,14 @@ export const createOperadorInventoryDataService = (supabaseClient: SupabaseClien
             nombre_producto,
             descripcion,
             unidad_medida,
+            unidad_id,
             fecha_caducidad,
-            fecha_donacion
+            fecha_donacion,
+            unidades:unidades(
+              id,
+              nombre,
+              simbolo
+            )
           )
         `)
         .or(`cantidad_disponible.lt.${STOCK_LEVELS.BAJO}`)
@@ -288,6 +300,11 @@ const mapInventarioRowToDomainWithOperatorInfo = (row: SupabaseInventarioRow): I
   const estadoCaducidad = getEstadoCaducidad(diasParaVencer);
   const necesitaAtencion = stockStatus === 'bajo' || estadoCaducidad === 'proximo' || estadoCaducidad === 'vencido';
 
+  // Obtener información de unidad estructurada
+  const unidadInfo = producto?.unidades;
+  const unidadNombre = Array.isArray(unidadInfo) ? unidadInfo[0]?.nombre : unidadInfo?.nombre;
+  const unidadSimbolo = Array.isArray(unidadInfo) ? unidadInfo[0]?.simbolo : unidadInfo?.simbolo;
+
   return {
     id_inventario: row.id_inventario,
     id_deposito: row.id_deposito,
@@ -304,6 +321,9 @@ const mapInventarioRowToDomainWithOperatorInfo = (row: SupabaseInventarioRow): I
       nombre_producto: producto?.nombre_producto ?? 'Sin nombre',
       descripcion: producto?.descripcion ?? null,
       unidad_medida: producto?.unidad_medida ?? null,
+      unidad_id: producto?.unidad_id ?? null,
+      unidad_nombre: unidadNombre ?? null,
+      unidad_simbolo: unidadSimbolo ?? null,
       fecha_caducidad: producto?.fecha_caducidad ?? null,
       fecha_donacion: producto?.fecha_donacion ?? null,
       dias_para_vencer: diasParaVencer ?? undefined,

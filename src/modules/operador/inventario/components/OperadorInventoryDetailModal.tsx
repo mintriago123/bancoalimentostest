@@ -211,7 +211,7 @@ const OperadorInventoryDetailModal = ({ item, isOpen, onClose }: OperadorInvento
               <div>
                 <label className="text-sm font-medium text-gray-600">Cantidad Disponible</label>
                 <p className="text-2xl font-bold text-orange-600">
-                  {item.cantidad_disponible} {item.producto.unidad_medida || 'unidades'}
+                  {item.cantidad_disponible} {item.producto.unidad_simbolo || item.producto.unidad_medida || 'unidades'}
                 </p>
               </div>
             </div>
