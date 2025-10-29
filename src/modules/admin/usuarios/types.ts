@@ -1,4 +1,4 @@
-export type UserRole = 'ADMINISTRADOR' | 'DONANTE' | 'SOLICITANTE';
+export type UserRole = 'ADMINISTRADOR' | 'DONANTE' | 'SOLICITANTE' | 'OPERADOR';
 export type UserStatus = 'activo' | 'bloqueado' | 'desactivado' | null;
 export type UserPersonType = 'Natural' | 'Juridica' | string | null;
 
@@ -22,6 +22,7 @@ export interface UsersStats {
   administradores: number;
   donantes: number;
   solicitantes: number;
+  operadores: number;
   activos: number;
   bloqueados: number;
 }
@@ -31,6 +32,7 @@ export interface RoleFilterState {
   ADMINISTRADOR: boolean;
   DONANTE: boolean;
   SOLICITANTE: boolean;
+  OPERADOR: boolean;
 }
 
 export interface PersonTypeFilterState {

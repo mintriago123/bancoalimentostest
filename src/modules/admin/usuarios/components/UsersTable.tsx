@@ -9,7 +9,7 @@ interface UsersTableProps {
 }
 
 const ROLE_OPTIONS: Array<{ value: UserRole; label: string }> = [
-  { value: 'ADMINISTRADOR', label: 'Administrador' },
+  { value: 'OPERADOR', label: 'Operador' },
   { value: 'DONANTE', label: 'Donante' },
   { value: 'SOLICITANTE', label: 'Solicitante' }
 ];

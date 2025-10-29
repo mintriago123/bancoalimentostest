@@ -27,7 +27,8 @@ const DEFAULT_ROLE_FILTER: RoleFilterState = {
   todos: true,
   ADMINISTRADOR: false,
   DONANTE: false,
-  SOLICITANTE: false
+  SOLICITANTE: false,
+  OPERADOR: false
 };
 
 const DEFAULT_PERSON_FILTER: PersonTypeFilterState = {
@@ -49,6 +50,7 @@ const computeStats = (users: UserRecord[]): UsersStats => {
     if (user.rol === 'ADMINISTRADOR') acc.administradores += 1;
     if (user.rol === 'DONANTE') acc.donantes += 1;
     if (user.rol === 'SOLICITANTE') acc.solicitantes += 1;
+    if (user.rol === 'OPERADOR') acc.operadores += 1;
 
     if (user.estado === 'bloqueado') acc.bloqueados += 1;
     if (!user.estado || user.estado === 'activo') acc.activos += 1;
@@ -59,6 +61,7 @@ const computeStats = (users: UserRecord[]): UsersStats => {
     administradores: 0,
     donantes: 0,
     solicitantes: 0,
+    operadores: 0,
     activos: 0,
     bloqueados: 0
   });
@@ -144,7 +147,7 @@ export const useUsersData = (supabaseClient: SupabaseClient): UseUsersDataResult
         [role]: !prev.roles[role]
       } as RoleFilterState;
 
-      const anySelected = ['ADMINISTRADOR', 'DONANTE', 'SOLICITANTE']
+      const anySelected = ['ADMINISTRADOR', 'DONANTE', 'SOLICITANTE', 'OPERADOR']
         .some(key => updated[key as keyof RoleFilterState]);
 
       return {

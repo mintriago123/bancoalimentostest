@@ -1,4 +1,4 @@
-import { Shield, Users, UserCheck, UserX } from 'lucide-react';
+import { Shield, Users, UserCheck, UserX, UserCog } from 'lucide-react';
 import StatCard from '@/modules/admin/shared/components/StatCard';
 import type { UsersStats } from '../types';
 
@@ -22,7 +22,7 @@ const UsersHeader = ({ stats }: UsersHeaderProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
       <StatCard
         label="Usuarios registrados"
         value={stats.total}
@@ -36,6 +36,13 @@ const UsersHeader = ({ stats }: UsersHeaderProps) => (
         accent="purple"
         icon={<Shield className="h-5 w-5" />}
         sublabel="Gestión y control"
+      />
+      <StatCard
+        label="Operadores"
+        value={stats.operadores}
+        accent="slate"
+        icon={<UserCog className="h-5 w-5" />}
+        sublabel="Gestión de inventario"
       />
       <StatCard
         label="Activos"

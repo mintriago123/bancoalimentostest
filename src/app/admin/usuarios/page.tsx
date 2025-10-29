@@ -32,7 +32,7 @@ export default function AdminUsuariosPage() {
 
   const { updateRole, updateStatus, processingId } = useUserActions(supabase);
 
-  const handleRoleChange = async (userId: string, newRole: 'ADMINISTRADOR' | 'DONANTE' | 'SOLICITANTE') => {
+  const handleRoleChange = async (userId: string, newRole: 'ADMINISTRADOR' | 'DONANTE' | 'SOLICITANTE' | 'OPERADOR') => {
     const result = await updateRole(userId, newRole);
 
     if (!result.success) {
