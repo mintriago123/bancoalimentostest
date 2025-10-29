@@ -32,7 +32,13 @@ export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Si el usuario ya está logueado y trata de acceder a iniciar sesión o registrarse, redirigir al dashboard
-    if ((pathname === '/auth/iniciar-sesion' || pathname === '/auth/registrar') && isAuthenticated && user) {
+    // PERO: Permitir acceso si hay parámetros de timeout, error, etc. (para mostrar mensajes)
+    const tieneParametrosMensaje = request.nextUrl.searchParams.has('timeout') || 
+                                    request.nextUrl.searchParams.has('error') ||
+                                    request.nextUrl.searchParams.has('registro') ||
+                                    request.nextUrl.searchParams.has('verificacion');
+    
+    if ((pathname === '/auth/iniciar-sesion' || pathname === '/auth/registrar') && isAuthenticated && user && !tieneParametrosMensaje) {
       try {
         const { data: perfil } = await supabase
           .from('usuarios')

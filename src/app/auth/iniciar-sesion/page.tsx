@@ -18,28 +18,60 @@ function FormularioIniciarSesion() {
   const registroExitoso = searchParams.get('registro') === 'exitoso';
   const verificacionExitosa = searchParams.get('verificacion') === 'exitoso';
   const errorParam = searchParams.get('error');
+  const timeoutParam = searchParams.get('timeout') === 'true';
+
+  // Debug: Log de parámetros
+  useEffect(() => {
+    console.log('🔍 Parámetros de URL:', {
+      timeout: searchParams.get('timeout'),
+      timeoutParam,
+      error: errorParam,
+      registro: registroExitoso,
+      verificacion: verificacionExitosa
+    });
+  }, [searchParams, timeoutParam, errorParam, registroExitoso, verificacionExitosa]);
 
   const { login, estaCargando, mensaje, limpiarMensaje } = useLogin();
 
   const [datosFormulario, setDatosFormulario] = useState({ email: '', password: '' });
-  const [mensajeInicial, setMensajeInicial] = useState<string | null>(
-    errorParam === 'blocked'
-      ? 'Tu cuenta ha sido bloqueada. Contacta al administrador.'
-      : errorParam === 'deactivated'
-      ? 'Tu cuenta ha sido desactivada. Contacta al administrador.'
-      : registroExitoso
-      ? AUTH_CONSTANTS.MENSAJES.REGISTRO_EXITOSO
-      : verificacionExitosa
-      ? AUTH_CONSTANTS.MENSAJES.VERIFICACION_EXITOSA
-      : null
-  );
+
+  const [mensajeInicial, setMensajeInicial] = useState<string | null>(null);
 
   useEffect(() => {
-    if (mensajeInicial) {
+    console.log('📢 mensajeInicial cambió a:', mensajeInicial);
+    
+    // Solo auto-ocultar mensajes de éxito (registro, verificación)
+    // NO auto-ocultar mensajes de error o timeout
+    const esMensajeExito = (registroExitoso || verificacionExitosa) && mensajeInicial;
+    
+    if (esMensajeExito) {
       const temporizador = setTimeout(() => setMensajeInicial(null), 5000);
       return () => clearTimeout(temporizador);
     }
-  }, [mensajeInicial]);
+    // Los mensajes de error, timeout, bloqueado, etc. se quedan hasta que el usuario los cierre
+  }, [mensajeInicial, registroExitoso, verificacionExitosa]);
+
+  // Detectar cambios en el parámetro de timeout
+  useEffect(() => {
+    console.log('🔔 Evaluando mensajes. timeoutParam:', timeoutParam);
+    
+    if (timeoutParam) {
+      console.log('✅ Configurando mensaje de timeout');
+      setMensajeInicial('Tu sesión se cerró automáticamente por inactividad (1 minuto sin actividad).');
+    } else if (errorParam === 'blocked') {
+      console.log('✅ Configurando mensaje de cuenta bloqueada');
+      setMensajeInicial('Tu cuenta ha sido bloqueada. Contacta al administrador.');
+    } else if (errorParam === 'deactivated') {
+      console.log('✅ Configurando mensaje de cuenta desactivada');
+      setMensajeInicial('Tu cuenta ha sido desactivada. Contacta al administrador.');
+    } else if (registroExitoso) {
+      console.log('✅ Configurando mensaje de registro exitoso');
+      setMensajeInicial(AUTH_CONSTANTS.MENSAJES.REGISTRO_EXITOSO);
+    } else if (verificacionExitosa) {
+      console.log('✅ Configurando mensaje de verificación exitosa');
+      setMensajeInicial(AUTH_CONSTANTS.MENSAJES.VERIFICACION_EXITOSA);
+    }
+  }, [timeoutParam, errorParam, registroExitoso, verificacionExitosa]);
 
   const manejarCambio = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -75,7 +107,7 @@ function FormularioIniciarSesion() {
         <div className="mb-4">
           <AuthMessage
             mensaje={{
-              tipo: errorParam ? 'error' : 'exito',
+              tipo: errorParam ? 'error' : timeoutParam ? 'info' : 'exito',
               texto: mensajeInicial,
             }}
             onClose={() => setMensajeInicial(null)}

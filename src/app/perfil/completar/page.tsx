@@ -9,6 +9,7 @@ import {
   useDateFormatter,
   useProfileUpdate,
 } from "@/modules/shared";
+import { validarCedulaEcuatoriana, validarRucEcuatoriano } from "@/lib/validaciones";
 
 export default function CompletarPerfil() {
   const router = useRouter();
@@ -156,6 +157,20 @@ export default function CompletarPerfil() {
     if (form.tipo_persona === "Juridica" && !form.ruc) {
       setError("El RUC es obligatorio.");
       return;
+    }
+
+    // Validar formato de cédula o RUC
+    if (form.tipo_persona === "Natural") {
+      if (!validarCedulaEcuatoriana(form.cedula)) {
+        setError("El formato de la cédula no es válido. Por favor, verifica que sea una cédula ecuatoriana correcta.");
+        return;
+      }
+    }
+    if (form.tipo_persona === "Juridica") {
+      if (!validarRucEcuatoriano(form.ruc)) {
+        setError("El formato del RUC no es válido. Por favor, verifica que sea un RUC ecuatoriano correcto.");
+        return;
+      }
     }
 
     if (!form.telefono || !validateTelefono(form.telefono)) {
