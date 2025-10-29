@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import { DONATION_STATE_COLORS } from '../constants';
 import type { Donation, DonationEstado, DonationPersonType } from '../types';
-import { formatDate, isExpired, isNearExpiration } from '../utils/formatters';
+import { isExpired, isNearExpiration } from '../utils/formatters';
+import { formatShortDate } from '@/lib/dateUtils';
 
 interface DonationsTableProps {
   donations: Donation[];
@@ -182,11 +183,11 @@ const DonationsTable = ({
                     <div className="flex items-center">
                       <Calendar className="w-4 h-4 mr-2" />
                       <div className="space-y-1">
-                        <div>Disponible: {formatDate(donation.fecha_disponible)}</div>
-                        <div>Registro: {formatDate(donation.creado_en)}</div>
+                        <div>Disponible: {formatShortDate(donation.fecha_disponible)}</div>
+                        <div>Registro: {formatShortDate(donation.creado_en)}</div>
                         {donation.fecha_vencimiento && (
                           <div className={`${expiryColorClass} font-medium`}>
-                            Vence: {formatDate(donation.fecha_vencimiento)}
+                            Vence: {formatShortDate(donation.fecha_vencimiento)}
                           </div>
                         )}
                       </div>

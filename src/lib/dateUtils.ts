@@ -2,8 +2,8 @@ import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
-// Zona horaria por defecto (ajusta según tu región)
-const DEFAULT_TIMEZONE = 'America/Mexico_City';
+// Zona horaria por defecto (Ecuador - GMT-5)
+const DEFAULT_TIMEZONE = 'America/Guayaquil';
 
 /**
  * Obtiene la zona horaria del navegador del usuario
@@ -25,8 +25,16 @@ export function formatDateInUserTimezone(
   if (!date) return '-';
   
   try {
-    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    let dateStr = date;
+    
+    // Si es string y no tiene 'Z' al final ni offset de zona horaria, añadir 'Z' para indicar UTC
+    if (typeof dateStr === 'string' && !dateStr.endsWith('Z') && !dateStr.match(/[+-]\d{2}:\d{2}$/)) {
+      dateStr = dateStr + 'Z';
+    }
+    
+    const dateObj = typeof dateStr === 'string' ? parseISO(dateStr) : dateStr;
     const timezone = getUserTimezone();
+    
     return formatInTimeZone(dateObj, timezone, formatStr, { locale: es });
   } catch (error) {
     console.error('Error formateando fecha:', error);

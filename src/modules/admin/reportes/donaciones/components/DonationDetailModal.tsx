@@ -20,7 +20,8 @@ import {
   XCircle
 } from 'lucide-react';
 import type { Donation, DonationEstado } from '../types';
-import { formatDate, isExpired, isNearExpiration } from '../utils/formatters';
+import { isExpired, isNearExpiration } from '../utils/formatters';
+import { formatShortDate } from '@/lib/dateUtils';
 import { DONATION_STATE_COLORS } from '../constants';
 
 interface DonationDetailModalProps {
@@ -205,13 +206,13 @@ const DonationDetailModal = ({ donation, isOpen, onClose }: DonationDetailModalP
                 <div>
                   <label className="text-sm font-medium text-gray-600">Disponible Desde</label>
                   <p className="text-gray-900 font-medium">
-                    {formatDate(donation.fecha_disponible)}
+                    {formatShortDate(donation.fecha_disponible)}
                   </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">Fecha de Registro</label>
                   <p className="text-gray-900 font-medium">
-                    {formatDate(donation.creado_en)}
+                    {formatShortDate(donation.creado_en)}
                   </p>
                 </div>
               </div>
@@ -226,7 +227,7 @@ const DonationDetailModal = ({ donation, isOpen, onClose }: DonationDetailModalP
                     expiryStatus === 'warning' ? 'text-yellow-600' : 
                     'text-gray-900'
                   }`}>
-                    {formatDate(donation.fecha_vencimiento)}
+                    {formatShortDate(donation.fecha_vencimiento)}
                     {expiryStatus === 'expired' && ' (Vencido)'}
                     {expiryStatus === 'warning' && ' (Próximo a vencer)'}
                   </p>

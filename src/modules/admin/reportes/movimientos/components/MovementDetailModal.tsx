@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import type { MovementItem } from '../types';
 import { MOVEMENT_TYPE_LABELS, MOVEMENT_BADGE_STYLES } from '../constants';
-import { formatDate, formatNumber } from '../utils/formatters';
+import { formatNumber } from '../utils/formatters';
+import { formatDateTime } from '@/lib/dateUtils';
 
 interface MovementDetailModalProps {
   movement: MovementItem | null;
@@ -150,7 +151,7 @@ const MovementDetailModal = ({ movement, isOpen, onClose }: MovementDetailModalP
                   Fecha del Movimiento
                 </label>
                 <p className="text-gray-900 font-medium text-lg">
-                  {formatDate(movement.fecha_movimiento)}
+                  {formatDateTime(movement.fecha_movimiento)}
                 </p>
               </div>
               <div>

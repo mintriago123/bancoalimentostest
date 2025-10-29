@@ -12,7 +12,8 @@ import { TrendingUp } from 'lucide-react';
 import { LoadingSpinner } from '@/app/components';
 import type { MovementItem } from '../types';
 import { MOVEMENT_TYPE_LABELS, MOVEMENT_BADGE_STYLES } from '../constants';
-import { formatDate, formatNumber } from '../utils/formatters';
+import { formatNumber } from '../utils/formatters';
+import { formatDateTime } from '@/lib/dateUtils';
 
 /**
  * Props para el componente MovementTable
@@ -72,7 +73,7 @@ const MovementRow: React.FC<{
       {/* Fecha */}
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
         <time dateTime={movement.fecha_movimiento}>
-          {formatDate(movement.fecha_movimiento)}
+          {formatDateTime(movement.fecha_movimiento)}
         </time>
       </td>
 

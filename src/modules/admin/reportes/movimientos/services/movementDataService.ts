@@ -265,7 +265,9 @@ export class MovementDataService {
     if (typeof fecha === 'string' && fecha.trim()) {
       const date = new Date(fecha);
       if (!Number.isNaN(date.getTime())) {
-        return date.toISOString();
+        // Retornar la fecha original sin convertir nuevamente
+        // La fecha ya viene en formato UTC de la base de datos
+        return fecha;
       }
     }
 
