@@ -165,6 +165,28 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
         return existingProduct.id_producto;
       }
 
+      // Buscar alimento_id en el catálogo para vincular
+      let alimentoId: number | null = null;
+      try {
+        const { data: alimentoData } = await supabaseClient
+          .from('alimentos')
+          .select('id')
+          .ilike('nombre', donation.tipo_producto)
+          .limit(1)
+          .maybeSingle();
+        
+        if (alimentoData) {
+          alimentoId = alimentoData.id;
+          logger.info('Alimento encontrado en catálogo', { 
+            alimentoId,
+            nombreAlimento: donation.tipo_producto 
+          });
+        }
+      } catch (err) {
+        logger.warn('No se pudo vincular con catálogo de alimentos', err);
+        // Continuar sin alimento_id
+      }
+
       // Si no existe, crear nuevo producto
       const { data: newProduct, error: insertError } = await supabaseClient
         .from('productos_donados')
@@ -174,7 +196,8 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
           unidad_medida: donation.unidad_simbolo,
           fecha_caducidad: donation.fecha_vencimiento ?? null,
           fecha_donacion: new Date().toISOString(),
-          id_usuario: donation.user_id // Agregar el ID del donante original
+          id_usuario: donation.user_id,
+          alimento_id: alimentoId // ✅ Vincular con catálogo de alimentos
         })
         .select('id_producto')
         .single();
@@ -186,7 +209,8 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
 
       logger.info('Nuevo producto creado', { 
         productoId: newProduct.id_producto,
-        nombreProducto: donation.tipo_producto 
+        nombreProducto: donation.tipo_producto,
+        alimentoId: alimentoId || 'sin vincular'
       });
       return newProduct.id_producto;
     } catch (error) {
@@ -281,10 +305,24 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
 
       if (insertError) {
         logger.error('Error creando registro de inventario', insertError);
+        logger.error('Detalles del error de inserción:', {
+          depositoId,
+          productoId,
+          cantidad: donation.cantidad,
+          errorCode: insertError.code,
+          errorMessage: insertError.message,
+          errorDetails: insertError.details
+        });
         throw new Error(`Error al crear registro de inventario: ${insertError.message}`);
       }
 
       logger.info(SYSTEM_MESSAGES.inventoryCreate(donation.cantidad, donation.unidad_simbolo, donation.tipo_producto));
+      logger.info('✅ Registro de inventario creado exitosamente:', {
+        depositoId,
+        productoId,
+        cantidad: donation.cantidad,
+        producto: donation.tipo_producto
+      });
     } catch (error) {
       if (error instanceof Error) {
         throw error;

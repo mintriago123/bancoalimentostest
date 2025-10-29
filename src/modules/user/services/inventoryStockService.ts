@@ -45,6 +45,8 @@ export const createInventoryStockService = (supabaseClient: SupabaseClient) => {
     }
 
     try {
+      logger.info(`Consultando stock para producto: "${nombreProducto}"`);
+      
       const { data, error } = await supabaseClient
         .from('inventario')
         .select(`
@@ -64,11 +66,22 @@ export const createInventoryStockService = (supabaseClient: SupabaseClient) => {
 
       if (error) {
         logger.error('Error consultando stock disponible', error);
+        logger.error('Detalles del error:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
         return {
           success: false,
           error: 'No fue posible consultar el inventario'
         };
       }
+
+      logger.info(`Resultados de consulta de stock:`, {
+        cantidadResultados: data?.length ?? 0,
+        datos: data
+      });
 
       if (!data || data.length === 0) {
         return {
