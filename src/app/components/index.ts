@@ -5,6 +5,7 @@ export { default as SupabaseProvider } from './SupabaseProvider';
 
 // Feature Components
 export { default as NotificacionesDropdown } from './NotificacionesDropdown';
+export { default as AccesibilidadFlotante } from './AccesibilidadFlotante';
 
 // UI Components
 export { default as Toast } from './ui/Toast';

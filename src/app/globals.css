@@ -327,3 +327,59 @@
 .animate-slide-in-right {
   animation: slide-in-right 0.3s ease-out;
 }
+
+/* =================================================================== */
+/* ESTILOS DE ACCESIBILIDAD */
+/* =================================================================== */
+
+/* Animación para el panel de accesibilidad */
+@keyframes slide-in-from-bottom {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation: slide-in-from-bottom 0.3s ease-out;
+}
+
+/* Mejoras de accesibilidad para navegación por teclado */
+.keyboard-navigation *:focus-visible {
+  outline: 3px solid #2563eb !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* Asegurar que los elementos interactivos sean accesibles */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Mejorar visibilidad de elementos deshabilitados */
+button:disabled,
+input:disabled,
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Asegurar contraste suficiente en textos */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Transiciones suaves para cambios de tamaño de texto */
+* {
+  transition: font-size 0.2s ease-in-out;
+}

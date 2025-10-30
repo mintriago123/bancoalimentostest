@@ -6,7 +6,7 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-100 via-blue-200 to-indigo-200 px-4 py-8">
       {/* Botón de inicio */}
-      <div className="absolute top-6 right-6 z-10">
+      <div className="absolute top-6 right-24 z-10">
         <Link
           href="/"
           className="inline-flex items-center gap-2 px-5 py-2.5 text-base font-semibold text-blue-700 bg-white/70 backdrop-blur-md border border-blue-200/60 rounded-xl shadow-md hover:bg-white/90 transition-all duration-200"
