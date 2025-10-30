@@ -98,7 +98,7 @@ export default function SolicitudesPage() {
     }> = {
       aprobada: {
         title: `Aprobar solicitud de ${solicitud.usuarios?.nombre ?? 'solicitante'}`,
-        description: `Se descontarán ${solicitud.cantidad} unidades de ${solicitud.tipo_alimento} del inventario disponible.`,
+        description: `Se descontarán ${solicitud.cantidad} ${solicitud.unidades?.simbolo ?? 'unidades'} de ${solicitud.tipo_alimento} del inventario disponible.`,
         confirmLabel: 'Aprobar y descontar',
         variant: 'warning'
       },

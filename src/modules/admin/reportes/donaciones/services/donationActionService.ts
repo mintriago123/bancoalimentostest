@@ -143,13 +143,13 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
 
   const obtenerOCrearProducto = async (donation: Donation): Promise<number> => {
     try {
-      // BÚSQUEDA MÁS ROBUSTA: Solo por nombre de producto y unidad de medida
+      // BÚSQUEDA MÁS ROBUSTA: Por nombre de producto y unidad_id (más confiable que símbolo)
       // Esto evita crear duplicados por diferencias en la categoría/descripción
       const { data: existingProduct, error: searchError } = await supabaseClient
         .from('productos_donados')
         .select('id_producto')
         .eq('nombre_producto', donation.tipo_producto)
-        .eq('unidad_medida', donation.unidad_simbolo)
+        .eq('unidad_id', donation.unidad_id)
         .maybeSingle();
 
       if (searchError && searchError.code !== NO_ROWS_CODE) {
@@ -194,6 +194,7 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
           nombre_producto: donation.tipo_producto,
           descripcion: donation.categoria_comida,
           unidad_medida: donation.unidad_simbolo,
+          unidad_id: donation.unidad_id, // ✅ Guardar el ID de la unidad para conversiones
           fecha_caducidad: donation.fecha_vencimiento ?? null,
           fecha_donacion: new Date().toISOString(),
           id_usuario: donation.user_id,

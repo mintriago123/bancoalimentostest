@@ -215,7 +215,7 @@ const SolicitudesTable = ({
                       {solicitud.tipo_alimento}
                     </div>
                     <div className="text-sm text-gray-500">
-                      Cantidad: {solicitud.cantidad} unidades
+                        Cantidad: {solicitud.cantidad} {solicitud.unidades?.simbolo ?? 'unidades'}
                     </div>
                     {solicitud.latitud && solicitud.longitud && (
                       <div className="flex items-center text-xs text-blue-600 mt-1">

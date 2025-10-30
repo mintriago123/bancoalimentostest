@@ -15,6 +15,14 @@ export interface SolicitudUsuario {
   tipo_persona?: string;
 }
 
+export interface SolicitudUnidad {
+  id: number;
+  nombre: string;
+  simbolo: string;
+  tipo_magnitud_id: number;
+  es_base: boolean;
+}
+
 export interface Solicitud {
   id: string;
   usuario_id: string;
@@ -27,6 +35,8 @@ export interface Solicitud {
   longitud?: number;
   fecha_respuesta?: string;
   comentario_admin?: string;
+  unidad_id?: number;
+  unidades?: SolicitudUnidad | null;
   usuarios: SolicitudUsuario | null;
 }
 
@@ -60,6 +70,15 @@ export interface InventarioDisponible {
 export interface ProductoInventario {
   id_producto: string;
   nombre_producto: string;
+  unidad_id?: number;
+}
+
+export interface UnidadConMagnitud {
+  id: number;
+  nombre: string;
+  simbolo: string;
+  tipo_magnitud_id: number;
+  es_base: boolean;
 }
 
 export interface InventarioDescontado {
@@ -97,6 +116,14 @@ export interface SupabaseSolicitudUsuario {
   tipo_persona?: string | null;
 }
 
+export interface SupabaseSolicitudUnidad {
+  id?: number | null;
+  nombre?: string | null;
+  simbolo?: string | null;
+  tipo_magnitud_id?: number | null;
+  es_base?: boolean | null;
+}
+
 export interface SupabaseSolicitudRow {
   id: string;
   usuario_id: string;
@@ -109,6 +136,8 @@ export interface SupabaseSolicitudRow {
   longitud?: number | null;
   fecha_respuesta?: string | null;
   comentario_admin?: string | null;
+  unidad_id?: number | null;
+  unidades?: SupabaseSolicitudUnidad | null;
   usuarios: SupabaseSolicitudUsuario | null;
 }
 

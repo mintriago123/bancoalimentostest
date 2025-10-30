@@ -147,7 +147,7 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
   const buscarProductosCoincidentes = async (tipoAlimento: string): Promise<ProductoInventario[]> => {
     const { data, error } = await supabaseClient
       .from('productos_donados')
-      .select('id_producto, nombre_producto')
+      .select('id_producto, nombre_producto, unidad_id')
       .ilike('nombre_producto', `%${tipoAlimento}%`);
 
     if (error) {
@@ -157,6 +157,73 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
     return (data as ProductoInventario[] | null | undefined) ?? [];
   };
 
+  /**
+   * Obtiene el factor de conversión entre dos unidades.
+   * Si ambas son de la misma magnitud, busca en la tabla de conversiones.
+   * @returns Factor de conversión (cantidad_origen * factor = cantidad_destino) o null si no hay conversión
+   */
+  const obtenerFactorConversion = async (
+    unidadOrigenId: number,
+    unidadDestinoId: number
+  ): Promise<number | null> => {
+    // Si son la misma unidad, no hay conversión necesaria
+    if (unidadOrigenId === unidadDestinoId) {
+      return 1;
+    }
+
+    try {
+      // Obtener información de ambas unidades
+      const { data: unidades, error: unidadesError } = await supabaseClient
+        .from('unidades')
+        .select('id, tipo_magnitud_id, es_base')
+        .in('id', [unidadOrigenId, unidadDestinoId]);
+
+      if (unidadesError || !unidades || unidades.length !== 2) {
+        logger.warn('No se pudieron obtener las unidades para conversión', unidadesError);
+        return null;
+      }
+
+      const unidadOrigen = unidades.find(u => u.id === unidadOrigenId);
+      const unidadDestino = unidades.find(u => u.id === unidadDestinoId);
+
+      // Verificar que sean de la misma magnitud
+      if (!unidadOrigen || !unidadDestino || unidadOrigen.tipo_magnitud_id !== unidadDestino.tipo_magnitud_id) {
+        logger.warn('Las unidades no son de la misma magnitud', { unidadOrigen, unidadDestino });
+        return null;
+      }
+
+      // Buscar conversión directa
+      const { data: conversionDirecta, error: convError1 } = await supabaseClient
+        .from('conversiones')
+        .select('factor_conversion')
+        .eq('unidad_origen_id', unidadOrigenId)
+        .eq('unidad_destino_id', unidadDestinoId)
+        .maybeSingle();
+
+      if (!convError1 && conversionDirecta) {
+        return Number(conversionDirecta.factor_conversion);
+      }
+
+      // Buscar conversión inversa
+      const { data: conversionInversa, error: convError2 } = await supabaseClient
+        .from('conversiones')
+        .select('factor_conversion')
+        .eq('unidad_origen_id', unidadDestinoId)
+        .eq('unidad_destino_id', unidadOrigenId)
+        .maybeSingle();
+
+      if (!convError2 && conversionInversa) {
+        return 1 / Number(conversionInversa.factor_conversion);
+      }
+
+      logger.warn('No se encontró conversión entre las unidades', { unidadOrigenId, unidadDestinoId });
+      return null;
+    } catch (error) {
+      logger.error('Error al obtener factor de conversión', error);
+      return null;
+    }
+  };
+
   const procesarDescuentoInventario = async (productos: ProductoInventario[], solicitud: Solicitud): Promise<ResultadoInventario> => {
     let cantidadRestante = solicitud.cantidad;
     let productosActualizados = 0;
@@ -164,7 +231,7 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
 
     for (const producto of productos) {
       if (cantidadRestante <= 0) break;
-      const resultadoProducto = await descontarDeProducto(producto, cantidadRestante);
+      const resultadoProducto = await descontarDeProducto(producto, cantidadRestante, solicitud);
 
       cantidadRestante = resultadoProducto.cantidadRestante;
       productosActualizados += resultadoProducto.productosActualizados;
@@ -189,7 +256,8 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
 
   const descontarDeProducto = async (
     producto: ProductoInventario,
-    cantidadNecesaria: number
+    cantidadNecesaria: number,
+    solicitud: Solicitud
   ): Promise<DescuentoProductoResult> => {
     const { data, error } = await supabaseClient
       .from('inventario')
@@ -207,7 +275,31 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
       };
     }
 
-    let cantidadRestante = cantidadNecesaria;
+    // Aplicar conversión de unidades si es necesario
+    let cantidadNecesariaEnUnidadInventario = cantidadNecesaria;
+    
+    // Log de diagnóstico
+    logger.info(`Verificando conversión: solicitud.unidad_id=${solicitud.unidad_id}, producto.unidad_id=${producto.unidad_id}, producto=${producto.nombre_producto}`);
+    
+    if (!producto.unidad_id) {
+      logger.warn(`⚠️ El producto "${producto.nombre_producto}" no tiene unidad_id definida. No se puede aplicar conversión. Usando cantidad directa: ${cantidadNecesaria}`);
+    } else if (!solicitud.unidad_id) {
+      logger.warn(`⚠️ La solicitud no tiene unidad_id definida. No se puede aplicar conversión. Usando cantidad directa: ${cantidadNecesaria}`);
+    } else if (solicitud.unidad_id !== producto.unidad_id) {
+      logger.info(`🔄 Iniciando conversión de unidad ${solicitud.unidad_id} a unidad ${producto.unidad_id}`);
+      const factorConversion = await obtenerFactorConversion(solicitud.unidad_id, producto.unidad_id);
+      
+      if (factorConversion === null) {
+        logger.warn(`❌ No se encontró conversión entre unidad ${solicitud.unidad_id} y ${producto.unidad_id}. Se usará la cantidad sin conversión: ${cantidadNecesaria}`);
+      } else {
+        cantidadNecesariaEnUnidadInventario = cantidadNecesaria * factorConversion;
+        logger.info(`✅ Conversión aplicada: ${cantidadNecesaria} (unidad ${solicitud.unidad_id}) × ${factorConversion} = ${cantidadNecesariaEnUnidadInventario} (unidad ${producto.unidad_id})`);
+      }
+    } else {
+      logger.info(`✓ Unidades coinciden (${solicitud.unidad_id}). No se requiere conversión.`);
+    }
+
+    let cantidadRestante = cantidadNecesariaEnUnidadInventario;
     let productosActualizados = 0;
     let cantidadEntregada = 0;
 
@@ -237,8 +329,17 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
       logger.info(`Descontadas ${cantidadADescontar} unidades de ${producto.nombre_producto} (restante en stock: ${nuevaCantidad})`);
     }
 
+    // Convertir la cantidad restante de vuelta a la unidad de la solicitud
+    let cantidadRestanteOriginal = cantidadRestante;
+    if (solicitud.unidad_id && producto.unidad_id && solicitud.unidad_id !== producto.unidad_id) {
+      const factorConversion = await obtenerFactorConversion(producto.unidad_id, solicitud.unidad_id);
+      if (factorConversion !== null) {
+        cantidadRestanteOriginal = cantidadRestante * factorConversion;
+      }
+    }
+
     return {
-      cantidadRestante,
+      cantidadRestante: cantidadRestanteOriginal,
       productosActualizados,
       cantidadEntregada
     };
@@ -283,7 +384,8 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
             cantidad: detalle.cantidadEntregada,
             tipo_transaccion: 'egreso',
             rol_usuario: 'beneficiario',
-            observacion_detalle: `Entrega por solicitud aprobada - ${solicitud.tipo_alimento}`
+            observacion_detalle: `Entrega por solicitud aprobada - ${solicitud.tipo_alimento}`,
+            unidad_id: detalle.producto.unidad_id ?? null
           });
 
         if (detalleError) {

@@ -102,7 +102,7 @@ const SolicitudDetailModal = ({
               </h3>
               <div className="space-y-2 text-sm">
                 <div><strong>Alimento solicitado:</strong> {solicitud.tipo_alimento}</div>
-                <div><strong>Cantidad:</strong> {solicitud.cantidad} unidades</div>
+                <div><strong>Cantidad:</strong> {solicitud.cantidad} {solicitud.unidades?.simbolo ?? 'unidades'}</div>
                 <div><strong>Fecha de solicitud:</strong> {formatDate(solicitud.created_at)}</div>
                 <div className="flex items-center space-x-2">
                   {estadoIcons[solicitud.estado]}
@@ -173,12 +173,12 @@ const SolicitudDetailModal = ({
                       <div className="font-medium text-gray-900">Resumen</div>
                       <div className="mt-1">
                         <span className="text-gray-600">Cantidad solicitada: </span>
-                        <span className="font-semibold">{solicitud.cantidad} unidades</span>
+                        <span className="font-semibold">{solicitud.cantidad} {solicitud.unidades?.simbolo ?? 'unidades'}</span>
                       </div>
                       <div>
                         <span className="text-gray-600">Total disponible: </span>
                         <span className={`font-semibold ${totalDisponible >= solicitud.cantidad ? 'text-green-600' : 'text-red-600'}`}>
-                          {totalDisponible} unidades
+                          {totalDisponible} {solicitud.unidades?.simbolo ?? 'unidades'}
                         </span>
                       </div>
                       <div className="mt-2">

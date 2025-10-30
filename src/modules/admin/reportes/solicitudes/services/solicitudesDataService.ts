@@ -35,6 +35,14 @@ export const createSolicitudesDataService = (supabaseClient: SupabaseClient) => 
           longitud,
           fecha_respuesta,
           comentario_admin,
+          unidad_id,
+          unidades:unidad_id (
+            id,
+            nombre,
+            simbolo,
+            tipo_magnitud_id,
+            es_base
+          ),
           usuarios:usuario_id (
             nombre,
             cedula,
@@ -134,6 +142,8 @@ const mapSolicitudRowToDomain = (row: SupabaseSolicitudRow): Solicitud => ({
   longitud: row.longitud ?? undefined,
   fecha_respuesta: row.fecha_respuesta ?? undefined,
   comentario_admin: row.comentario_admin ?? undefined,
+  unidad_id: row.unidad_id ?? undefined,
+  unidades: mapSolicitudUnidad(row.unidades),
   usuarios: mapSolicitudUsuario(row.usuarios)
 });
 
@@ -149,6 +159,34 @@ const mapSolicitudUsuario = (usuario: SupabaseSolicitudUsuario | null): Solicitu
     email: usuario.email ?? undefined,
     direccion: usuario.direccion ?? undefined,
     tipo_persona: usuario.tipo_persona ?? undefined
+  };
+};
+
+const mapSolicitudUnidad = (unidad: unknown): import('../types').SolicitudUnidad | null => {
+  const normalized = normalizeRelation(unidad);
+  
+  if (!normalized || typeof normalized !== 'object') {
+    return null;
+  }
+
+  const u = normalized as { 
+    id?: number | null;
+    nombre?: string | null;
+    simbolo?: string | null;
+    tipo_magnitud_id?: number | null;
+    es_base?: boolean | null;
+  };
+
+  if (!u.id || !u.nombre || !u.simbolo || u.tipo_magnitud_id === null || u.tipo_magnitud_id === undefined) {
+    return null;
+  }
+
+  return {
+    id: u.id,
+    nombre: u.nombre,
+    simbolo: u.simbolo,
+    tipo_magnitud_id: u.tipo_magnitud_id,
+    es_base: u.es_base ?? false
   };
 };
 
