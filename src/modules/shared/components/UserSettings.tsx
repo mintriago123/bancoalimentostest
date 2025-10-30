@@ -8,8 +8,7 @@ import {
   BellIcon,
   EyeIcon,
   EyeSlashIcon,
-  KeyIcon,
-  GlobeAltIcon
+  KeyIcon
 } from '@heroicons/react/24/outline';
 import { usePasswordChange, useUserPreferences, useMessage } from '@/modules/shared';
 
@@ -110,8 +109,8 @@ export default function UserSettings({
 
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-sm font-medium text-gray-700">Recibir Notificaciones</p>
-              <p className="text-xs text-gray-500">Notificaciones sobre cambios importantes</p>
+              <p className="text-sm font-medium text-gray-700">Recibir notificaciones por correo</p>
+              <p className="text-xs text-gray-500">Activa o desactiva los emails automáticos del sistema</p>
             </div>
             <button
               onClick={() => updatePreference('recibir_notificaciones', !preferences.recibir_notificaciones)}
@@ -122,41 +121,6 @@ export default function UserSettings({
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                   preferences.recibir_notificaciones ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
-          </div>
-
-          <div>
-            <label htmlFor="idioma" className="block text-sm font-medium text-gray-700 mb-1">
-              <GlobeAltIcon className="inline w-4 h-4 mr-1 text-red-600" />
-              Idioma
-            </label>
-            <select
-              id="idioma"
-              value={preferences.idioma}
-              onChange={(e) => updatePreference('idioma', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="es">Español</option>
-              <option value="en">Inglés</option>
-            </select>
-          </div>
-
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm font-medium text-gray-700">Perfil Público</p>
-              <p className="text-xs text-gray-500">Permitir que otros usuarios vean tu perfil</p>
-            </div>
-            <button
-              onClick={() => updatePreference('perfil_publico', !preferences.perfil_publico)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                preferences.perfil_publico ? 'bg-green-600' : 'bg-gray-200'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  preferences.perfil_publico ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
             </button>

@@ -79,6 +79,31 @@ Sistema web integral para la gestión de un banco de alimentos que conecta a don
 - **PostCSS** para procesamiento CSS
 - **ts-node** para ejecución de TypeScript
 
+## 📧 Configuración de Correos
+
+El sistema envía notificaciones por email mediante un proveedor abstraído. Por defecto se incluye **Gmail** utilizando SMTP seguro y puedes migrar a otro servicio creando un proveedor que implemente la misma interfaz.
+
+### Variables de entorno
+- `EMAIL_PROVIDER=gmail` – Proveedor activo (por ahora sólo `gmail`).
+- `EMAIL_GMAIL_USER` – Cuenta de Gmail o alias habilitado para SMTP.
+- `EMAIL_GMAIL_PASS` – Contraseña de aplicación generada en la cuenta de Gmail.
+- `EMAIL_FROM_ADDRESS` *(opcional)* – Remitente usado en los correos. Por defecto se usa la cuenta de Gmail.
+- `EMAIL_FROM_NAME` *(opcional)* – Nombre descriptivo del remitente.
+- `EMAIL_SUPPRESS_SEND` *(opcional)* – Si es `true`, los correos se registran en consola pero no se envían (útil en desarrollo).
+- `EMAIL_LOG_ONLY` *(opcional)* – Si es `true`, se mantiene el envío y se deja constancia en consola.
+- `SUPABASE_SERVICE_ROLE_KEY` – Clave de servicio usada en el backend para saltar RLS al crear notificaciones (nunca exponer en el cliente).
+
+> Para Gmail debes habilitar la verificación en dos pasos y crear una **contraseña de aplicación** dedicada. No se recomienda usar la contraseña principal de la cuenta.
+
+### Cambiar de proveedor
+
+1. Crea una clase que implemente `EmailProvider` en `src/lib/email/providers/`.
+2. Define la lógica de inicialización usando tus credenciales (por ejemplo SES, SendGrid, Resend).
+3. Amplía `loadEmailConfig` para cargar las variables del nuevo proveedor.
+4. Actualiza el factory en `emailService` para instanciar tu nueva clase cuando `EMAIL_PROVIDER` coincida.
+
+Todo el código de negocio (servicios y API) consume el servicio de correo agnóstico, por lo que no es necesario modificar los casos de uso al migrar.
+
 ## 📁 Arquitectura del Proyecto
 
 ```

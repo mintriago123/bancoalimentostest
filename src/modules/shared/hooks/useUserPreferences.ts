@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
-
 interface UserPreferences {
   recibir_notificaciones: boolean;
-  idioma: string;
-  perfil_publico: boolean;
 }
 
 interface UseUserPreferencesReturn {
@@ -16,9 +13,7 @@ interface UseUserPreferencesReturn {
 
 export function useUserPreferences(
   initialPreferences: UserPreferences = {
-    recibir_notificaciones: true,
-    idioma: 'es',
-    perfil_publico: true
+    recibir_notificaciones: true
   }
 ): UseUserPreferencesReturn {
   const [preferences, setPreferences] = useState<UserPreferences>(initialPreferences);
@@ -37,20 +32,21 @@ export function useUserPreferences(
   ): Promise<boolean> => {
     setIsSaving(true);
     try {
-      // Aquí puedes agregar la lógica real para guardar en Supabase
       const { error } = await supabase
         .from('usuarios')
         .update({
-          recibir_notificaciones: preferences.recibir_notificaciones,
-          idioma: preferences.idioma,
-          perfil_publico: preferences.perfil_publico
+          recibir_notificaciones: preferences.recibir_notificaciones
         })
         .eq('id', userId);
 
-      if (error) throw error;
+      if (error) {
+        if ((error as any).code === 'PGRST204') {
+          console.warn('Columna recibir_notificaciones no existe en usuarios, la preferencia de correo no se persistirá.');
+          return true;
+        }
+        throw error;
+      }
 
-      // Simulación temporal si no existe la columna
-      await new Promise(res => setTimeout(res, 1000));
       return true;
     } catch (error) {
       console.error('Error al guardar preferencias:', error);
