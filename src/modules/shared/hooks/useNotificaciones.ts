@@ -207,30 +207,65 @@ export function useNotificaciones(supabase: SupabaseClient, user: User | null) {
     mensaje: string;
     tipo?: 'info' | 'success' | 'warning' | 'error';
     destinatario_id?: string;
+    destinatarioId?: string;
     rol_destinatario?: string;
+    rolDestinatario?: string;
     categoria?: string;
     url_accion?: string;
+    urlAccion?: string;
     metadatos?: Record<string, unknown>;
+    expira_en?: string;
+    expiraEn?: string;
+    enviarEmail?: boolean;
+    email?: {
+      to?: string | string[];
+      subject?: string;
+      html?: string;
+      text?: string;
+      from?: string;
+      cc?: string | string[];
+      bcc?: string | string[];
+      replyTo?: string;
+      attachments?: Array<{
+        filename: string;
+        path?: string;
+        content?: string;
+        contentType?: string;
+      }>;
+      headers?: Record<string, string>;
+    };
   }) => {
     try {
-      const { data, error } = await supabase
-        .from('notificaciones')
-        .insert({
-          titulo: notificacion.titulo,
-          mensaje: notificacion.mensaje,
-          tipo: notificacion.tipo || 'info',
-          destinatario_id: notificacion.destinatario_id,
-          rol_destinatario: notificacion.rol_destinatario,
-          categoria: notificacion.categoria || 'sistema',
-          url_accion: notificacion.url_accion,
-          metadatos: notificacion.metadatos || {},
-          fecha_creacion: new Date().toISOString()
-        })
-        .select()
-        .single();
+      const payload = {
+        titulo: notificacion.titulo,
+        mensaje: notificacion.mensaje,
+        tipo: notificacion.tipo,
+        categoria: notificacion.categoria,
+        urlAccion: notificacion.urlAccion ?? notificacion.url_accion,
+        destinatarioId: notificacion.destinatarioId ?? notificacion.destinatario_id,
+        rolDestinatario: notificacion.rolDestinatario ?? notificacion.rol_destinatario,
+        metadatos: notificacion.metadatos,
+        expiraEn: notificacion.expiraEn ?? notificacion.expira_en,
+        enviarEmail: notificacion.enviarEmail,
+        email: notificacion.email,
+      };
 
-      if (error) throw error;
-      return data;
+      const response = await fetch('/api/notificaciones', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        const message = errorBody?.error ?? 'No se pudo crear la notificación';
+        throw new Error(message);
+      }
+
+      const data = await response.json();
+      return data?.notificacion ?? null;
     } catch (err) {
       console.error('Error al crear notificación:', err);
       throw err;

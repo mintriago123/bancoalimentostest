@@ -13,6 +13,7 @@ import type {
   DescuentoProductoResult
 } from '../types';
 import { createSolicitudesDataService } from './solicitudesDataService';
+import { sendNotification } from '@/modules/shared/services/notificationClient';
 
 const logger = {
   info: (message: string, details?: unknown) => console.info(`[SolicitudesActionService] ${message}`, details),
@@ -54,6 +55,7 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         await registrarMovimientoSolicitud(solicitud, resultadoInventario);
 
         const mensaje = buildResultadoMensaje(solicitud, resultadoInventario);
+        await notificarCambioEstado(solicitud, nuevoEstado, mensaje, comentarioAdmin);
         return {
           success: true,
           data: {
@@ -63,6 +65,8 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
           }
         };
       }
+
+      await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin);
 
       return {
         success: true,
@@ -142,6 +146,44 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         detalleEntregado: []
       };
     }
+  };
+
+  const notificarCambioEstado = async (
+    solicitud: Solicitud,
+    nuevoEstado: 'aprobada' | 'rechazada',
+    mensajeInventario?: string,
+    comentarioAdmin?: string
+  ) => {
+    const titulo =
+      nuevoEstado === 'aprobada'
+        ? 'Tu solicitud ha sido aprobada'
+        : 'Tu solicitud ha sido rechazada';
+
+    const mensaje = (() => {
+      if (nuevoEstado === 'aprobada') {
+        if (mensajeInventario) return mensajeInventario;
+        return `Tu solicitud de ${solicitud.cantidad} ${solicitud.unidades?.simbolo ?? ''} de ${solicitud.tipo_alimento} ha sido aprobada.`;
+      }
+
+      if (comentarioAdmin && comentarioAdmin.trim().length > 0) {
+        return `Tu solicitud fue rechazada. Comentario del administrador: ${comentarioAdmin.trim()}`;
+      }
+
+      return `Tu solicitud de ${solicitud.tipo_alimento} fue rechazada.`;
+    })();
+
+    await sendNotification({
+      titulo,
+      mensaje,
+      categoria: 'solicitud',
+      tipo: nuevoEstado === 'aprobada' ? 'success' : 'warning',
+      destinatarioId: solicitud.usuario_id,
+      urlAccion: '/user/solicitudes',
+      metadatos: {
+        solicitudId: solicitud.id,
+        nuevoEstado,
+      },
+    });
   };
 
   const buscarProductosCoincidentes = async (tipoAlimento: string): Promise<ProductoInventario[]> => {

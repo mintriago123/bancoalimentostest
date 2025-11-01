@@ -10,6 +10,7 @@ import type {
   ServiceResult
 } from '../types';
 import { SYSTEM_MESSAGES } from '../constants';
+import { sendNotification } from '@/modules/shared/services/notificationClient';
 
 const logger = {
   info: (message: string, details?: unknown) => console.info(`[DonationActionService] ${message}`, details),
@@ -86,6 +87,7 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
         }
 
         logger.info('Donación procesada completamente: inventario y movimiento registrados');
+        await notificarCambioEstadoDonacion(donation, nuevoEstado);
         return {
           success: true,
           data: {
@@ -93,6 +95,8 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
           }
         };
       }
+
+      await notificarCambioEstadoDonacion(donation, nuevoEstado);
 
       return {
         success: true,
@@ -219,6 +223,44 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
         throw error;
       }
       throw new Error('Error desconocido al obtener o crear producto');
+    }
+  };
+
+  const notificarCambioEstadoDonacion = async (donation: Donation, nuevoEstado: DonationEstado) => {
+    try {
+      const titulo = `Estado de tu donación: ${nuevoEstado}`;
+      const mensaje = (() => {
+        switch (nuevoEstado) {
+          case 'Recogida':
+            return `Tu donación de ${donation.tipo_producto} ha sido recogida por nuestro equipo.`;
+          case 'Entregada':
+            return `Gracias por tu aporte. La donación de ${donation.tipo_producto} ha sido entregada y registrada en el inventario.`;
+          case 'Cancelada':
+            return 'Tu donación fue cancelada. Si fue un error, contáctanos para coordinar nuevamente.';
+          default:
+            return `El estado de tu donación de ${donation.tipo_producto} ahora es ${nuevoEstado}.`;
+        }
+      })();
+
+      await sendNotification({
+        titulo,
+        mensaje,
+        categoria: 'donacion',
+        tipo:
+          nuevoEstado === 'Cancelada'
+            ? 'warning'
+            : nuevoEstado === 'Entregada'
+              ? 'success'
+              : 'info',
+        destinatarioId: donation.user_id ?? undefined,
+        urlAccion: '/donante/donaciones',
+        metadatos: {
+          donacionId: donation.id,
+          nuevoEstado,
+        },
+      });
+    } catch (error) {
+      logger.error('Error enviando notificación de donación', error);
     }
   };
 
