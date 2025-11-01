@@ -11,10 +11,20 @@ export interface ResolvedEmailConfig {
   gmail: {
     user: string;
     pass: string;
+    port: number;
+    secure: boolean;
+    requireTLS: boolean;
   };
 }
 
 const DEFAULT_FROM_NAME = 'Banco de Alimentos';
+
+function parseBoolean(value: string | undefined, fallback: boolean): boolean {
+  if (typeof value === 'undefined') {
+    return fallback;
+  }
+  return value.toLowerCase() === 'true';
+}
 
 export function loadEmailConfig(): ResolvedEmailConfig {
   const provider = (process.env.EMAIL_PROVIDER ?? 'gmail') as SupportedEmailProvider;
@@ -27,6 +37,22 @@ export function loadEmailConfig(): ResolvedEmailConfig {
   const logOnly = process.env.EMAIL_LOG_ONLY === 'true';
   const gmailUser = process.env.EMAIL_GMAIL_USER ?? '';
   const gmailPass = process.env.EMAIL_GMAIL_PASS ?? '';
+
+  const parsedPort = Number(process.env.EMAIL_GMAIL_PORT ?? '465');
+  const gmailPort = Number.isInteger(parsedPort) ? parsedPort : 465;
+
+  const secureEnv = process.env.EMAIL_GMAIL_SECURE;
+  const requireTLSEnv = process.env.EMAIL_GMAIL_REQUIRE_TLS;
+
+  const gmailSecure =
+    typeof secureEnv === 'undefined'
+      ? gmailPort === 465
+      : parseBoolean(secureEnv, gmailPort === 465);
+
+  const gmailRequireTLS =
+    typeof requireTLSEnv === 'undefined'
+      ? gmailPort === 587
+      : parseBoolean(requireTLSEnv, gmailPort === 587);
 
   if ((!gmailUser || !gmailPass) && !suppressSend) {
     throw new Error('Faltan las variables EMAIL_GMAIL_USER o EMAIL_GMAIL_PASS para enviar correos con Gmail.');
@@ -44,6 +70,9 @@ export function loadEmailConfig(): ResolvedEmailConfig {
     gmail: {
       user: gmailUser,
       pass: gmailPass,
+      port: gmailPort,
+      secure: gmailSecure,
+      requireTLS: gmailRequireTLS,
     },
   };
 }

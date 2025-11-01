@@ -20,8 +20,9 @@ export class GmailEmailProvider implements EmailProvider {
 
     this.transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      port: config.gmail.port,
+      secure: config.gmail.secure,
+      requireTLS: config.gmail.requireTLS,
       auth: {
         user: config.gmail.user,
         pass: config.gmail.pass,
