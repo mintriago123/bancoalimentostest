@@ -3,6 +3,7 @@ export interface Unidad {
   nombre: string;
   simbolo: string;
   tipo_magnitud_id: number;
+  tipo_magnitud_nombre?: string;
   es_base: boolean;
 }
 

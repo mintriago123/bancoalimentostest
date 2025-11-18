@@ -73,14 +73,30 @@ export const useCatalogData = (supabaseClient: SupabaseClient) => {
     try {
       const { data, error } = await supabaseClient
         .from('unidades')
-        .select('id, nombre, simbolo, tipo_magnitud_id, es_base')
+        .select(`
+          id, 
+          nombre, 
+          simbolo, 
+          tipo_magnitud_id, 
+          es_base,
+          tipos_magnitud!inner(nombre)
+        `)
         .order('tipo_magnitud_id', { ascending: true })
         .order('nombre', { ascending: true });
 
       if (error) {
         console.error('Error al cargar unidades:', error);
       } else {
-        setUnidades(data || []);
+        // Mapear para incluir tipo_magnitud_nombre
+        const unidadesConTipo = (data || []).map(u => ({
+          id: u.id,
+          nombre: u.nombre,
+          simbolo: u.simbolo,
+          tipo_magnitud_id: u.tipo_magnitud_id,
+          tipo_magnitud_nombre: (u.tipos_magnitud as any)?.nombre,
+          es_base: u.es_base
+        }));
+        setUnidades(unidadesConTipo);
       }
     } catch (err) {
       console.error('Error inesperado al cargar unidades:', err);
