@@ -296,6 +296,7 @@ CREATE TABLE public.usuarios (
   representante text,
   estado character varying DEFAULT 'activo'::character varying CHECK (estado::text = ANY (ARRAY['activo'::character varying::text, 'bloqueado'::character varying::text, 'desactivado'::character varying::text])),
   email text,
+  recibir_notificaciones boolean DEFAULT true,
   CONSTRAINT usuarios_pkey PRIMARY KEY (id),
   CONSTRAINT usuarios_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
