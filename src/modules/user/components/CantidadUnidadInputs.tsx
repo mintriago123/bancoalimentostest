@@ -82,7 +82,11 @@ export function CantidadUnidadInputs({
               >
                 {hasSufficientStock
                   ? '✓ Cantidad disponible en inventario'
-                  : `⚠️ Excede el stock disponible (${stockInfo.total_disponible} ${stockInfo.unidad_simbolo || stockInfo.unidad_nombre || 'unidades'} máximo)`}
+                  : `⚠️ Excede el stock disponible (${
+                      stockInfo.total_formateado 
+                        ? `${stockInfo.total_formateado.cantidad} ${stockInfo.total_formateado.simbolo}`
+                        : `${stockInfo.total_disponible} ${stockInfo.unidad_simbolo || stockInfo.unidad_nombre || 'unidades'}`
+                    } máximo)`}
               </p>
             )}
           {stockInfo &&

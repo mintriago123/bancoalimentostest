@@ -73,15 +73,19 @@ export const useInventoryStock = (supabaseClient: SupabaseClient): UseInventoryS
       return 'Sin stock disponible';
     }
 
-    // Usar el símbolo de la unidad si está disponible, sino usar "unidades"
-    const unidad = stockInfo.unidad_simbolo || stockInfo.unidad_nombre || 'unidades';
-    const baseMessage = `${stockInfo.total_disponible} ${unidad} disponibles`;
+    // Usar la cantidad formateada si está disponible
+    const cantidadTexto = stockInfo.total_formateado 
+      ? `${stockInfo.total_formateado.cantidad} ${stockInfo.total_formateado.simbolo}`
+      : `${stockInfo.total_disponible} ${stockInfo.unidad_simbolo || 'unidades'}`;
+    
+    const baseMessage = `${cantidadTexto} disponibles`;
     
     if (cantidadSolicitada && cantidadSolicitada > 0) {
       if (stockInfo.total_disponible >= cantidadSolicitada) {
         return `✓ ${baseMessage} (suficiente)`;
       } else {
         const faltante = cantidadSolicitada - stockInfo.total_disponible;
+        const unidad = stockInfo.unidad_simbolo || stockInfo.unidad_nombre || 'unidades';
         return `⚠️ ${baseMessage} (faltan ${faltante} ${unidad})`;
       }
     }
