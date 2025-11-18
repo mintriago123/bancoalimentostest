@@ -84,11 +84,15 @@ export interface StockInfo {
   producto_encontrado: boolean;
   total_disponible: number;
   depositos: DepositoStock[];
+  unidad_nombre?: string;
+  unidad_simbolo?: string;
 }
 
 export interface DepositoStock {
   deposito: string;
   cantidad_disponible: number;
+  unidad_nombre?: string;
+  unidad_simbolo?: string;
 }
 
 // ---------- Ubicación ----------

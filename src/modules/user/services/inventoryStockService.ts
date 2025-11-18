@@ -9,12 +9,16 @@ export interface StockInfo {
   cantidad_disponible: number;
   deposito: string;
   fecha_actualizacion: string | null;
+  unidad_nombre?: string;
+  unidad_simbolo?: string;
 }
 
 export interface StockSummary {
   total_disponible: number;
   depositos: StockInfo[];
   producto_encontrado: boolean;
+  unidad_nombre?: string;
+  unidad_simbolo?: string;
 }
 
 export interface ServiceResult<T> {
@@ -54,7 +58,11 @@ export const createInventoryStockService = (supabaseClient: SupabaseClient) => {
           cantidad_disponible,
           fecha_actualizacion,
           productos_donados!inner(
-            nombre_producto
+            nombre_producto,
+            unidades!inner(
+              nombre,
+              simbolo
+            )
           ),
           depositos!inner(
             nombre
@@ -95,21 +103,50 @@ export const createInventoryStockService = (supabaseClient: SupabaseClient) => {
       }
 
       // Procesar los datos
-      const stockInfo: StockInfo[] = data.map(row => ({
+      const stockInfoRaw: StockInfo[] = data.map(row => ({
         id_inventario: row.id_inventario,
         cantidad_disponible: row.cantidad_disponible ?? 0,
         deposito: (row.depositos as any)?.nombre ?? 'Sin depósito',
-        fecha_actualizacion: row.fecha_actualizacion
+        fecha_actualizacion: row.fecha_actualizacion,
+        unidad_nombre: (row.productos_donados as any)?.unidades?.nombre,
+        unidad_simbolo: (row.productos_donados as any)?.unidades?.simbolo
       }));
 
+      // Agrupar por depósito para evitar duplicados
+      const depositosAgrupados = new Map<string, StockInfo>();
+      
+      for (const item of stockInfoRaw) {
+        const depositoKey = item.deposito;
+        const existing = depositosAgrupados.get(depositoKey);
+        
+        if (existing) {
+          // Si ya existe una entrada para este depósito, sumar las cantidades
+          existing.cantidad_disponible += item.cantidad_disponible;
+          // Mantener la fecha más reciente
+          if (item.fecha_actualizacion && (!existing.fecha_actualizacion || 
+              item.fecha_actualizacion > existing.fecha_actualizacion)) {
+            existing.fecha_actualizacion = item.fecha_actualizacion;
+          }
+        } else {
+          // Primera entrada para este depósito
+          depositosAgrupados.set(depositoKey, { ...item });
+        }
+      }
+
+      const stockInfo = Array.from(depositosAgrupados.values());
       const totalDisponible = stockInfo.reduce((sum, item) => sum + item.cantidad_disponible, 0);
+      
+      // Obtener la unidad del primer registro (todos deberían tener la misma)
+      const primeraUnidad = stockInfo[0];
 
       return {
         success: true,
         data: {
           total_disponible: totalDisponible,
           depositos: stockInfo,
-          producto_encontrado: true
+          producto_encontrado: true,
+          unidad_nombre: primeraUnidad?.unidad_nombre,
+          unidad_simbolo: primeraUnidad?.unidad_simbolo
         }
       };
 

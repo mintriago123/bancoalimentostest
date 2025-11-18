@@ -82,7 +82,7 @@ export function CantidadUnidadInputs({
               >
                 {hasSufficientStock
                   ? '✓ Cantidad disponible en inventario'
-                  : `⚠️ Excede el stock disponible (${stockInfo.total_disponible} unidades máximo)`}
+                  : `⚠️ Excede el stock disponible (${stockInfo.total_disponible} ${stockInfo.unidad_simbolo || stockInfo.unidad_nombre || 'unidades'} máximo)`}
               </p>
             )}
           {stockInfo &&
@@ -93,7 +93,7 @@ export function CantidadUnidadInputs({
                 onClick={onUseMaxStock}
                 className="text-xs text-blue-600 hover:text-blue-700 underline"
               >
-                Usar máximo disponible ({stockInfo.total_disponible})
+                Usar máximo disponible ({stockInfo.total_disponible} {stockInfo.unidad_simbolo || stockInfo.unidad_nombre || 'unidades'})
               </button>
             )}
         </div>

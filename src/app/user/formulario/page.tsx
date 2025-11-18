@@ -185,8 +185,9 @@ export default function FormularioSolicitante() {
 
     // Verificar stock disponible si hay información de inventario
     if (stockInfo && stockInfo.producto_encontrado && !isStockSufficient(cantidadNum)) {
+      const unidad = stockInfo.unidad_simbolo || stockInfo.unidad_nombre || 'unidades';
       setMensaje(
-        `${MESSAGES.SOLICITUD.STOCK_INSUFFICIENT} Solo hay ${stockInfo.total_disponible} unidades disponibles y has solicitado ${cantidadNum}.`
+        `${MESSAGES.SOLICITUD.STOCK_INSUFFICIENT} Solo hay ${stockInfo.total_disponible} ${unidad} disponibles y has solicitado ${cantidadNum} ${unidad}.`
       );
       setLoading(false);
       return;
