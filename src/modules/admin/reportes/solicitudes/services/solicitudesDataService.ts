@@ -88,7 +88,11 @@ export const createSolicitudesDataService = (supabaseClient: SupabaseClient) => 
           cantidad_disponible,
           fecha_actualizacion,
           productos_donados!inner(
-            nombre_producto
+            nombre_producto,
+            unidades(
+              nombre,
+              simbolo
+            )
           ),
           depositos!inner(
             nombre
@@ -203,12 +207,15 @@ const mapInventarioDisponibleRowToDomain = (
 ): InventarioDisponible => {
   const producto = normalizeRelation(row.productos_donados);
   const deposito = normalizeRelation(row.depositos);
+  const unidad = producto?.unidades ? normalizeRelation(producto.unidades) : null;
 
   return {
     id: String(row.id_inventario),
     tipo_alimento: producto?.nombre_producto ?? 'Producto desconocido',
     cantidad_disponible: row.cantidad_disponible ?? 0,
     deposito: deposito?.nombre ?? 'Depósito desconocido',
-    fecha_vencimiento: row.fecha_actualizacion ?? null
+    fecha_vencimiento: row.fecha_actualizacion ?? null,
+    unidad_nombre: unidad?.nombre ?? undefined,
+    unidad_simbolo: unidad?.simbolo ?? undefined
   };
 };

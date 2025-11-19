@@ -3,18 +3,26 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CantidadFormateada, ConversionData } from '@/lib/unidadConversion';
+import { convertirCantidad } from '@/lib/unidadConversion';
 
 export interface StockInfo {
   id_inventario: string;
   cantidad_disponible: number;
   deposito: string;
   fecha_actualizacion: string | null;
+  unidad_nombre?: string;
+  unidad_simbolo?: string;
+  cantidad_formateada?: CantidadFormateada;
 }
 
 export interface StockSummary {
   total_disponible: number;
   depositos: StockInfo[];
   producto_encontrado: boolean;
+  unidad_nombre?: string;
+  unidad_simbolo?: string;
+  total_formateado?: CantidadFormateada;
 }
 
 export interface ServiceResult<T> {
@@ -29,6 +37,37 @@ const logger = {
 };
 
 export const createInventoryStockService = (supabaseClient: SupabaseClient) => {
+  /**
+   * Obtiene las conversiones disponibles de la base de datos
+   */
+  const obtenerConversiones = async (): Promise<ConversionData[]> => {
+    try {
+      const { data, error } = await supabaseClient
+        .from('conversiones')
+        .select(`
+          factor_conversion,
+          unidad_origen:unidades!conversiones_unidad_origen_id_fkey(nombre, simbolo),
+          unidad_destino:unidades!conversiones_unidad_destino_id_fkey(nombre, simbolo)
+        `);
+
+      if (error || !data) {
+        logger.error('Error obteniendo conversiones', error);
+        return [];
+      }
+
+      return data.map(row => ({
+        unidad_origen: (row.unidad_origen as any)?.nombre || '',
+        simbolo_origen: (row.unidad_origen as any)?.simbolo || '',
+        unidad_destino: (row.unidad_destino as any)?.nombre || '',
+        simbolo_destino: (row.unidad_destino as any)?.simbolo || '',
+        factor_conversion: Number(row.factor_conversion) || 0
+      }));
+    } catch (err) {
+      logger.error('Excepción obteniendo conversiones', err);
+      return [];
+    }
+  };
+
   /**
    * Obtiene el stock disponible de un producto por nombre
    */
@@ -47,6 +86,9 @@ export const createInventoryStockService = (supabaseClient: SupabaseClient) => {
     try {
       logger.info(`Consultando stock para producto: "${nombreProducto}"`);
       
+      // Obtener conversiones disponibles
+      const conversiones = await obtenerConversiones();
+      
       const { data, error } = await supabaseClient
         .from('inventario')
         .select(`
@@ -54,7 +96,12 @@ export const createInventoryStockService = (supabaseClient: SupabaseClient) => {
           cantidad_disponible,
           fecha_actualizacion,
           productos_donados!inner(
-            nombre_producto
+            nombre_producto,
+            unidades!inner(
+              id,
+              nombre,
+              simbolo
+            )
           ),
           depositos!inner(
             nombre
@@ -95,21 +142,85 @@ export const createInventoryStockService = (supabaseClient: SupabaseClient) => {
       }
 
       // Procesar los datos
-      const stockInfo: StockInfo[] = data.map(row => ({
-        id_inventario: row.id_inventario,
-        cantidad_disponible: row.cantidad_disponible ?? 0,
-        deposito: (row.depositos as any)?.nombre ?? 'Sin depósito',
-        fecha_actualizacion: row.fecha_actualizacion
-      }));
+      const stockInfoRaw: StockInfo[] = data.map(row => {
+        const unidad = (row.productos_donados as any)?.unidades;
+        const cantidad = row.cantidad_disponible ?? 0;
+        
+        // Convertir cantidad a unidad más legible
+        const cantidadFormateada = convertirCantidad(
+          cantidad,
+          unidad?.simbolo || '',
+          unidad?.nombre || '',
+          conversiones
+        );
 
+        return {
+          id_inventario: row.id_inventario,
+          cantidad_disponible: cantidad,
+          deposito: (row.depositos as any)?.nombre ?? 'Sin depósito',
+          fecha_actualizacion: row.fecha_actualizacion,
+          unidad_nombre: unidad?.nombre,
+          unidad_simbolo: unidad?.simbolo,
+          cantidad_formateada: cantidadFormateada
+        };
+      });
+
+      // Agrupar por depósito para evitar duplicados
+      const depositosAgrupados = new Map<string, StockInfo>();
+      
+      for (const item of stockInfoRaw) {
+        const depositoKey = item.deposito;
+        const existing = depositosAgrupados.get(depositoKey);
+        
+        if (existing) {
+          // Si ya existe una entrada para este depósito, sumar las cantidades
+          const nuevaCantidad = existing.cantidad_disponible + item.cantidad_disponible;
+          
+          // Reconvertir con la nueva cantidad sumada
+          const cantidadFormateada = convertirCantidad(
+            nuevaCantidad,
+            item.unidad_simbolo || '',
+            item.unidad_nombre || '',
+            conversiones
+          );
+          
+          existing.cantidad_disponible = nuevaCantidad;
+          existing.cantidad_formateada = cantidadFormateada;
+          
+          // Mantener la fecha más reciente
+          if (item.fecha_actualizacion && (!existing.fecha_actualizacion || 
+              item.fecha_actualizacion > existing.fecha_actualizacion)) {
+            existing.fecha_actualizacion = item.fecha_actualizacion;
+          }
+        } else {
+          // Primera entrada para este depósito
+          depositosAgrupados.set(depositoKey, { ...item });
+        }
+      }
+
+      const stockInfo = Array.from(depositosAgrupados.values());
       const totalDisponible = stockInfo.reduce((sum, item) => sum + item.cantidad_disponible, 0);
+      
+      // Obtener la unidad del primer registro (todos deberían tener la misma)
+      const primeraUnidad = stockInfo[0];
+
+      // Convertir el total a unidad más legible
+      const totalFormateado = convertirCantidad(
+        totalDisponible,
+        primeraUnidad?.unidad_simbolo || '',
+        primeraUnidad?.unidad_nombre || '',
+        conversiones
+      );
 
       return {
         success: true,
         data: {
           total_disponible: totalDisponible,
           depositos: stockInfo,
-          producto_encontrado: true
+          producto_encontrado: true,
+          unidad_nombre: primeraUnidad?.unidad_nombre,
+          unidad_simbolo: primeraUnidad?.unidad_simbolo,
+          total_formateado: totalFormateado
         }
       };
 

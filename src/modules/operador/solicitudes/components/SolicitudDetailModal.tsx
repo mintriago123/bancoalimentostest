@@ -148,24 +148,27 @@ const SolicitudDetailModal = ({
               {!inventarioLoading && !inventarioError && inventario.length > 0 && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {inventario.map(item => (
-                      <div key={item.id} className="border rounded-lg p-3">
-                        <div className="font-semibold text-gray-900">
-                          {item.tipo_alimento}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Depósito: {item.deposito}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Disponible: <span className="font-medium">{item.cantidad_disponible} unidades</span>
-                        </div>
-                        {item.fecha_vencimiento && (
-                          <div className="text-xs text-gray-500">
-                            Actualizado: {formatDate(item.fecha_vencimiento)}
+                    {inventario.map(item => {
+                      const unidad = item.unidad_simbolo || item.unidad_nombre || 'unidades';
+                      return (
+                        <div key={item.id} className="border rounded-lg p-3">
+                          <div className="font-semibold text-gray-900">
+                            {item.tipo_alimento}
                           </div>
-                        )}
-                      </div>
-                    ))}
+                          <div className="text-sm text-gray-600">
+                            Depósito: {item.deposito}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            Disponible: <span className="font-medium">{item.cantidad_disponible} {unidad}</span>
+                          </div>
+                          {item.fecha_vencimiento && (
+                            <div className="text-xs text-gray-500">
+                              Actualizado: {formatDate(item.fecha_vencimiento)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   <div className="mt-4 p-3 bg-white rounded border">

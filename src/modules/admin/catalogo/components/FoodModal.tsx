@@ -77,6 +77,16 @@ const FoodModal = ({ open, mode, initialData, unidadesDisponibles, loadingUnidad
     });
   };
 
+  // Obtener el tipo de magnitud de las unidades ya seleccionadas
+  const tipoMagnitudSeleccionado = unidadesSeleccionadas.length > 0
+    ? unidadesDisponibles.find(u => u.id === unidadesSeleccionadas[0])?.tipo_magnitud_id
+    : null;
+
+  // Filtrar unidades disponibles según el tipo de magnitud seleccionado
+  const unidadesFiltradasPorTipo = tipoMagnitudSeleccionado
+    ? unidadesDisponibles.filter(u => u.tipo_magnitud_id === tipoMagnitudSeleccionado)
+    : unidadesDisponibles;
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!nombre.trim()) return;
@@ -103,8 +113,8 @@ const FoodModal = ({ open, mode, initialData, unidadesDisponibles, loadingUnidad
     setSubmitting(false);
   };
 
-  // Agrupar unidades por tipo de magnitud
-  const unidadesPorTipo = unidadesDisponibles.reduce((acc, unidad) => {
+  // Agrupar unidades por tipo de magnitud (usar las filtradas)
+  const unidadesPorTipo = unidadesFiltradasPorTipo.reduce((acc, unidad) => {
     const tipo = unidad.tipo_magnitud_id;
     if (!acc[tipo]) {
       acc[tipo] = [];
@@ -206,12 +216,23 @@ const FoodModal = ({ open, mode, initialData, unidadesDisponibles, loadingUnidad
                     No hay unidades disponibles. Contacta al administrador.
                   </div>
                 ) : (
-                  <div className="max-h-64 overflow-y-auto space-y-3 p-3 bg-slate-50 rounded-lg">
-                    {Object.entries(unidadesPorTipo).map(([tipoId, unidades]) => (
-                      <div key={tipoId} className="space-y-2">
-                        <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
-                          Tipo de magnitud #{tipoId}
+                  <>
+                    {tipoMagnitudSeleccionado && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-xs font-medium text-blue-900">
+                          ℹ️ Solo puedes seleccionar unidades del mismo tipo de magnitud para asegurar conversiones correctas
                         </p>
+                      </div>
+                    )}
+                    <div className="max-h-64 overflow-y-auto space-y-3 p-3 bg-slate-50 rounded-lg">
+                    {Object.entries(unidadesPorTipo).map(([tipoId, unidades]) => {
+                      const tipoMagnitudNombre = unidades[0]?.tipo_magnitud_nombre || `Tipo ${tipoId}`;
+                      
+                      return (
+                        <div key={tipoId} className="space-y-2">
+                          <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                            {tipoMagnitudNombre}
+                          </p>
                         <div className="grid grid-cols-2 gap-2">
                           {unidades.map(unidad => {
                             const isSelected = unidadesSeleccionadas.includes(unidad.id);
@@ -259,8 +280,10 @@ const FoodModal = ({ open, mode, initialData, unidadesDisponibles, loadingUnidad
                           })}
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
+                  </>
                 )}
 
                 {unidadesSeleccionadas.length > 0 && (
