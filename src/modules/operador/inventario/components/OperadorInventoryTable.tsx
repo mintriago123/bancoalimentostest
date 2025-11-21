@@ -19,6 +19,16 @@ import {
 import type { InventarioItem } from '../types';
 import { formatShortDate } from '@/lib/dateUtils';
 
+/**
+ * Formatea una cantidad numérica con máximo 2 decimales.
+ */
+const formatQuantity = (cantidad: number): string => {
+  if (Number.isInteger(cantidad)) {
+    return cantidad.toString();
+  }
+  return cantidad.toFixed(2).replace(/\.?0+$/, '');
+};
+
 interface OperadorInventoryTableProps {
   items: InventarioItem[];
   totalItems: number;
@@ -204,7 +214,7 @@ const OperadorInventoryTable = ({
                       <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full border text-sm font-medium ${STOCK_LEVEL_STYLES[stockLevel]}`}>
                         {STOCK_LEVEL_ICONS[stockLevel]}
                         <span>
-                          {item.cantidad_disponible} {
+                          {formatQuantity(item.cantidad_disponible)} {
                             item.producto.unidad_simbolo || 
                             item.producto.unidad_medida || 
                             'unidades'

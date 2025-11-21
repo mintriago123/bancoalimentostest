@@ -10,6 +10,20 @@ export const formatDate = (value?: string | null) => {
   return formatShortDate(value);
 };
 
+/**
+ * Formatea una cantidad numérica con máximo 2 decimales.
+ * Si es un número entero, lo muestra sin decimales.
+ * Si es decimal, muestra máximo 2 decimales.
+ */
+export const formatQuantity = (cantidad: number): string => {
+  // Si es un número entero, retornarlo sin decimales
+  if (Number.isInteger(cantidad)) {
+    return cantidad.toString();
+  }
+  // Si es decimal, mostrar máximo 2 decimales
+  return cantidad.toFixed(2).replace(/\.?0+$/, '');
+};
+
 export const determineStockLevel = (cantidad: number): StockLevel => {
   if (cantidad <= STOCK_THRESHOLDS.bajo) return 'bajo';
   if (cantidad <= STOCK_THRESHOLDS.normal) return 'normal';

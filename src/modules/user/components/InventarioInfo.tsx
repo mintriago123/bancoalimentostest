@@ -8,6 +8,16 @@ import { Package, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { LoadingSpinner } from '@/app/components';
 import { StockInfo, LoadingState } from '../types';
 
+/**
+ * Formatea una cantidad numérica con máximo 2 decimales.
+ */
+const formatQuantity = (cantidad: number): string => {
+  if (Number.isInteger(cantidad)) {
+    return cantidad.toString();
+  }
+  return cantidad.toFixed(2).replace(/\.?0+$/, '');
+};
+
 interface InventarioInfoProps {
   stockInfo: StockInfo | null;
   loadingState: LoadingState;
@@ -81,7 +91,7 @@ export function InventarioInfo({
                       // Usar la cantidad formateada si está disponible
                       const cantidadTexto = deposito.cantidad_formateada
                         ? `${deposito.cantidad_formateada.cantidad} ${deposito.cantidad_formateada.simbolo}`
-                        : `${deposito.cantidad_disponible} ${stockInfo.unidad_simbolo || 'unidades'}`;
+                        : `${formatQuantity(deposito.cantidad_disponible)} ${stockInfo.unidad_simbolo || 'unidades'}`;
                       
                       return (
                         <div
@@ -108,7 +118,7 @@ export function InventarioInfo({
                       : `Cantidad disponible insuficiente. Considera reducir a máximo ${
                           stockInfo.total_formateado && stockInfo.total_formateado.fue_convertido
                             ? `${stockInfo.total_formateado.cantidad} ${stockInfo.total_formateado.simbolo}`
-                            : `${stockInfo.total_disponible} ${stockInfo.unidad_simbolo || stockInfo.unidad_nombre || 'unidades'}`
+                            : `${formatQuantity(stockInfo.total_disponible)} ${stockInfo.unidad_simbolo || stockInfo.unidad_nombre || 'unidades'}`
                         }`}
                   </p>
                 </div>
@@ -120,12 +130,7 @@ export function InventarioInfo({
                   onClick={onUseMaxStock}
                   className="text-xs text-blue-600 hover:text-blue-700 underline mt-2"
                 >
-                  Usar máximo disponible ({
-                    // Redondear y formatear la cantidad original
-                    Number.isInteger(stockInfo.total_disponible) 
-                      ? stockInfo.total_disponible 
-                      : stockInfo.total_disponible.toFixed(2)
-                  } {stockInfo.unidad_simbolo || stockInfo.unidad_nombre || 'unidades'})
+                  Usar máximo disponible ({formatQuantity(stockInfo.total_disponible)} {stockInfo.unidad_simbolo || stockInfo.unidad_nombre || 'unidades'})
                 </button>
               )}
             </>
