@@ -86,9 +86,379 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
     }
   };
 
+  /**
+   * Obtiene los movimientos de egreso relacionados con una solicitud aprobada.
+   * Busca movimientos que coincidan con el solicitante y el tipo de alimento.
+   */
+  const obtenerMovimientosEgresoSolicitud = async (solicitud: Solicitud): Promise<InventarioDescontado[]> => {
+    try {
+      // Buscar cabeceras de movimiento que coincidan con el solicitante y mencionen el tipo de alimento
+      // Filtramos por fecha para buscar movimientos cercanos a la fecha de respuesta de la solicitud
+      // Si no hay fecha_respuesta, usamos created_at como referencia
+      const fechaSolicitud = solicitud.fecha_respuesta 
+        ? new Date(solicitud.fecha_respuesta) 
+        : new Date(solicitud.created_at);
+      
+      // Buscar movimientos en un rango de tiempo más amplio (desde 7 días antes hasta 1 día después de la aprobación)
+      // Esto cubre casos donde la solicitud fue aprobada hace tiempo
+      const fechaInicio = new Date(fechaSolicitud);
+      fechaInicio.setDate(fechaInicio.getDate() - 7);
+      fechaInicio.setHours(0, 0, 0, 0);
+      const fechaFin = new Date(fechaSolicitud);
+      fechaFin.setDate(fechaFin.getDate() + 1);
+      fechaFin.setHours(23, 59, 59, 999);
+
+      // Convertir a formato ISO sin timezone para coincidir con timestamp without time zone
+      const fechaInicioStr = fechaInicio.toISOString().replace('Z', '');
+      const fechaFinStr = fechaFin.toISOString().replace('Z', '');
+
+      const { data: cabeceras, error: cabecerasError } = await supabaseClient
+        .from('movimiento_inventario_cabecera')
+        .select('id_movimiento, fecha_movimiento, observaciones')
+        .eq('id_solicitante', solicitud.usuario_id)
+        .ilike('observaciones', `%${solicitud.tipo_alimento}%`)
+        .eq('estado_movimiento', 'completado')
+        .gte('fecha_movimiento', fechaInicioStr)
+        .lte('fecha_movimiento', fechaFinStr)
+        .order('fecha_movimiento', { ascending: false })
+        .limit(10); // Limitar a los 10 más recientes en el rango de tiempo
+
+      if (cabecerasError || !cabeceras || cabeceras.length === 0) {
+        logger.warn('No se encontraron cabeceras de movimiento para la solicitud', cabecerasError);
+        return [];
+      }
+
+      // Obtener los detalles de egreso de estas cabeceras
+      const idsMovimiento = cabeceras.map(c => c.id_movimiento);
+      const { data: detalles, error: detallesError } = await supabaseClient
+        .from('movimiento_inventario_detalle')
+        .select('id_movimiento, id_producto, cantidad, tipo_transaccion, unidad_id, observacion_detalle')
+        .in('id_movimiento', idsMovimiento)
+        .eq('tipo_transaccion', 'egreso')
+        .ilike('observacion_detalle', `%${solicitud.tipo_alimento}%`);
+
+      if (detallesError || !detalles || detalles.length === 0) {
+        logger.warn('No se encontraron detalles de egreso para la solicitud', detallesError);
+        return [];
+      }
+
+      // Obtener información de los productos
+      const idsProducto = [...new Set(detalles.map(d => d.id_producto))];
+      const { data: productos, error: productosError } = await supabaseClient
+        .from('productos_donados')
+        .select('id_producto, nombre_producto, unidad_id')
+        .in('id_producto', idsProducto);
+
+      if (productosError || !productos) {
+        logger.error('Error obteniendo productos para los movimientos', productosError);
+        return [];
+      }
+
+      // Mapear detalles a InventarioDescontado
+      const movimientos: InventarioDescontado[] = [];
+      for (const detalle of detalles) {
+        const producto = productos.find(p => p.id_producto === detalle.id_producto);
+        if (producto) {
+          movimientos.push({
+            producto: {
+              id_producto: producto.id_producto,
+              nombre_producto: producto.nombre_producto,
+              unidad_id: producto.unidad_id ?? undefined
+            },
+            cantidadEntregada: Number(detalle.cantidad)
+          });
+        }
+      }
+
+      logger.info(`Se encontraron ${movimientos.length} productos para restaurar`);
+      return movimientos;
+    } catch (error) {
+      logger.error('Error obteniendo movimientos de egreso de la solicitud', error);
+      return [];
+    }
+  };
+
+  /**
+   * Restaura el inventario sumando las cantidades que fueron descontadas.
+   */
+  const restaurarInventario = async (
+    movimientos: InventarioDescontado[]
+  ): Promise<ServiceResult<{ productosActualizados: number }>> => {
+    try {
+      let productosActualizados = 0;
+
+      for (const movimiento of movimientos) {
+        // Buscar registros de inventario para este producto
+        const { data: inventarioItems, error: inventarioError } = await supabaseClient
+          .from('inventario')
+          .select('id_inventario, cantidad_disponible, id_deposito, id_producto')
+          .eq('id_producto', movimiento.producto.id_producto)
+          .order('fecha_actualizacion', { ascending: false });
+
+        if (inventarioError) {
+          logger.error(`Error obteniendo inventario para producto ${movimiento.producto.nombre_producto}`, inventarioError);
+          continue;
+        }
+
+        // Si hay registros de inventario, actualizar el primero (más reciente)
+        // Si no hay registros, crear uno nuevo (necesitamos un depósito por defecto)
+        if (inventarioItems && inventarioItems.length > 0) {
+          const item = inventarioItems[0];
+          const nuevaCantidad = (item.cantidad_disponible ?? 0) + movimiento.cantidadEntregada;
+
+          const { error: updateError } = await supabaseClient
+            .from('inventario')
+            .update({
+              cantidad_disponible: nuevaCantidad,
+              fecha_actualizacion: new Date().toISOString()
+            })
+            .eq('id_inventario', item.id_inventario);
+
+          if (updateError) {
+            logger.error(`Error restaurando inventario para producto ${movimiento.producto.nombre_producto}`, updateError);
+            continue;
+          }
+
+          productosActualizados++;
+          logger.info(`Restauradas ${movimiento.cantidadEntregada} unidades de ${movimiento.producto.nombre_producto} (nuevo stock: ${nuevaCantidad})`);
+        } else {
+          // No hay inventario existente, necesitamos crear uno nuevo
+          // Primero obtener un depósito por defecto
+          const { data: depositos, error: depositosError } = await supabaseClient
+            .from('depositos')
+            .select('id_deposito')
+            .limit(1)
+            .single();
+
+          if (depositosError || !depositos) {
+            logger.error(`No se pudo obtener un depósito para crear inventario de ${movimiento.producto.nombre_producto}`, depositosError);
+            continue;
+          }
+
+          const { error: insertError } = await supabaseClient
+            .from('inventario')
+            .insert({
+              id_producto: movimiento.producto.id_producto,
+              id_deposito: depositos.id_deposito,
+              cantidad_disponible: movimiento.cantidadEntregada,
+              fecha_actualizacion: new Date().toISOString()
+            });
+
+          if (insertError) {
+            logger.error(`Error creando inventario para producto ${movimiento.producto.nombre_producto}`, insertError);
+            continue;
+          }
+
+          productosActualizados++;
+          logger.info(`Creado nuevo registro de inventario con ${movimiento.cantidadEntregada} unidades de ${movimiento.producto.nombre_producto}`);
+        }
+      }
+
+      return {
+        success: true,
+        data: { productosActualizados }
+      };
+    } catch (error) {
+      logger.error('Error restaurando inventario', error);
+      return {
+        success: false,
+        error: 'Error inesperado al restaurar el inventario',
+        errorDetails: error
+      };
+    }
+  };
+
+  /**
+   * Registra un movimiento de ingreso cuando se revierte una solicitud aprobada.
+   */
+  const registrarMovimientoReversion = async (
+    solicitud: Solicitud,
+    movimientos: InventarioDescontado[]
+  ): Promise<void> => {
+    try {
+      if (movimientos.length === 0) {
+        logger.warn('No se registró movimiento de reversión porque no hay productos para restaurar');
+        return;
+      }
+
+      const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+      if (authError || !authData?.user) {
+        logger.warn('No se encontró usuario autenticado para registrar movimiento de reversión', authError);
+        return;
+      }
+
+      // Crear cabecera del movimiento
+      const { data: cabecera, error: cabeceraError } = await supabaseClient
+        .from('movimiento_inventario_cabecera')
+        .insert({
+          fecha_movimiento: new Date().toISOString(),
+          id_donante: authData.user.id,
+          id_solicitante: solicitud.usuario_id,
+          estado_movimiento: 'completado',
+          observaciones: `Reversión de solicitud - ${solicitud.tipo_alimento} (${solicitud.cantidad} unidades)`
+        })
+        .select('id_movimiento')
+        .single();
+
+      if (cabeceraError || !cabecera) {
+        logger.error('Error creando cabecera de movimiento de reversión', cabeceraError);
+        return;
+      }
+
+      // Crear detalles del movimiento (ingresos)
+      for (const movimiento of movimientos) {
+        const { error: detalleError } = await supabaseClient
+          .from('movimiento_inventario_detalle')
+          .insert({
+            id_movimiento: cabecera.id_movimiento,
+            id_producto: movimiento.producto.id_producto,
+            cantidad: movimiento.cantidadEntregada,
+            tipo_transaccion: 'ingreso',
+            rol_usuario: 'beneficiario',
+            observacion_detalle: `Reversión de solicitud aprobada - ${solicitud.tipo_alimento}`,
+            unidad_id: movimiento.producto.unidad_id ?? null
+          });
+
+        if (detalleError) {
+          logger.error('Error creando detalle de movimiento de reversión', detalleError);
+        }
+      }
+
+      logger.info('Movimiento de reversión registrado exitosamente');
+    } catch (error) {
+      logger.error('Error registrando movimiento de reversión', error);
+    }
+  };
+
   const revertirSolicitud = async (solicitudId: string): Promise<ServiceResult<SolicitudActionResponse>> => {
     try {
-      const { error } = await supabaseClient
+      logger.info(`Iniciando reversión de solicitud ${solicitudId}`);
+
+      // Obtener la solicitud completa
+      const { data: solicitudData, error: fetchError } = await supabaseClient
+        .from('solicitudes')
+        .select(`
+          id,
+          usuario_id,
+          tipo_alimento,
+          cantidad,
+          comentarios,
+          estado,
+          created_at,
+          latitud,
+          longitud,
+          fecha_respuesta,
+          comentario_admin,
+          unidad_id,
+          unidades:unidad_id (
+            id,
+            nombre,
+            simbolo,
+            tipo_magnitud_id,
+            es_base
+          ),
+          usuarios:usuario_id (
+            nombre,
+            cedula,
+            telefono,
+            email,
+            direccion,
+            tipo_persona
+          )
+        `)
+        .eq('id', solicitudId)
+        .single();
+
+      if (fetchError || !solicitudData) {
+        logger.error('Error obteniendo solicitud para revertir', fetchError);
+        return {
+          success: false,
+          error: 'No fue posible obtener la información de la solicitud',
+          errorDetails: fetchError
+        };
+      }
+
+      // Función auxiliar para normalizar relaciones (pueden venir como array o objeto)
+      const normalizeRelation = <T>(value: T | T[] | null | undefined): T | null => {
+        if (Array.isArray(value)) {
+          return (value[0] ?? null) as T | null;
+        }
+        return (value ?? null) as T | null;
+      };
+
+      // Normalizar relaciones
+      const unidadesNormalizadas = normalizeRelation(solicitudData.unidades);
+      const usuariosNormalizados = normalizeRelation(solicitudData.usuarios);
+
+      // Mapear la solicitud al formato de dominio
+      const solicitud: Solicitud = {
+        id: solicitudData.id,
+        usuario_id: solicitudData.usuario_id,
+        tipo_alimento: solicitudData.tipo_alimento ?? 'Producto desconocido',
+        cantidad: solicitudData.cantidad ?? 0,
+        comentarios: solicitudData.comentarios ?? undefined,
+        estado: solicitudData.estado as Solicitud['estado'],
+        created_at: solicitudData.created_at,
+        latitud: solicitudData.latitud ?? undefined,
+        longitud: solicitudData.longitud ?? undefined,
+        fecha_respuesta: solicitudData.fecha_respuesta ?? undefined,
+        comentario_admin: solicitudData.comentario_admin ?? undefined,
+        unidad_id: solicitudData.unidad_id ?? undefined,
+        unidades: unidadesNormalizadas ? {
+          id: unidadesNormalizadas.id,
+          nombre: unidadesNormalizadas.nombre,
+          simbolo: unidadesNormalizadas.simbolo,
+          tipo_magnitud_id: unidadesNormalizadas.tipo_magnitud_id,
+          es_base: unidadesNormalizadas.es_base ?? false
+        } : null,
+        usuarios: usuariosNormalizados ? {
+          nombre: usuariosNormalizados.nombre ?? 'N/A',
+          cedula: usuariosNormalizados.cedula ?? 'N/A',
+          telefono: usuariosNormalizados.telefono ?? 'N/A',
+          email: usuariosNormalizados.email ?? undefined,
+          direccion: usuariosNormalizados.direccion ?? undefined,
+          tipo_persona: usuariosNormalizados.tipo_persona ?? undefined
+        } : null
+      };
+
+      // Verificar que la solicitud esté en estado 'aprobada'
+      if (solicitud.estado !== 'aprobada') {
+        logger.warn(`Intento de revertir solicitud que no está aprobada. Estado actual: ${solicitud.estado}`);
+        return {
+          success: false,
+          error: 'Solo se pueden revertir solicitudes que estén en estado aprobada'
+        };
+      }
+
+      // Buscar movimientos de egreso relacionados con esta solicitud
+      const movimientosEgreso = await obtenerMovimientosEgresoSolicitud(solicitud);
+
+      // Si hay movimientos, restaurar inventario y registrar ingreso
+      if (movimientosEgreso.length > 0) {
+        logger.info(`Se encontraron ${movimientosEgreso.length} movimientos de egreso para restaurar`);
+
+        // Restaurar el inventario
+        const resultadoRestauracion = await restaurarInventario(movimientosEgreso);
+        
+        if (resultadoRestauracion.error) {
+          logger.error('Error restaurando inventario', resultadoRestauracion.error);
+          return {
+            success: false,
+            error: `No fue posible restaurar el inventario: ${resultadoRestauracion.error}`,
+            errorDetails: resultadoRestauracion.errorDetails
+          };
+        }
+
+        // Registrar movimiento de ingreso
+        await registrarMovimientoReversion(solicitud, movimientosEgreso);
+
+        logger.info('Inventario restaurado y movimiento de ingreso registrado exitosamente');
+      } else {
+        logger.warn('No se encontraron movimientos de egreso relacionados con la solicitud. Continuando con la reversión del estado únicamente.');
+      }
+
+      // Actualizar el estado de la solicitud a 'pendiente'
+      const { error: updateError } = await supabaseClient
         .from('solicitudes')
         .update({
           estado: 'pendiente',
@@ -96,20 +466,25 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         })
         .eq('id', solicitudId);
 
-      if (error) {
-        logger.error('Error al revertir solicitud', error);
+      if (updateError) {
+        logger.error('Error al revertir solicitud', updateError);
         return {
           success: false,
           error: 'No fue posible revertir la solicitud',
-          errorDetails: error
+          errorDetails: updateError
         };
       }
+
+      const mensaje = movimientosEgreso.length > 0
+        ? 'Solicitud revertida a pendiente exitosamente. El inventario ha sido restaurado.'
+        : 'Solicitud revertida a pendiente exitosamente. No se encontraron movimientos de egreso para restaurar.';
 
       return {
         success: true,
         data: {
           success: true,
-          message: 'Solicitud revertida a pendiente exitosamente'
+          message: mensaje,
+          warning: movimientosEgreso.length === 0
         }
       };
     } catch (err) {
