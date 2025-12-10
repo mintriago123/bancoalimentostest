@@ -89,61 +89,103 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
   /**
    * Obtiene los movimientos de egreso relacionados con una solicitud aprobada.
    * Busca movimientos que coincidan con el solicitante y el tipo de alimento.
+   * Solo incluye movimientos creados DESPUÉS de la última reversión (si existe).
    */
   const obtenerMovimientosEgresoSolicitud = async (solicitud: Solicitud): Promise<InventarioDescontado[]> => {
     try {
-      // Buscar cabeceras de movimiento que coincidan con el solicitante y mencionen el tipo de alimento
-      // Filtramos por fecha para buscar movimientos cercanos a la fecha de respuesta de la solicitud
-      // Si no hay fecha_respuesta, usamos created_at como referencia
-      const fechaSolicitud = solicitud.fecha_respuesta 
+      // Determinar la fecha de referencia: fecha_respuesta si existe, sino created_at
+      const fechaReferencia = solicitud.fecha_respuesta 
         ? new Date(solicitud.fecha_respuesta) 
         : new Date(solicitud.created_at);
       
-      // Buscar movimientos en un rango de tiempo más amplio (desde 7 días antes hasta 1 día después de la aprobación)
-      // Esto cubre casos donde la solicitud fue aprobada hace tiempo
-      const fechaInicio = new Date(fechaSolicitud);
-      fechaInicio.setDate(fechaInicio.getDate() - 7);
-      fechaInicio.setHours(0, 0, 0, 0);
-      const fechaFin = new Date(fechaSolicitud);
-      fechaFin.setDate(fechaFin.getDate() + 1);
-      fechaFin.setHours(23, 59, 59, 999);
+      // Buscar la última reversión para esta solicitud (si existe)
+      // Esto nos permite saber desde qué fecha buscar movimientos de egreso
+      const { data: ultimaReversion, error: reversionError } = await supabaseClient
+        .from('movimiento_inventario_cabecera')
+        .select('id_movimiento, fecha_movimiento')
+        .eq('id_solicitante', solicitud.usuario_id)
+        .ilike('observaciones', `%Reversión de solicitud%${solicitud.tipo_alimento}%`)
+        .eq('estado_movimiento', 'completado')
+        .order('fecha_movimiento', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      // Convertir a formato ISO sin timezone para coincidir con timestamp without time zone
-      const fechaInicioStr = fechaInicio.toISOString().replace('Z', '');
-      const fechaFinStr = fechaFin.toISOString().replace('Z', '');
+      if (reversionError) {
+        logger.warn('Error obteniendo última reversión (continuando de todas formas)', reversionError);
+      }
 
-      const { data: cabeceras, error: cabecerasError } = await supabaseClient
+      // Determinar la fecha mínima para buscar movimientos de egreso
+      // Si hay una reversión, solo buscamos movimientos creados DESPUÉS de esa reversión
+      // Si no hay reversión, buscamos movimientos cercanos a la fecha de respuesta
+      let fechaMinima: Date;
+      if (ultimaReversion) {
+        // Buscar movimientos creados DESPUÉS de la última reversión
+        fechaMinima = new Date(ultimaReversion.fecha_movimiento);
+        logger.info(`Se encontró una reversión previa. Buscando movimientos de egreso después de ${fechaMinima.toISOString()}`);
+      } else {
+        // Buscar movimientos en un rango cercano a la fecha de respuesta
+        fechaMinima = new Date(fechaReferencia);
+        fechaMinima.setDate(fechaMinima.getDate() - 1);
+        fechaMinima.setHours(0, 0, 0, 0);
+        logger.info(`No se encontró reversión previa. Buscando movimientos de egreso desde ${fechaMinima.toISOString()}`);
+      }
+
+      // Fecha máxima: 1 día después de la fecha de referencia
+      const fechaMaxima = new Date(fechaReferencia);
+      fechaMaxima.setDate(fechaMaxima.getDate() + 1);
+      fechaMaxima.setHours(23, 59, 59, 999);
+
+      // Convertir a formato ISO sin timezone
+      const fechaMinimaStr = fechaMinima.toISOString().replace('Z', '');
+      const fechaMaximaStr = fechaMaxima.toISOString().replace('Z', '');
+
+      // Buscar cabeceras de movimientos de egreso (solicitudes aprobadas)
+      // Solo movimientos creados DESPUÉS de la última reversión (si existe)
+      const { data: cabecerasEgreso, error: cabecerasError } = await supabaseClient
         .from('movimiento_inventario_cabecera')
         .select('id_movimiento, fecha_movimiento, observaciones')
         .eq('id_solicitante', solicitud.usuario_id)
-        .ilike('observaciones', `%${solicitud.tipo_alimento}%`)
+        .ilike('observaciones', `%Solicitud aprobada%${solicitud.tipo_alimento}%`)
         .eq('estado_movimiento', 'completado')
-        .gte('fecha_movimiento', fechaInicioStr)
-        .lte('fecha_movimiento', fechaFinStr)
-        .order('fecha_movimiento', { ascending: false })
-        .limit(10); // Limitar a los 10 más recientes en el rango de tiempo
+        .gte('fecha_movimiento', fechaMinimaStr)
+        .lte('fecha_movimiento', fechaMaximaStr)
+        .order('fecha_movimiento', { ascending: false });
 
-      if (cabecerasError || !cabeceras || cabeceras.length === 0) {
-        logger.warn('No se encontraron cabeceras de movimiento para la solicitud', cabecerasError);
+      if (cabecerasError || !cabecerasEgreso || cabecerasEgreso.length === 0) {
+        logger.warn('No se encontraron cabeceras de movimiento de egreso para la solicitud', cabecerasError);
         return [];
       }
 
-      // Obtener los detalles de egreso de estas cabeceras
-      const idsMovimiento = cabeceras.map(c => c.id_movimiento);
+      // Obtener los detalles de egreso de las cabeceras encontradas
+      const idsMovimiento = cabecerasEgreso.map(c => c.id_movimiento);
       const { data: detalles, error: detallesError } = await supabaseClient
         .from('movimiento_inventario_detalle')
         .select('id_movimiento, id_producto, cantidad, tipo_transaccion, unidad_id, observacion_detalle')
         .in('id_movimiento', idsMovimiento)
         .eq('tipo_transaccion', 'egreso')
-        .ilike('observacion_detalle', `%${solicitud.tipo_alimento}%`);
+        .ilike('observacion_detalle', `%Entrega por solicitud aprobada%${solicitud.tipo_alimento}%`);
 
       if (detallesError || !detalles || detalles.length === 0) {
         logger.warn('No se encontraron detalles de egreso para la solicitud', detallesError);
         return [];
       }
 
+      // Agrupar por producto y sumar cantidades
+      const productosAgrupados = new Map<string, { cantidad: number; detalle: typeof detalles[0] }>();
+      
+      for (const detalle of detalles) {
+        const productoId = detalle.id_producto;
+        const cantidad = Number(detalle.cantidad);
+        
+        if (productosAgrupados.has(productoId)) {
+          productosAgrupados.get(productoId)!.cantidad += cantidad;
+        } else {
+          productosAgrupados.set(productoId, { cantidad, detalle });
+        }
+      }
+
       // Obtener información de los productos
-      const idsProducto = [...new Set(detalles.map(d => d.id_producto))];
+      const idsProducto = [...productosAgrupados.keys()];
       const { data: productos, error: productosError } = await supabaseClient
         .from('productos_donados')
         .select('id_producto, nombre_producto, unidad_id')
@@ -156,18 +198,18 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
 
       // Mapear detalles a InventarioDescontado
       const movimientos: InventarioDescontado[] = [];
-      for (const detalle of detalles) {
-        const producto = productos.find(p => p.id_producto === detalle.id_producto);
-        if (producto) {
-          movimientos.push({
-            producto: {
-              id_producto: producto.id_producto,
-              nombre_producto: producto.nombre_producto,
-              unidad_id: producto.unidad_id ?? undefined
-            },
-            cantidadEntregada: Number(detalle.cantidad)
-          });
-        }
+      for (const [productoId, info] of productosAgrupados.entries()) {
+        const producto = productos.find(p => p.id_producto === productoId);
+        if (!producto) continue;
+
+        movimientos.push({
+          producto: {
+            id_producto: producto.id_producto,
+            nombre_producto: producto.nombre_producto,
+            unidad_id: producto.unidad_id ?? undefined
+          },
+          cantidadEntregada: info.cantidad
+        });
       }
 
       logger.info(`Se encontraron ${movimientos.length} productos para restaurar`);
