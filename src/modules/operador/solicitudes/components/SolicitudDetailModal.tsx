@@ -20,6 +20,16 @@ import type {
   SolicitudEstado
 } from '../types';
 
+/**
+ * Formatea una cantidad numérica con máximo 2 decimales.
+ */
+const formatQuantity = (cantidad: number): string => {
+  if (Number.isInteger(cantidad)) {
+    return cantidad.toString();
+  }
+  return cantidad.toFixed(2).replace(/\.?0+$/, '');
+};
+
 interface SolicitudDetailModalProps {
   solicitud: Solicitud;
   comentarioAdmin: string;
@@ -159,7 +169,7 @@ const SolicitudDetailModal = ({
                             Depósito: {item.deposito}
                           </div>
                           <div className="text-sm text-gray-600">
-                            Disponible: <span className="font-medium">{item.cantidad_disponible} {unidad}</span>
+                            Disponible: <span className="font-medium">{formatQuantity(item.cantidad_disponible)} {unidad}</span>
                           </div>
                           {item.fecha_vencimiento && (
                             <div className="text-xs text-gray-500">
@@ -181,7 +191,7 @@ const SolicitudDetailModal = ({
                       <div>
                         <span className="text-gray-600">Total disponible: </span>
                         <span className={`font-semibold ${totalDisponible >= solicitud.cantidad ? 'text-green-600' : 'text-red-600'}`}>
-                          {totalDisponible} {solicitud.unidades?.simbolo ?? 'unidades'}
+                          {formatQuantity(totalDisponible)} {solicitud.unidades?.simbolo ?? 'unidades'}
                         </span>
                       </div>
                       <div className="mt-2">
@@ -193,7 +203,7 @@ const SolicitudDetailModal = ({
                         ) : (
                           <div className="flex items-center text-red-600 text-sm">
                             <XCircle className="w-4 h-4 mr-1" />
-                            Stock insuficiente ({totalDisponible} de {solicitud.cantidad} disponibles)
+                            Stock insuficiente ({formatQuantity(totalDisponible)} de {solicitud.cantidad} disponibles)
                           </div>
                         )}
                       </div>

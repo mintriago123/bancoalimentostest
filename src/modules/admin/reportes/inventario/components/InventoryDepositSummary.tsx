@@ -4,6 +4,7 @@
 
 import { Warehouse } from 'lucide-react';
 import type { Deposito, InventarioItem } from '../types';
+import { formatQuantity } from '../utils/formatters';
 
 interface InventoryDepositSummaryProps {
   depositos: Deposito[];
@@ -34,7 +35,7 @@ const InventoryDepositSummary = ({
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Total unidades</span>
-              <span className="text-sm font-medium text-gray-900">{totalUnidades}</span>
+              <span className="text-sm font-medium text-gray-900">{formatQuantity(totalUnidades)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Stock bajo</span>

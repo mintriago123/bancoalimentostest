@@ -14,7 +14,7 @@ import {
   FileText
 } from 'lucide-react';
 import type { InventarioItem } from '../types';
-import { determineStockLevel, formatDate } from '../utils/formatters';
+import { determineStockLevel, formatDate, formatQuantity } from '../utils/formatters';
 
 interface InventoryDetailModalProps {
   item: InventarioItem | null;
@@ -97,7 +97,7 @@ const InventoryDetailModal = ({ item, isOpen, onClose }: InventoryDetailModalPro
                 </div>
               </div>
               <div className={`text-3xl font-bold ${stockInfo.color}`}>
-                {item.cantidad_disponible}
+                {formatQuantity(item.cantidad_disponible)}
               </div>
             </div>
           </div>

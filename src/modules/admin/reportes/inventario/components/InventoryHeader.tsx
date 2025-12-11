@@ -5,6 +5,7 @@
 import { AlertTriangle, Gauge, Layers, PackageCheck, PackageMinus, PackagePlus } from 'lucide-react';
 import StatCard from '@/modules/admin/shared/components/StatCard';
 import type { InventarioStats } from '../types';
+import { formatQuantity } from '../utils/formatters';
 
 interface InventoryHeaderProps {
   stats: InventarioStats;
@@ -57,7 +58,7 @@ const InventoryHeader = ({ stats }: InventoryHeaderProps) => (
       />
       <StatCard
         label="Unidades totales"
-        value={stats.totalUnidades}
+        value={formatQuantity(stats.totalUnidades)}
         accent="blue"
         icon={<PackageMinus className="h-5 w-5" />}
         sublabel="Inventario acumulado"

@@ -14,6 +14,16 @@ import {
 } from 'lucide-react';
 import type { OperadorInventarioStats } from '../types';
 
+/**
+ * Formatea una cantidad numérica con máximo 2 decimales.
+ */
+const formatQuantity = (cantidad: number): string => {
+  if (Number.isInteger(cantidad)) {
+    return cantidad.toString();
+  }
+  return cantidad.toFixed(2).replace(/\.?0+$/, '');
+};
+
 interface OperadorInventoryStatsProps {
   stats: OperadorInventarioStats;
   isLoading?: boolean;
@@ -21,7 +31,7 @@ interface OperadorInventoryStatsProps {
 
 interface StatCardProps {
   title: string;
-  value: number;
+  value: number | string;
   icon: React.ReactNode;
   color: 'red' | 'yellow' | 'green' | 'blue' | 'orange';
   subtitle?: string;
@@ -71,7 +81,7 @@ const StatCard = ({ title, value, icon, color, subtitle, trend }: StatCardProps)
           <p className="text-sm font-medium text-gray-600">{title}</p>
           <div className="flex items-center space-x-2">
             <p className={`text-2xl font-bold ${styles.text}`}>
-              {value.toLocaleString()}
+              {typeof value === 'number' ? value.toLocaleString() : value}
             </p>
             {trend && (
               <div className={`${styles.text}`}>
@@ -135,7 +145,7 @@ const OperadorInventoryStats = ({ stats, isLoading = false }: OperadorInventoryS
           
           <StatCard
             title="Total de Unidades"
-            value={stats.totalUnidades}
+            value={formatQuantity(stats.totalUnidades)}
             icon={<CheckCircle className="w-6 h-6" />}
             color="green"
             subtitle="Unidades disponibles"

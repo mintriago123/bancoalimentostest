@@ -18,6 +18,16 @@ import {
 import type { InventarioItem } from '../types';
 import { formatLongDate } from '@/lib/dateUtils';
 
+/**
+ * Formatea una cantidad numérica con máximo 2 decimales.
+ */
+const formatQuantity = (cantidad: number): string => {
+  if (Number.isInteger(cantidad)) {
+    return cantidad.toString();
+  }
+  return cantidad.toFixed(2).replace(/\.?0+$/, '');
+};
+
 interface OperadorInventoryDetailModalProps {
   item: InventarioItem | null;
   isOpen: boolean;
@@ -156,7 +166,7 @@ const OperadorInventoryDetailModal = ({ item, isOpen, onClose }: OperadorInvento
                 </div>
               </div>
               <div className={`text-3xl font-bold ${stockInfo.color}`}>
-                {item.cantidad_disponible}
+                {formatQuantity(item.cantidad_disponible)}
               </div>
             </div>
           </div>
@@ -211,7 +221,7 @@ const OperadorInventoryDetailModal = ({ item, isOpen, onClose }: OperadorInvento
               <div>
                 <label className="text-sm font-medium text-gray-600">Cantidad Disponible</label>
                 <p className="text-2xl font-bold text-orange-600">
-                  {item.cantidad_disponible} {item.producto.unidad_simbolo || item.producto.unidad_medida || 'unidades'}
+                  {formatQuantity(item.cantidad_disponible)} {item.producto.unidad_simbolo || item.producto.unidad_medida || 'unidades'}
                 </p>
               </div>
             </div>
