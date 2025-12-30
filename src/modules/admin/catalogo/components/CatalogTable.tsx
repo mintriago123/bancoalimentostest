@@ -32,7 +32,9 @@ const CatalogTable = ({ foods, onEdit, onDelete }: CatalogTableProps) => {
               {foods.map(food => (
                 <tr key={food.id} className="transition-colors duration-150 hover:bg-slate-50">
                   <td className="px-6 py-4 text-sm font-semibold text-slate-800">{food.nombre}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{food.categoria}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {food.categoria || <span className="italic text-slate-400">Sin categoría</span>}
+                  </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2">
                       <button

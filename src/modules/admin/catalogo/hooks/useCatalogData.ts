@@ -23,7 +23,11 @@ const NORMALIZED_CATEGORIES = [
 ];
 
 const computeStats = (foods: FoodRecord[]): CatalogStats => {
-  const uniqueCategories = new Set(foods.map(food => food.categoria.trim().toLowerCase()));
+  const uniqueCategories = new Set(
+    foods
+      .filter(food => food.categoria)
+      .map(food => food.categoria.trim().toLowerCase())
+  );
   return {
     totalAlimentos: foods.length,
     totalCategorias: uniqueCategories.size
@@ -37,7 +41,9 @@ const applyFilters = (foods: FoodRecord[], filters: CatalogFilters): FoodRecord[
     const matchesSearch = term ? food.nombre.toLowerCase().includes(term) : true;
     const matchesCategory = filters.category === 'todos'
       ? true
-      : food.categoria.toLowerCase() === filters.category.toLowerCase();
+      : food.categoria 
+        ? food.categoria.toLowerCase() === filters.category.toLowerCase()
+        : filters.category === 'Sin categoría';
 
     return matchesSearch && matchesCategory;
   });
@@ -159,10 +165,82 @@ export const useCatalogData = (supabaseClient: SupabaseClient) => {
   }, []);
 
   const categories = useMemo(() => {
-    const dynamicCategories = Array.from(new Set(foods.map(food => food.categoria.trim())));
+    const dynamicCategories = Array.from(
+      new Set(
+        foods
+          .filter(food => food.categoria)
+          .map(food => food.categoria.trim())
+      )
+    );
     const combined = new Set([...NORMALIZED_CATEGORIES, ...dynamicCategories]);
-    return ['todos', ...Array.from(combined)];
+    
+    // Verificar si hay alimentos sin categoría
+    const hasFoodWithoutCategory = foods.some(food => !food.categoria);
+    const categoriesArray = ['todos', ...Array.from(combined)];
+    
+    if (hasFoodWithoutCategory) {
+      categoriesArray.push('Sin categoría');
+    }
+    
+    return categoriesArray;
   }, [foods]);
+
+  const categoriesWithCount = useMemo(() => {
+    const categoryCounts = new Map<string, number>();
+    
+    // Contar alimentos por categoría (solo las que tienen alimentos)
+    foods.forEach(food => {
+      if (food.categoria) {
+        const cat = food.categoria.trim();
+        categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
+      }
+    });
+
+    // Convertir a array de objetos, solo incluir categorías que tienen alimentos
+    return Array.from(categoryCounts.entries())
+      .map(([nombre, cantidad]) => ({
+        nombre,
+        cantidad
+      }))
+      .filter(cat => cat.cantidad > 0);
+  }, [foods]);
+
+  const deleteCategory = useCallback(async (categoryName: string) => {
+    try {
+      // Si la categoría es "Sin categoría", no hacer nada
+      if (categoryName === 'Sin categoría') {
+        return {
+          success: false,
+          error: 'No se puede eliminar la categoría "Sin categoría"'
+        };
+      }
+
+      // Eliminar todos los alimentos de esta categoría
+      const { error } = await supabaseClient
+        .from('alimentos')
+        .delete()
+        .eq('categoria', categoryName);
+
+      if (error) {
+        return {
+          success: false,
+          error: 'No fue posible eliminar la categoría y sus alimentos',
+          errorDetails: error
+        };
+      }
+
+      // Recargar los alimentos para actualizar la lista
+      await loadFoods();
+
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: 'Error inesperado al eliminar la categoría',
+        errorDetails: err
+      };
+    }
+  }, [supabaseClient, loadFoods]);
 
   return {
     foods,
@@ -170,6 +248,7 @@ export const useCatalogData = (supabaseClient: SupabaseClient) => {
     stats,
     filters,
     categories,
+    categoriesWithCount,
     unidades,
     loading,
     loadingUnidades,
@@ -180,6 +259,7 @@ export const useCatalogData = (supabaseClient: SupabaseClient) => {
     createFood,
     updateFood,
     deleteFood,
-    checkFoodUsage
+    checkFoodUsage,
+    deleteCategory
   };
 };

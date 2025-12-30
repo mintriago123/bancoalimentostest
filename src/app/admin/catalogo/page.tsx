@@ -7,8 +7,10 @@ import { useToast } from '@/modules/shared';
 import CatalogHeader from '@/modules/admin/catalogo/components/CatalogHeader';
 import CatalogFilters from '@/modules/admin/catalogo/components/CatalogFilters';
 import CatalogTable from '@/modules/admin/catalogo/components/CatalogTable';
+import CategoriesSection from '@/modules/admin/catalogo/components/CategoriesSection';
 import FoodModal from '@/modules/admin/catalogo/components/FoodModal';
 import DeleteConfirmModal from '@/modules/admin/catalogo/components/DeleteConfirmModal';
+import CategoryDeleteModal from '@/modules/admin/catalogo/components/CategoryDeleteModal';
 import { useCatalogData } from '@/modules/admin/catalogo/hooks/useCatalogData';
 import type { FoodFormValues, FoodRecord } from '@/modules/admin/catalogo/types';
 import { Plus } from 'lucide-react';
@@ -22,6 +24,7 @@ export default function AdminCatalogPage() {
     stats,
     filters,
     categories,
+    categoriesWithCount,
     unidades,
     loading,
     loadingUnidades,
@@ -32,7 +35,8 @@ export default function AdminCatalogPage() {
     createFood,
     updateFood,
     deleteFood,
-    checkFoodUsage
+    checkFoodUsage,
+    deleteCategory
   } = useCatalogData(supabase);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -40,6 +44,8 @@ export default function AdminCatalogPage() {
   const [selectedFood, setSelectedFood] = useState<FoodRecord | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [usageInfo, setUsageInfo] = useState<{ totalDonaciones: number; totalProductos: number } | null>(null);
+  const [categoryDeleteOpen, setCategoryDeleteOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<{ nombre: string; cantidad: number } | null>(null);
 
   const openCreateModal = () => {
     setSelectedFood(null);
@@ -126,6 +132,28 @@ export default function AdminCatalogPage() {
     }
   };
 
+  const openCategoryDeleteModal = (categoryName: string) => {
+    const categoryData = categoriesWithCount.find(cat => cat.nombre === categoryName);
+    if (categoryData) {
+      setSelectedCategory(categoryData);
+      setCategoryDeleteOpen(true);
+    }
+  };
+
+  const handleCategoryDelete = async () => {
+    if (!selectedCategory) return;
+
+    const result = await deleteCategory(selectedCategory.nombre);
+
+    if (result.success) {
+      showSuccess('Categoría eliminada correctamente');
+      setCategoryDeleteOpen(false);
+      setSelectedCategory(null);
+    } else {
+      showError(result.error ?? 'No fue posible eliminar la categoría');
+    }
+  };
+
   return (
     <DashboardLayout
       requiredRole="ADMINISTRADOR"
@@ -170,11 +198,18 @@ export default function AdminCatalogPage() {
             })}
           </div>
         ) : (
-          <CatalogTable
-            foods={filteredFoods}
-            onEdit={openEditModal}
-            onDelete={openDeleteModal}
-          />
+          <>
+            <CatalogTable
+              foods={filteredFoods}
+              onEdit={openEditModal}
+              onDelete={openDeleteModal}
+            />
+            
+            <CategoriesSection
+              categories={categoriesWithCount}
+              onDeleteCategory={openCategoryDeleteModal}
+            />
+          </>
         )}
       </div>
 
@@ -194,6 +229,17 @@ export default function AdminCatalogPage() {
         usageInfo={usageInfo}
         onClose={() => setDeleteOpen(false)}
         onConfirm={handleDelete}
+      />
+
+      <CategoryDeleteModal
+        open={categoryDeleteOpen}
+        categoryName={selectedCategory?.nombre}
+        foodCount={selectedCategory?.cantidad}
+        onClose={() => {
+          setCategoryDeleteOpen(false);
+          setSelectedCategory(null);
+        }}
+        onConfirm={handleCategoryDelete}
       />
 
       <div className="fixed top-4 right-4 z-50 space-y-2">
