@@ -2,7 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { RUTAS_PUBLICAS } from '@/lib/constantes';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const supabaseResponse = NextResponse.next({
     request,
   });
