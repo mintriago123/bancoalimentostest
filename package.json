@@ -15,13 +15,13 @@
     "@types/mapbox-gl": "^3.4.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
+    "exceljs": "^4.4.0",
     "lucide-react": "^0.525.0",
     "mapbox-gl": "^3.13.0",
     "next": "^16.0.8",
-    "nodemailer": "^6.9.15",
+    "nodemailer": "^7.0.12",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "xlsx": "^0.18.5"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

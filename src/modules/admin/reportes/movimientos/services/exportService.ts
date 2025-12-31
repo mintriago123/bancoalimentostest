@@ -7,6 +7,7 @@
  * @version 1.0.0
  */
 
+import ExcelJS from 'exceljs';
 import type { 
   MovementItem, 
   MovementSummary, 
@@ -81,28 +82,42 @@ export class ExportService {
         filtersCount: filterDescriptions.length
       });
 
-      // Importación dinámica de XLSX para reducir bundle size
-      const XLSXModule = await import('xlsx');
-      const XLSX = XLSXModule.default || XLSXModule;
+      // Crear libro de trabajo con ExcelJS
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'Banco de Alimentos';
+      workbook.created = new Date();
+      
+      // Crear hoja de trabajo
+      const worksheet = workbook.addWorksheet(EXPORT_CONFIG.worksheetName);
 
       // Construir estructura del reporte
       const workbookData = this.buildWorkbookStructure(data, summary, filterDescriptions, lastUpdate);
       
-      // Crear hoja de trabajo
-      const worksheet = XLSX.utils.aoa_to_sheet(workbookData.rows);
+      // Agregar filas al worksheet
+      workbookData.rows.forEach(row => {
+        worksheet.addRow(row);
+      });
       
       // Aplicar configuración de columnas y filas
       this.configureWorksheetLayout(worksheet, workbookData);
       
       // Aplicar estilos
-      this.applyWorksheetStyles();
+      this.applyWorksheetStyles(worksheet, workbookData);
       
-      // Crear libro de trabajo y exportar
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, EXPORT_CONFIG.worksheetName);
-      
+      // Generar archivo
       const filename = generateExportFilename(EXPORT_CONFIG.filePrefix, EXPORT_CONFIG.fileExtension);
-      XLSX.writeFile(workbook, filename, { compression: EXPORT_CONFIG.compression });
+      const buffer = await workbook.xlsx.writeBuffer();
+      
+      // Crear blob y descargar
+      const blob = new Blob([buffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      window.URL.revokeObjectURL(url);
 
       exportLogger.info('Exportación completada exitosamente', { filename });
 
@@ -392,35 +407,93 @@ export class ExportService {
   /**
    * Configura el layout de la hoja de trabajo (columnas, filas, etc.)
    */
-  private configureWorksheetLayout(worksheet: Record<string, unknown>, workbookData: Record<string, unknown>) {
+  private configureWorksheetLayout(worksheet: ExcelJS.Worksheet, workbookData: Record<string, unknown>) {
     // Configurar anchos de columna
-    worksheet['!cols'] = EXPORT_COLUMN_WIDTHS.map(width => ({ wch: width }));
-
-    const rows = workbookData.rows as unknown[][];
+    worksheet.columns = EXPORT_COLUMN_WIDTHS.map((width, index) => ({
+      width: width,
+      key: `col${index + 1}`
+    }));
 
     // Configurar alturas de fila básicas
-    worksheet['!rows'] = rows.map(() => ({ hpt: EXCEL_ROW_HEIGHTS.default }));
+    worksheet.eachRow((row) => {
+      row.height = EXCEL_ROW_HEIGHTS.default;
+    });
 
     // Configurar fusiones de celdas
     const merges = workbookData.merges as WorksheetMerge[];
-    if (merges.length > 0) {
-      worksheet['!merges'] = merges;
+    if (merges && merges.length > 0) {
+      merges.forEach(merge => {
+        worksheet.mergeCells(
+          merge.s.r + 1, // ExcelJS usa índices basados en 1
+          merge.s.c + 1,
+          merge.e.r + 1,
+          merge.e.c + 1
+        );
+      });
     }
 
     exportLogger.info('Layout de hoja de trabajo configurado');
   }
 
   /**
-   * Aplica estilos profesionales a la hoja de trabajo
-   * Nota: Para estilos avanzados se requieren librerías adicionales como xlsx-style
+   * Aplica estilos profesionales a la hoja de trabajo con ExcelJS
    */
-  private applyWorksheetStyles(): void {
-    // Esta es una implementación simplificada
-    // En un escenario real, se aplicarían estilos detallados usando librerías especializadas
+  private applyWorksheetStyles(worksheet: ExcelJS.Worksheet, workbookData: Record<string, unknown>): void {
     exportLogger.info('Aplicando estilos al documento Excel');
     
-    // Los estilos complejos requerirían librerías adicionales como xlsx-style
-    // Por simplicidad, mantenemos la funcionalidad básica aquí
+    const sections = workbookData.sections as Record<string, { tableHeaderRowIndex?: number; [key: string]: unknown }>;
+    
+    // Aplicar estilos a encabezados de tabla
+    if (sections?.table?.tableHeaderRowIndex !== undefined) {
+      const headerRowIndex = sections.table.tableHeaderRowIndex + 1; // ExcelJS usa índices basados en 1
+      const headerRow = worksheet.getRow(headerRowIndex);
+      
+      headerRow.eachCell((cell) => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF4472C4' }
+        };
+        cell.font = {
+          bold: true,
+          color: { argb: 'FFFFFFFF' },
+          size: 11
+        };
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: 'center'
+        };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+    }
+    
+    // Aplicar estilos alternados a las filas de datos
+    const dataRowInfo = workbookData.dataRowInfo as DataRowInfo[];
+    if (dataRowInfo && dataRowInfo.length > 0) {
+      dataRowInfo.forEach((rowInfo, index) => {
+        const row = worksheet.getRow(rowInfo.index + 1);
+        const isEven = index % 2 === 0;
+        
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: isEven ? 'FFF2F2F2' : 'FFFFFFFF' }
+          };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+            left: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+            bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+            right: { style: 'thin', color: { argb: 'FFD0D0D0' } }
+          };
+        });
+      });
+    }
   }
 }
 
