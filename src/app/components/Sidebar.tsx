@@ -343,16 +343,16 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Overlay para dispositivos móviles cuando está expandido */}
+      {/* Overlay transparente para cerrar el sidebar al hacer clic fuera en móvil */}
       {!isCollapsed && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+          className="fixed inset-0 z-30 md:hidden"
           onClick={() => setIsCollapsed(true)}
           aria-label="Cerrar sidebar"
         />
       )}
       
-      <div className={`fixed left-0 top-0 h-full bg-gradient-to-b from-white to-gray-50 shadow-xl border-r border-gray-200 transition-all duration-300 flex flex-col z-40 ${
+      <div className={`fixed left-0 top-0 h-full bg-gradient-to-b from-white to-gray-50 shadow-2xl border-r border-gray-200 transition-all duration-300 flex flex-col z-40 ${
         isCollapsed ? '-translate-x-full md:translate-x-0 md:w-16' : 'translate-x-0 w-64'
       }`}>
       {/* Header del Sidebar con Avatar */}
