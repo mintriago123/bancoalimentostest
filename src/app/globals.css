@@ -383,3 +383,66 @@ body {
 * {
   transition: font-size 0.2s ease-in-out;
 }
+
+/* =================================================================== */
+/* UTILIDADES RESPONSIVE */
+/* =================================================================== */
+
+/* Prevenir scroll horizontal en móviles */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Asegurar que las tablas sean responsive */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Espaciado responsive */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Mejoras para touch en dispositivos móviles */
+@media (hover: none) and (pointer: coarse) {
+  button, a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Ocultar scrollbar en algunos elementos en móvil */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Asegurar que las imágenes sean responsive */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Texto truncado responsive */
+.truncate-2-lines {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.truncate-3-lines {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
