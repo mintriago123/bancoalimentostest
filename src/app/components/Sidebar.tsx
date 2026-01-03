@@ -215,8 +215,11 @@ export default function Sidebar({
   // En dispositivos móviles, empezar contraído
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 768 && !externalSetIsCollapsed) {
-        setInternalIsCollapsed(true);
+      if (window.innerWidth < 768) {
+        // En móvil, siempre empezar cerrado
+        if (!externalSetIsCollapsed) {
+          setInternalIsCollapsed(true);
+        }
       }
     };
 
@@ -340,35 +343,34 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Overlay para dispositivos móviles cuando está expandido */}
+      {/* Overlay transparente para cerrar el sidebar al hacer clic fuera en móvil */}
       {!isCollapsed && (
-        <button 
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden cursor-default"
+        <div 
+          className="fixed inset-0 z-30 md:hidden"
           onClick={() => setIsCollapsed(true)}
           aria-label="Cerrar sidebar"
-          type="button"
         />
       )}
       
-      <div className={`fixed left-0 top-0 h-full bg-gradient-to-b from-white to-gray-50 shadow-xl border-r border-gray-200 transition-all duration-300 flex flex-col z-40 ${
-        isCollapsed ? 'w-16' : 'w-64 md:w-64'
-      } ${!isCollapsed ? 'translate-x-0' : 'md:translate-x-0'}`}>
+      <div className={`fixed left-0 top-0 h-full bg-gradient-to-b from-white to-gray-50 shadow-2xl border-r border-gray-200 transition-all duration-300 flex flex-col z-40 ${
+        isCollapsed ? '-translate-x-full md:translate-x-0 md:w-16' : 'translate-x-0 w-64'
+      }`}>
       {/* Header del Sidebar con Avatar */}
-      <div className="p-4 border-b border-gray-100 bg-white">
+      <div className="p-3 sm:p-4 border-b border-gray-100 bg-white">
         {!isCollapsed ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3 flex-1 min-w-0">
+              <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
                 {/* Avatar con iniciales */}
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-md ${getAvatarColor()}`}>
+                <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold shadow-md flex-shrink-0 ${getAvatarColor()}`}>
                   {getUserInitials(userName)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-sm font-semibold text-gray-900 truncate">
+                  <h2 className="text-xs sm:text-sm font-semibold text-gray-900 truncate">
                     {userName}
                   </h2>
                   <p className={`text-xs font-medium ${
-                    isAdmin ? 'text-red-600' : isDonante ? 'text-green-600' : 'text-blue-600'
+                    isAdmin ? 'text-red-600' : isDonante ? 'text-green-600' : isOperador ? 'text-orange-600' : 'text-blue-600'
                   }`}>
                     {getRoleLabel()}
                   </p>
@@ -422,6 +424,7 @@ export default function Sidebar({
               <div className="mt-2 space-y-1 bg-gray-50 rounded-lg p-2">
                 <button
                   onClick={() => {
+                    setIsCollapsed(true);
                     if (isAdmin) {
                       router.push('/admin/perfil');
                     } else if (isOperador) {
@@ -439,6 +442,7 @@ export default function Sidebar({
                 </button>
                 <button
                   onClick={() => {
+                    setIsCollapsed(true);
                     if (isAdmin) {
                       router.push('/admin/configuracion');
                     } else if (isOperador) {
@@ -487,29 +491,33 @@ export default function Sidebar({
                       if (hasSubItems && !isCollapsed) {
                         toggleSubMenu(item.name);
                       } else {
+                        // En móvil, cerrar el sidebar después de navegar
+                        if (window.innerWidth < 768) {
+                          setIsCollapsed(true);
+                        }
                         router.push(item.href);
                       }
                     }}
-                    className={`w-full flex items-center px-3 py-2.5 text-left rounded-lg transition-all duration-200 group ${
+                    className={`w-full flex items-center px-2 sm:px-3 py-2 sm:py-2.5 text-left rounded-lg transition-all duration-200 group ${
                       getActiveStyles(isItemActive)
                     }`}
                     title={isCollapsed ? item.name : undefined}
                   >
-                    <Icon className={`w-5 h-5 ${isCollapsed ? 'mx-auto' : 'mr-3'} ${
+                    <Icon className={`w-5 h-5 ${isCollapsed ? 'mx-auto' : 'mr-2 sm:mr-3'} flex-shrink-0 ${
                       getIconStyles(isItemActive)
                     }`} />
                     {!isCollapsed && (
                       <>
                         <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium">{item.name}</span>
+                          <span className="text-xs sm:text-sm font-medium">{item.name}</span>
                           {item.description && (
-                            <p className="text-xs text-gray-500 mt-0.5 truncate">
+                            <p className="text-xs text-gray-500 mt-0.5 truncate hidden sm:block">
                               {item.description}
                             </p>
                           )}
                         </div>
                         {hasSubItems && (
-                          <div className="ml-2 transition-transform duration-200">
+                          <div className="ml-2 transition-transform duration-200 flex-shrink-0">
                             {isSubMenuOpenState ? (
                               <ChevronUpIcon className="w-4 h-4 text-gray-500" />
                             ) : (
@@ -523,24 +531,30 @@ export default function Sidebar({
 
                   {/* Submenú */}
                   {hasSubItems && !isCollapsed && isSubMenuOpenState && (
-                    <div className="mt-1 ml-8 space-y-1 border-l-2 border-gray-100 pl-3">
+                    <div className="mt-1 ml-4 sm:ml-8 space-y-1 border-l-2 border-gray-100 pl-2 sm:pl-3">
                       {item.subItems!.map((subItem) => {
                         const isSubActive = isActiveRoute(subItem.href);
                         
                         return (
                           <button
                             key={subItem.name}
-                            onClick={() => router.push(subItem.href)}
-                            className={`w-full flex items-start px-3 py-2 text-left rounded-md transition-all duration-200 group ${
+                            onClick={() => {
+                              // En móvil, cerrar el sidebar después de navegar
+                              if (window.innerWidth < 768) {
+                                setIsCollapsed(true);
+                              }
+                              router.push(subItem.href);
+                            }}
+                            className={`w-full flex items-start px-2 sm:px-3 py-2 text-left rounded-md transition-all duration-200 group ${
                               isSubActive 
                                 ? 'bg-gray-100 text-gray-900 border border-gray-200' 
                                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                             }`}
                           >
                             <div className="flex-1 min-w-0">
-                              <span className="text-sm font-medium">{subItem.name}</span>
+                              <span className="text-xs sm:text-sm font-medium">{subItem.name}</span>
                               {subItem.description && (
-                                <p className="text-xs text-gray-500 mt-0.5">
+                                <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">
                                   {subItem.description}
                                 </p>
                               )}

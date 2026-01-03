@@ -88,11 +88,11 @@ function FormularioIniciarSesion() {
 
   return (
     <>
-      <div className="mb-8 text-center">
-        <h2 className="text-3xl font-extrabold tracking-tight text-gray-900">
+      <div className="mb-6 sm:mb-8 text-center">
+        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">
           Bienvenido de Vuelta
         </h2>
-        <p className="mt-2 text-sm text-gray-700">
+        <p className="mt-2 text-xs sm:text-sm text-gray-700">
           ¿No tienes una cuenta?{' '}
           <Link
             href={AUTH_CONSTANTS.RUTAS.REGISTRAR}

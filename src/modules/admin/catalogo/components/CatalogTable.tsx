@@ -23,35 +23,40 @@ const CatalogTable = ({ foods, onEdit, onDelete }: CatalogTableProps) => {
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Categoría</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Acciones</th>
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Nombre</th>
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 hidden sm:table-cell">Categoría</th>
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Acciones</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-100">
               {foods.map(food => (
                 <tr key={food.id} className="transition-colors duration-150 hover:bg-slate-50">
-                  <td className="px-6 py-4 text-sm font-semibold text-slate-800">{food.nombre}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
+                  <td className="px-3 sm:px-4 lg:px-6 py-4">
+                    <div className="text-sm font-semibold text-slate-800">{food.nombre}</div>
+                    <div className="sm:hidden text-xs text-slate-600 mt-1">
+                      {food.categoria || <span className="italic text-slate-400">Sin categoría</span>}
+                    </div>
+                  </td>
+                  <td className="px-3 sm:px-4 lg:px-6 py-4 text-sm text-slate-600 hidden sm:table-cell">
                     {food.categoria || <span className="italic text-slate-400">Sin categoría</span>}
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-2">
+                  <td className="px-3 sm:px-4 lg:px-6 py-4">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <button
                         type="button"
                         onClick={() => onEdit(food)}
-                        className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 px-3 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-50"
+                        className="inline-flex items-center justify-center gap-1 sm:gap-2 rounded-lg border border-indigo-200 px-2 sm:px-3 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-50 whitespace-nowrap"
                       >
-                        <Pencil className="h-4 w-4" />
-                        Editar
+                        <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Editar</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => onDelete(food)}
-                        className="inline-flex items-center gap-2 rounded-lg border border-rose-200 px-3 py-1 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50"
+                        className="inline-flex items-center justify-center gap-1 sm:gap-2 rounded-lg border border-rose-200 px-2 sm:px-3 py-1 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 whitespace-nowrap"
                       >
-                        <Trash2 className="h-4 w-4" />
-                        Eliminar
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Eliminar</span>
                       </button>
                     </div>
                   </td>

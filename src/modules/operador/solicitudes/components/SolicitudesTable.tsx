@@ -45,7 +45,7 @@ const SolicitudesTable = ({
   const renderAcciones = (solicitud: Solicitud) => {
     const isProcessing = processingId === solicitud.id;
 
-    const baseButtonClasses = 'text-white p-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
+    const baseButtonClasses = 'text-white p-1.5 sm:p-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
 
     // Solo solicitudes pendientes tienen botones de acción
     if (solicitud.estado === 'pendiente') {
@@ -58,7 +58,7 @@ const SolicitudesTable = ({
             title="Ver detalles"
             disabled={isProcessing}
           >
-            <FileText className="w-4 h-4" />
+            <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
           </button>
           <button
             type="button"
@@ -67,7 +67,7 @@ const SolicitudesTable = ({
             title="Aprobar (se descontará del inventario)"
             disabled={isProcessing}
           >
-            <CheckCircle className="w-4 h-4" />
+            <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
           </button>
           <button
             type="button"
@@ -76,7 +76,7 @@ const SolicitudesTable = ({
             title="Rechazar"
             disabled={isProcessing}
           >
-            <XCircle className="w-4 h-4" />
+            <XCircle className="w-3 h-3 sm:w-4 sm:h-4" />
           </button>
         </>
       );
@@ -93,10 +93,10 @@ const SolicitudesTable = ({
             title="Ver detalles"
             disabled={isProcessing}
           >
-            <FileText className="w-4 h-4" />
+            <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
           </button>
-          <span className="text-green-600 px-2 py-1 rounded border border-green-200 bg-green-50 text-xs">
-            ✓ Descontado de inventario
+          <span className="text-green-600 px-1.5 sm:px-2 py-1 rounded border border-green-200 bg-green-50 text-xs whitespace-nowrap">
+            ✓ Descontado
           </span>
         </>
       );
@@ -111,7 +111,7 @@ const SolicitudesTable = ({
         title="Ver detalles"
         disabled={isProcessing}
       >
-        <FileText className="w-4 h-4" />
+        <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
       </button>
     );
   };
@@ -147,19 +147,19 @@ const SolicitudesTable = ({
           <table className="min-w-full">
             <thead className="sticky top-0 z-10 bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Solicitante
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Solicitud
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
                   Fecha
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acciones
                 </th>
               </tr>
@@ -167,34 +167,39 @@ const SolicitudesTable = ({
             <tbody className="bg-white divide-y divide-gray-200">
               {solicitudes.map(solicitud => (
                 <tr key={solicitud.id} className="transition-colors duration-150 hover:bg-slate-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                          <User className="w-5 h-5 text-gray-500" />
+                  <td className="px-3 sm:px-4 lg:px-6 py-4">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="flex-shrink-0 hidden sm:block">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                          <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
                         </div>
                       </div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-gray-900 truncate">
                           {solicitud.usuarios?.nombre ?? 'Sin nombre'}
                         </div>
-                        <div className="text-sm text-gray-500 flex items-center space-x-2">
-                          <span>{solicitud.usuarios?.cedula ?? 'Sin cédula'}</span>
+                        <div className="text-xs sm:text-sm text-gray-500 flex flex-col sm:flex-row sm:items-center sm:space-x-2">
+                          <span className="truncate">{solicitud.usuarios?.cedula ?? 'Sin cédula'}</span>
                           {solicitud.usuarios?.tipo_persona && (
-                            <span className="px-2 py-1 bg-gray-100 rounded text-xs">
+                            <span className="px-1.5 py-0.5 bg-gray-100 rounded text-xs inline-block mt-1 sm:mt-0">
                               {solicitud.usuarios.tipo_persona}
                             </span>
                           )}
                         </div>
+                        {/* Mostrar fecha en móviles */}
+                        <div className="md:hidden text-xs text-gray-500 mt-1 flex items-center">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          {formatDate(solicitud.created_at)}
+                        </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 sm:px-4 lg:px-6 py-4">
                     <div>
                       <div className="text-sm font-medium text-gray-900">
                         {solicitud.tipo_alimento}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-xs sm:text-sm text-gray-500">
                         Cantidad: {solicitud.cantidad} {solicitud.unidades?.simbolo ?? 'unidades'}
                       </div>
                       {solicitud.latitud && solicitud.longitud && (
@@ -205,27 +210,27 @@ const SolicitudesTable = ({
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-4 lg:px-6 py-4 whitespace-nowrap hidden md:table-cell">
                     <div className="flex items-center text-sm text-gray-500">
                       <Calendar className="w-4 h-4 mr-2" />
                       {formatDate(solicitud.created_at)}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      {estadoIcons[solicitud.estado]}
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${badgeStyles[solicitud.estado]}`}>
+                  <td className="px-3 sm:px-4 lg:px-6 py-4">
+                    <div className="flex items-center space-x-1 sm:space-x-2">
+                      <span className="hidden sm:inline">{estadoIcons[solicitud.estado]}</span>
+                      <span className={`inline-flex px-1.5 sm:px-2 py-1 text-xs font-semibold rounded-full border ${badgeStyles[solicitud.estado]}`}>
                         {solicitud.estado}
                       </span>
                     </div>
                     {solicitud.fecha_respuesta && (
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-gray-500 mt-1 hidden lg:block">
                         Respuesta: {formatDate(solicitud.fecha_respuesta)}
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex space-x-2">
+                  <td className="px-3 sm:px-4 lg:px-6 py-4">
+                    <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-2">
                       {renderAcciones(solicitud)}
                     </div>
                   </td>

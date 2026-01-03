@@ -23,30 +23,30 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
         <div className="text-center">
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight">
             Nutriendo vidas, <br className="hidden md:block" />
             <span className="bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
               Optimizando recursos
             </span>
           </h1>
 
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-12 leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-8 sm:mb-10 lg:mb-12 leading-relaxed px-4">
             Recolectamos alimentos que serán distribuidos entre quienes más lo necesitan. Únete a nuestra misión y sé
             parte de este gran cambio social.
           </p>
 
-          <div className="flex flex-col sm:flex-row justify-center gap-4 mb-16">
-            <Link href="/auth/registrar?rol=DONANTE">
-              <button className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-8 py-4 rounded-md text-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300">
-                <Heart className="w-5 h-5 mr-2" />
+          <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 mb-12 sm:mb-14 lg:mb-16 px-4">
+            <Link href="/auth/registrar?rol=DONANTE" className="w-full sm:w-auto">
+              <button className="w-full sm:w-auto inline-flex items-center justify-center rounded-md text-sm sm:text-base lg:text-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background bg-primary text-primary-foreground hover:bg-primary/90 h-11 sm:h-12 px-6 sm:px-8 py-3 sm:py-4 rounded-md bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300">
+                <Heart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Registrarse
               </button>
             </Link>
-            <Link href="/auth/iniciar-sesion">
-              <button className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background border border-input hover:bg-accent hover:text-accent-foreground h-11 px-8 py-4 rounded-md text-lg border-2 border-blue-600 text-blue-700 hover:bg-blue-50 bg-transparent">
-                <User className="w-5 h-5 mr-2" />
+            <Link href="/auth/iniciar-sesion" className="w-full sm:w-auto">
+              <button className="w-full sm:w-auto inline-flex items-center justify-center rounded-md text-sm sm:text-base lg:text-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background border border-input hover:bg-accent hover:text-accent-foreground h-11 sm:h-12 px-6 sm:px-8 py-3 sm:py-4 rounded-md border-2 border-blue-600 text-blue-700 hover:bg-blue-50 bg-transparent">
+                <User className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Iniciar sesión
               </button>
             </Link>
@@ -55,26 +55,26 @@ export default function HomePage() {
       </main>
 
       {/* Statistics */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-blue-700 text-white relative overflow-hidden">
+      <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-r from-blue-600 to-blue-700 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('/placeholder.svg?height=100&width=100')] opacity-10"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 text-center p-8 hover:bg-white/20 transition-all duration-300 rounded-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 text-center p-6 sm:p-8 hover:bg-white/20 transition-all duration-300 rounded-lg">
               <div className="p-0">
-                <p className="text-5xl font-bold mb-2">1.3B</p>
-                <p className="text-lg text-blue-100">Toneladas de alimentos se desperdician anualmente</p>
+                <p className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">1.3B</p>
+                <p className="text-sm sm:text-base lg:text-lg text-blue-100">Toneladas de alimentos se desperdician anualmente</p>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 text-center p-8 hover:bg-white/20 transition-all duration-300 rounded-lg">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 text-center p-6 sm:p-8 hover:bg-white/20 transition-all duration-300 rounded-lg">
               <div className="p-0">
-                <p className="text-5xl font-bold mb-2">800M</p>
-                <p className="text-lg text-blue-100">Personas pasan hambre en el mundo</p>
+                <p className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">800M</p>
+                <p className="text-sm sm:text-base lg:text-lg text-blue-100">Personas pasan hambre en el mundo</p>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 text-center p-8 hover:bg-white/20 transition-all duration-300 rounded-lg">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 text-center p-6 sm:p-8 hover:bg-white/20 transition-all duration-300 rounded-lg sm:col-span-2 md:col-span-1">
               <div className="p-0">
-                <p className="text-5xl font-bold mb-2">10K+</p>
-                <p className="text-lg text-blue-100">Familias ayudadas mensualmente</p>
+                <p className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">10K+</p>
+                <p className="text-sm sm:text-base lg:text-lg text-blue-100">Familias ayudadas mensualmente</p>
               </div>
             </div>
           </div>
@@ -82,47 +82,47 @@ export default function HomePage() {
       </section>
 
 {/* How it works */}
-      <section className="py-20 bg-white">
+      <section className="py-12 sm:py-16 lg:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">¿Cómo funciona nuestro banco de alimentos?</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <div className="text-center mb-10 sm:mb-12 lg:mb-16">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 px-4">¿Cómo funciona nuestro banco de alimentos?</h2>
+            <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto px-4">
               Un proceso simple y efectivo para maximizar el impacto social
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-8 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
+            <div className="text-center p-6 sm:p-8 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg">
               <div className="p-0">
-                <div className="mx-auto h-20 w-20 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center mb-6">
-                  <Package className="h-10 w-10 text-green-600" />
+                <div className="mx-auto h-16 w-16 sm:h-20 sm:w-20 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
+                  <Package className="h-8 w-8 sm:h-10 sm:w-10 text-green-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Recolección</h3>
-                <p className="text-gray-600 leading-relaxed">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">Recolección</h3>
+                <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                   Recogemos alimentos excedentes de supermercados, restaurantes y productores locales.
                 </p>
               </div>
             </div>
 
-            <div className="text-center p-8 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg">
+            <div className="text-center p-6 sm:p-8 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg">
               <div className="p-0">
-                <div className="mx-auto h-20 w-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mb-6">
-                  <Users className="h-10 w-10 text-blue-600" />
+                <div className="mx-auto h-16 w-16 sm:h-20 sm:w-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
+                  <Users className="h-8 w-8 sm:h-10 sm:w-10 text-blue-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Clasificación</h3>
-                <p className="text-gray-600 leading-relaxed">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">Clasificación</h3>
+                <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                   Nuestros voluntarios clasifican y almacenan los alimentos siguiendo estrictos protocolos de calidad.
                 </p>
               </div>
             </div>
 
-            <div className="text-center p-8 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg">
+            <div className="text-center p-6 sm:p-8 hover:shadow-xl transition-all duration-300 rounded-lg border-0 shadow-lg sm:col-span-2 md:col-span-1">
               <div className="p-0">
-                <div className="mx-auto h-20 w-20 bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl flex items-center justify-center mb-6">
-                  <Truck className="h-10 w-10 text-orange-600" />
+                <div className="mx-auto h-16 w-16 sm:h-20 sm:w-20 bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
+                  <Truck className="h-8 w-8 sm:h-10 sm:w-10 text-orange-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Distribución</h3>
-                <p className="text-gray-600 leading-relaxed">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">Distribución</h3>
+                <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                   Entregamos los alimentos a organizaciones benéficas y familias que más lo necesitan.
                 </p>
               </div>
@@ -140,24 +140,24 @@ export default function HomePage() {
 
 
       {/* Footer */}
-      <footer className="bg-gradient-to-br from-gray-800 to-gray-900 text-white py-16">
+      <footer className="bg-gradient-to-br from-gray-800 to-gray-900 text-white py-10 sm:py-12 lg:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-            <div className="md:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mb-8 sm:mb-10 lg:mb-12">
+            <div className="sm:col-span-2">
               <div className="flex items-center space-x-2 mb-4">
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                   <Heart className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-xl font-bold">Banco de Alimentos Solidarios</h3>
+                <h3 className="text-lg sm:text-xl font-bold">Banco de Alimentos Solidarios</h3>
               </div>
           
           
               <div className="flex items-center space-x-4">
                 <Link
                   href="/contribuyentes"
-                  className="inline-flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors duration-300"
+                  className="inline-flex items-center px-3 sm:px-4 py-2 text-sm sm:text-base bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors duration-300"
                 >
-                  <Users className="w-5 h-5 mr-2" />
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                   Ver Contribuyentes
                 </Link>
               </div>
@@ -165,7 +165,7 @@ export default function HomePage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold mb-4">Participa</h3>
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Participa</h3>
               <ul className="space-y-3">
                 <li>
                   <Link href="/donar" className="text-gray-300 hover:text-blue-400 transition-colors duration-300">
