@@ -37,12 +37,12 @@ export default function OperadorDashboardPage() {
       title="Panel de Operador"
       description="Gestión diaria de solicitudes, donaciones e inventario"
     >
-      <div className="p-6 space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header con botón de actualizar */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Panel de Operador</h1>
-            <p className="mt-1 text-sm text-gray-600">
+        <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="hidden lg:block">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Panel de Operador</h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-600">
               Vista general de las operaciones del día
             </p>
           </div>
@@ -51,13 +51,13 @@ export default function OperadorDashboardPage() {
             type="button"
             onClick={refresh}
             disabled={loading}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+            className={`inline-flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
               loading
                 ? 'cursor-not-allowed bg-gray-200 text-gray-400'
                 : 'bg-orange-600 text-white shadow-sm hover:bg-orange-700 focus:ring-orange-500'
             }`}
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} />
             Actualizar datos
           </button>
         </div>

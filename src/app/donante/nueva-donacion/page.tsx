@@ -471,22 +471,22 @@ export default function NuevaDonacionPage() {
   return (
     <DashboardLayout>
       <div className="flex flex-col min-h-screen bg-gray-50">
-        <main className="flex-grow flex items-center justify-center p-4">
-          <div className="bg-white shadow-xl rounded-2xl p-8 max-w-2xl w-full">
+        <main className="flex-grow flex items-center justify-center p-3 sm:p-4 md:p-6">
+          <div className="bg-white shadow-xl rounded-2xl p-4 sm:p-6 md:p-8 max-w-2xl w-full">
             {mensaje && (
-              <div className={`p-4 mb-6 rounded-lg text-white ${
+              <div className={`p-3 sm:p-4 mb-4 sm:mb-6 rounded-lg text-white text-sm sm:text-base ${
                 mensaje.includes('exitosa') ? 'bg-green-500' : 'bg-red-500'
               }`}>
                 {mensaje}
               </div>
             )}
             {mensajeValidacion && (
-              <div className="p-4 mb-6 rounded-lg text-white bg-yellow-500">
+              <div className="p-3 sm:p-4 mb-4 sm:mb-6 rounded-lg text-white bg-yellow-500 text-sm sm:text-base">
                 {mensajeValidacion}
               </div>
             )}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
-              <h1 className="text-xl sm:text-2xl font-extrabold text-blue-700">Nueva Donación</h1>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 gap-3 sm:gap-4">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-blue-700">Nueva Donación</h1>
               <StepIndicator
                 currentStep={pasoActual}
                 totalSteps={3}
@@ -509,8 +509,8 @@ export default function NuevaDonacionPage() {
           </div>
         </main>
 
-        <footer className="bg-white shadow-sm p-4 mt-8">
-          <div className="max-w-4xl mx-auto text-center text-gray-500 text-sm">
+        <footer className="bg-white shadow-sm p-3 sm:p-4 mt-6 sm:mt-8">
+          <div className="max-w-4xl mx-auto text-center text-gray-500 text-xs sm:text-sm">
             &copy; {new Date().getFullYear()} Banco de Alimentos. Todos los derechos reservados.
           </div>
         </footer>

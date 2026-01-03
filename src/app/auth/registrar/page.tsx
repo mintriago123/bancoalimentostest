@@ -70,7 +70,7 @@ export default function PaginaRegistroSimple() {
 
   return (
     <form className="space-y-4 max-w-md mx-auto" onSubmit={manejarEnvio}>
-      <h2 className="text-2xl font-bold text-center">Registro</h2>
+      <h2 className="text-xl sm:text-2xl font-bold text-center">Registro</h2>
 
       <RoleSelector
         rolSeleccionado={rolSeleccionado}
