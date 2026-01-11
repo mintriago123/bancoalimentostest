@@ -61,15 +61,21 @@ export function useSolicitudes(
   }, [fetchSolicitudes]);
 
   const createSolicitud = async (data: SolicitudFormData): Promise<boolean> => {
-    if (!usuarioId) return false;
+    if (!usuarioId) {
+      console.error('[useSolicitudes] No hay usuarioId');
+      return false;
+    }
 
+    console.log('[useSolicitudes] Creando solicitud con datos:', data);
     const { error: createError } = await service.createSolicitud(usuarioId, data);
 
     if (createError) {
+      console.error('[useSolicitudes] Error al crear solicitud:', createError);
       setError(MESSAGES.SOLICITUD.ERROR_CREATE);
       return false;
     }
 
+    console.log('[useSolicitudes] Solicitud creada correctamente');
     await fetchSolicitudes();
     return true;
   };

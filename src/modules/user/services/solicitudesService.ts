@@ -47,19 +47,38 @@ export class SolicitudesService {
     solicitudData: SolicitudFormData
   ): Promise<{ data: Solicitud | null; error: any }> {
     try {
+      console.log('[SolicitudesService] Intentando crear solicitud:', {
+        usuarioId,
+        solicitudData
+      });
+
+      const insertData = {
+        usuario_id: usuarioId,
+        tipo_alimento: solicitudData.tipo_alimento,
+        cantidad: solicitudData.cantidad,
+        unidad_id: solicitudData.unidad_id,
+        comentarios: solicitudData.comentarios || null,
+        latitud: solicitudData.latitud || null,
+        longitud: solicitudData.longitud || null,
+      };
+
+      console.log('[SolicitudesService] Datos a insertar:', insertData);
+
       const { data, error } = await this.supabase
         .from('solicitudes')
-        .insert([
-          {
-            usuario_id: usuarioId,
-            ...solicitudData,
-          },
-        ])
+        .insert(insertData)
         .select()
         .single();
 
+      if (error) {
+        console.error('[SolicitudesService] Error al crear solicitud:', error);
+      } else {
+        console.log('[SolicitudesService] Solicitud creada exitosamente:', data);
+      }
+
       return { data, error };
     } catch (error) {
+      console.error('[SolicitudesService] Exception al crear solicitud:', error);
       return { data: null, error };
     }
   }
