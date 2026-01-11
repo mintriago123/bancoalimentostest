@@ -32,6 +32,19 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
     try {
       logger.info(`Actualizando estado de solicitud ${solicitud.id} a ${nuevoEstado}`);
 
+      // Validar stock disponible antes de aprobar
+      if (nuevoEstado === 'aprobada' && solicitud.estado === 'pendiente') {
+        const validacionStock = await validarStockDisponible(solicitud);
+        if (!validacionStock.suficiente) {
+          logger.warn(`Stock insuficiente para aprobar solicitud ${solicitud.id}`, validacionStock);
+          return {
+            success: false,
+            error: `No hay suficiente inventario disponible. Solicitado: ${solicitud.cantidad} ${solicitud.unidades?.simbolo ?? 'unidades'}, Disponible: ${validacionStock.disponible} ${solicitud.unidades?.simbolo ?? 'unidades'}`,
+            errorDetails: validacionStock
+          };
+        }
+      }
+
       const { error: updateError } = await supabaseClient
         .from('solicitudes')
         .update({
@@ -535,6 +548,62 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         success: false,
         error: 'Error inesperado al revertir la solicitud',
         errorDetails: err
+      };
+    }
+  };
+
+  /**
+   * Valida si hay suficiente stock disponible para satisfacer una solicitud.
+   * Considera conversiones de unidades si es necesario.
+   */
+  const validarStockDisponible = async (solicitud: Solicitud): Promise<{ suficiente: boolean; disponible: number; solicitado: number }> => {
+    try {
+      const productosCoincidentes = await buscarProductosCoincidentes(solicitud.tipo_alimento);
+
+      if (!productosCoincidentes || productosCoincidentes.length === 0) {
+        return {
+          suficiente: false,
+          disponible: 0,
+          solicitado: solicitud.cantidad
+        };
+      }
+
+      let totalDisponible = 0;
+
+      for (const producto of productosCoincidentes) {
+        const { data, error } = await supabaseClient
+          .from('inventario')
+          .select('cantidad_disponible')
+          .eq('id_producto', producto.id_producto)
+          .gt('cantidad_disponible', 0);
+
+        if (error || !data) continue;
+
+        const stockProducto = data.reduce((sum, item) => sum + (item.cantidad_disponible ?? 0), 0);
+
+        // Aplicar conversión de unidades si es necesario
+        let stockConvertido = stockProducto;
+        if (producto.unidad_id && solicitud.unidad_id && producto.unidad_id !== solicitud.unidad_id) {
+          const factorConversion = await obtenerFactorConversion(producto.unidad_id, solicitud.unidad_id);
+          if (factorConversion !== null) {
+            stockConvertido = stockProducto * factorConversion;
+          }
+        }
+
+        totalDisponible += stockConvertido;
+      }
+
+      return {
+        suficiente: totalDisponible >= solicitud.cantidad,
+        disponible: totalDisponible,
+        solicitado: solicitud.cantidad
+      };
+    } catch (error) {
+      logger.error('Error validando stock disponible', error);
+      return {
+        suficiente: false,
+        disponible: 0,
+        solicitado: solicitud.cantidad
       };
     }
   };

@@ -266,7 +266,8 @@ const SolicitudDetailModal = ({
                     type="button"
                     onClick={onAprobar}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={isProcessing}
+                    disabled={isProcessing || inventarioLoading || totalDisponible < solicitud.cantidad}
+                    title={totalDisponible < solicitud.cantidad ? 'Stock insuficiente para aprobar esta solicitud' : ''}
                   >
                     <CheckCircle className="w-4 h-4" />
                     <span>Aprobar Solicitud</span>
