@@ -48,12 +48,6 @@ export default function MisSolicitudesPage() {
   };
 
   const handleEditar = async (id: number, data: SolicitudEditData): Promise<boolean> => {
-    if (data.cantidad <= 0) {
-      setMensaje(MESSAGES.VALIDATION.CANTIDAD_INVALID);
-      setTimeout(() => setMensaje(''), 3000);
-      return false;
-    }
-
     const success = await updateSolicitud(id, data);
     
     if (success) {

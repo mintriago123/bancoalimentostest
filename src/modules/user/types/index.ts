@@ -29,7 +29,6 @@ export interface SolicitudFormData {
 }
 
 export interface SolicitudEditData {
-  cantidad: number;
   comentarios: string;
 }
 

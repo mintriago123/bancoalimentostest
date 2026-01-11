@@ -39,7 +39,6 @@ export function SolicitudCard({
   const { formatDateTime } = useDateFormatter();
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [formEdit, setFormEdit] = useState<SolicitudEditData>({
-    cantidad: solicitud.cantidad,
     comentarios: solicitud.comentarios || '',
   });
   const [loadingEdit, setLoadingEdit] = useState(false);
@@ -60,21 +59,16 @@ export function SolicitudCard({
   const handleEditar = () => {
     setEditandoId(solicitud.id);
     setFormEdit({
-      cantidad: solicitud.cantidad,
       comentarios: solicitud.comentarios || '',
     });
   };
 
   const handleCancelarEdicion = () => {
     setEditandoId(null);
-    setFormEdit({ cantidad: 0, comentarios: '' });
+    setFormEdit({ comentarios: '' });
   };
 
   const handleGuardar = async () => {
-    if (formEdit.cantidad <= 0) {
-      return;
-    }
-
     setLoadingEdit(true);
     const success = await onEdit(solicitud.id, formEdit);
 
@@ -136,21 +130,9 @@ export function SolicitudCard({
       {/* Cantidad */}
       <div className="flex items-center gap-2 text-sm text-gray-700">
         <Hash className="w-4 h-4" />
-        {editandoId === solicitud.id ? (
-          <input
-            type="number"
-            min={1}
-            value={formEdit.cantidad}
-            onChange={(e) =>
-              setFormEdit((f) => ({ ...f, cantidad: Number(e.target.value) }))
-            }
-            className="w-24 p-1 border rounded"
-          />
-        ) : (
-          <p>
-            <strong>Cantidad:</strong> {solicitud.cantidad}
-          </p>
-        )}
+        <p>
+          <strong>Cantidad:</strong> {solicitud.cantidad}
+        </p>
       </div>
 
       {/* Comentarios */}
