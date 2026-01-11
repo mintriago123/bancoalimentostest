@@ -153,6 +153,30 @@ export default function OperadorSolicitudesPage() {
     return true;
   }, [updateEstado, refetch, showError, showSuccess, showWarning, confirm, loadInventario, resetInventario]);
 
+  const handleMarcarEntregada = useCallback(async (solicitud: Solicitud) => {
+    const confirmed = await confirm({
+      title: `Marcar como entregada`,
+      description: `¿Estás seguro de marcar esta solicitud como entregada? Esta acción NO se puede revertir.`,
+      confirmLabel: 'Marcar como entregada',
+      cancelLabel: 'Cancelar',
+      variant: 'warning'
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    const result = await updateEstado(solicitud, 'entregada');
+
+    if (!result.success) {
+      showError(result.message);
+      return;
+    }
+
+    showSuccess('Solicitud marcada como entregada exitosamente');
+    await refetch();
+  }, [updateEstado, refetch, showError, showSuccess, confirm]);
+
   const handleOpenModal = useCallback((solicitud: Solicitud) => {
     setSolicitudSeleccionada(solicitud);
     setComentarioAdmin(solicitud.comentario_admin ?? '');
@@ -200,6 +224,7 @@ export default function OperadorSolicitudesPage() {
         totalSolicitudes={totalSolicitudes}
         onVerDetalle={handleOpenModal}
         onActualizarEstado={(solicitud, estado) => handleEstadoChange(solicitud, estado)}
+        onMarcarEntregada={handleMarcarEntregada}
         estadoIcons={estadoIcons}
         badgeStyles={badgeStyles}
         formatDate={formatDateTime}
@@ -216,6 +241,7 @@ export default function OperadorSolicitudesPage() {
     totalSolicitudes,
     handleOpenModal,
     handleEstadoChange,
+    handleMarcarEntregada,
     estadoIcons,
     badgeStyles,
     processingId,

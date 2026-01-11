@@ -20,7 +20,7 @@ interface SolicitudesTableProps {
   totalSolicitudes: number;
   onVerDetalle: (solicitud: Solicitud) => void;
   onActualizarEstado: (solicitud: Solicitud, nuevoEstado: 'aprobada' | 'rechazada') => void;
-  onRevertir: (solicitud: Solicitud) => void;
+  onRevertir?: (solicitud: Solicitud) => void;
   onMarcarEntregada?: (solicitud: Solicitud) => void;
   estadoIcons: Record<SolicitudEstado, JSX.Element>;
   badgeStyles: Record<SolicitudEstado, string>;
@@ -113,15 +113,17 @@ const SolicitudesTable = ({
               <Package className="w-4 h-4" />
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => onRevertir(solicitud)}
-            className={`bg-yellow-600 hover:bg-yellow-700 ${baseButtonClasses}`}
-            title="Revertir a pendiente"
-            disabled={isProcessing}
-          >
-            <Clock className="w-4 h-4" />
-          </button>
+          {onRevertir && (
+            <button
+              type="button"
+              onClick={() => onRevertir(solicitud)}
+              className={`bg-yellow-600 hover:bg-yellow-700 ${baseButtonClasses}`}
+              title="Revertir a pendiente"
+              disabled={isProcessing}
+            >
+              <Clock className="w-4 h-4" />
+            </button>
+          )}
         </>
       );
     }
@@ -156,15 +158,17 @@ const SolicitudesTable = ({
         >
           <FileText className="w-4 h-4" />
         </button>
-        <button
-          type="button"
-          onClick={() => onRevertir(solicitud)}
-          className={`bg-yellow-600 hover:bg-yellow-700 ${baseButtonClasses}`}
-          title="Revertir a pendiente"
-          disabled={isProcessing}
-        >
-          <Clock className="w-4 h-4" />
-        </button>
+        {onRevertir && (
+          <button
+            type="button"
+            onClick={() => onRevertir(solicitud)}
+            className={`bg-yellow-600 hover:bg-yellow-700 ${baseButtonClasses}`}
+            title="Revertir a pendiente"
+            disabled={isProcessing}
+          >
+            <Clock className="w-4 h-4" />
+          </button>
+        )}
       </>
     );
   };

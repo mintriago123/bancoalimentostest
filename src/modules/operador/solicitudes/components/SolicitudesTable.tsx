@@ -6,8 +6,10 @@ import type { JSX } from 'react';
 import {
   Calendar,
   CheckCircle,
+  Clock,
   FileText,
   MapPin,
+  Package,
   User,
   XCircle
 } from 'lucide-react';
@@ -18,6 +20,7 @@ interface SolicitudesTableProps {
   totalSolicitudes: number;
   onVerDetalle: (solicitud: Solicitud) => void;
   onActualizarEstado: (solicitud: Solicitud, nuevoEstado: 'aprobada' | 'rechazada') => void;
+  onMarcarEntregada?: (solicitud: Solicitud) => void;
   estadoIcons: Record<SolicitudEstado, JSX.Element>;
   badgeStyles: Record<SolicitudEstado, string>;
   formatDate: (value?: string | null) => string;
@@ -33,6 +36,7 @@ const SolicitudesTable = ({
   totalSolicitudes,
   onVerDetalle,
   onActualizarEstado,
+  onMarcarEntregada,
   estadoIcons,
   badgeStyles,
   formatDate,
@@ -82,7 +86,7 @@ const SolicitudesTable = ({
       );
     }
 
-    // Para solicitudes aprobadas, solo mostrar detalle y estado
+    // Para solicitudes aprobadas, mostrar detalle, estado y botón de marcar como entregada
     if (solicitud.estado === 'aprobada') {
       return (
         <>
@@ -97,6 +101,37 @@ const SolicitudesTable = ({
           </button>
           <span className="text-green-600 px-1.5 sm:px-2 py-1 rounded border border-green-200 bg-green-50 text-xs whitespace-nowrap">
             ✓ Descontado
+          </span>
+          {onMarcarEntregada && (
+            <button
+              type="button"
+              onClick={() => onMarcarEntregada(solicitud)}
+              className={`bg-blue-600 hover:bg-blue-700 ${baseButtonClasses}`}
+              title="Marcar como entregada"
+              disabled={isProcessing}
+            >
+              <Package className="w-3 h-3 sm:w-4 sm:h-4" />
+            </button>
+          )}
+        </>
+      );
+    }
+
+    // Para solicitudes entregadas, solo mostrar detalle
+    if (solicitud.estado === 'entregada') {
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => onVerDetalle(solicitud)}
+            className={`bg-blue-600 hover:bg-blue-700 ${baseButtonClasses}`}
+            title="Ver detalles"
+            disabled={isProcessing}
+          >
+            <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+          </button>
+          <span className="text-blue-600 px-1.5 sm:px-2 py-1 rounded border border-blue-200 bg-blue-50 text-xs whitespace-nowrap">
+            ✓ Entregada
           </span>
         </>
       );
