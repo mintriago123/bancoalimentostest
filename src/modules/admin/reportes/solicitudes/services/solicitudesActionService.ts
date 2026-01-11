@@ -26,7 +26,7 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
 
   const updateSolicitudEstado = async (
     solicitud: Solicitud,
-    nuevoEstado: 'aprobada' | 'rechazada',
+    nuevoEstado: 'aprobada' | 'rechazada' | 'entregada',
     comentarioAdmin?: string
   ): Promise<ServiceResult<SolicitudActionResponse>> => {
     try {
@@ -75,6 +75,18 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
             success: true,
             message: mensaje,
             warning: resultadoInventario.error || resultadoInventario.noStock || resultadoInventario.cantidadRestante > 0
+          }
+        };
+      }
+
+      if (nuevoEstado === 'entregada') {
+        await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin);
+        return {
+          success: true,
+          data: {
+            success: true,
+            message: 'Solicitud marcada como entregada exitosamente',
+            warning: false
           }
         };
       }
@@ -479,6 +491,14 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
       // Verificar que la solicitud esté en estado 'aprobada'
       if (solicitud.estado !== 'aprobada') {
         logger.warn(`Intento de revertir solicitud que no está aprobada. Estado actual: ${solicitud.estado}`);
+        
+        if (solicitud.estado === 'entregada') {
+          return {
+            success: false,
+            error: 'No se pueden revertir solicitudes que ya fueron entregadas. Este cambio es permanente.'
+          };
+        }
+        
         return {
           success: false,
           error: 'Solo se pueden revertir solicitudes que estén en estado aprobada'
@@ -636,19 +656,24 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
 
   const notificarCambioEstado = async (
     solicitud: Solicitud,
-    nuevoEstado: 'aprobada' | 'rechazada',
+    nuevoEstado: 'aprobada' | 'rechazada' | 'entregada',
     mensajeInventario?: string,
     comentarioAdmin?: string
   ) => {
-    const titulo =
-      nuevoEstado === 'aprobada'
-        ? 'Tu solicitud ha sido aprobada'
-        : 'Tu solicitud ha sido rechazada';
+    const titulo = (() => {
+      if (nuevoEstado === 'aprobada') return 'Tu solicitud ha sido aprobada';
+      if (nuevoEstado === 'entregada') return 'Tu solicitud ha sido entregada';
+      return 'Tu solicitud ha sido rechazada';
+    })();
 
     const mensaje = (() => {
       if (nuevoEstado === 'aprobada') {
         if (mensajeInventario) return mensajeInventario;
         return `Tu solicitud de ${solicitud.cantidad} ${solicitud.unidades?.simbolo ?? ''} de ${solicitud.tipo_alimento} ha sido aprobada.`;
+      }
+
+      if (nuevoEstado === 'entregada') {
+        return `Tu solicitud de ${solicitud.cantidad} ${solicitud.unidades?.simbolo ?? ''} de ${solicitud.tipo_alimento} ha sido entregada. ¡Gracias!`;
       }
 
       if (comentarioAdmin && comentarioAdmin.trim().length > 0) {
@@ -662,7 +687,7 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
       titulo,
       mensaje,
       categoria: 'solicitud',
-      tipo: nuevoEstado === 'aprobada' ? 'success' : 'warning',
+      tipo: nuevoEstado === 'aprobada' || nuevoEstado === 'entregada' ? 'success' : 'warning',
       destinatarioId: solicitud.usuario_id,
       urlAccion: '/user/solicitudes',
       metadatos: {

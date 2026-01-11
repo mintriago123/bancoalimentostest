@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { CheckCircle, Clock, XCircle } from 'lucide-react';
+import { CheckCircle, Clock, XCircle, Package } from 'lucide-react';
 import { SolicitudEstado, SolicitudFilters } from '../types';
 
 export const INITIAL_FILTERS: SolicitudFilters = {
@@ -12,26 +12,30 @@ export const INITIAL_FILTERS: SolicitudFilters = {
     todos: true,
     pendiente: false,
     aprobada: false,
-    rechazada: false
+    rechazada: false,
+    entregada: false
   }
 };
 
 export const ESTADO_BADGE_STYLES: Record<SolicitudEstado, string> = {
   pendiente: 'bg-yellow-100 text-yellow-800 border-yellow-200',
   aprobada: 'bg-green-100 text-green-800 border-green-200',
-  rechazada: 'bg-red-100 text-red-800 border-red-200'
+  rechazada: 'bg-red-100 text-red-800 border-red-200',
+  entregada: 'bg-blue-100 text-blue-800 border-blue-200'
 };
 
 export const ESTADO_ICONS: Record<SolicitudEstado, React.ReactElement> = {
   pendiente: React.createElement(Clock, { className: 'w-4 h-4' }),
   aprobada: React.createElement(CheckCircle, { className: 'w-4 h-4' }),
-  rechazada: React.createElement(XCircle, { className: 'w-4 h-4' })
+  rechazada: React.createElement(XCircle, { className: 'w-4 h-4' }),
+  entregada: React.createElement(Package, { className: 'w-4 h-4' })
 };
 
 export const ESTADO_LABELS: Record<SolicitudEstado, string> = {
   pendiente: 'Pendiente',
   aprobada: 'Aprobada',
-  rechazada: 'Rechazada'
+  rechazada: 'Rechazada',
+  entregada: 'Entregada'
 };
 
 export const SYSTEM_MESSAGES = {

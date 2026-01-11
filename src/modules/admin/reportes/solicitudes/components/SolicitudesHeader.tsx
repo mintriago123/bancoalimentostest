@@ -2,7 +2,7 @@
  * @fileoverview Encabezado con métricas principales de solicitudes.
  */
 
-import { Ban, CheckCircle, Clock, Inbox } from 'lucide-react';
+import { Ban, CheckCircle, Clock, Inbox, Package } from 'lucide-react';
 import StatCard from '@/modules/admin/shared/components/StatCard';
 import type { SolicitudCounters } from '../types';
 
@@ -26,7 +26,7 @@ const SolicitudesHeader = ({ counters }: SolicitudesHeaderProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
       <StatCard
         label="Solicitudes"
         value={counters.total}
@@ -47,6 +47,13 @@ const SolicitudesHeader = ({ counters }: SolicitudesHeaderProps) => (
         accent="green"
         icon={<CheckCircle className="h-5 w-5" />}
         sublabel="En proceso de entrega"
+      />
+      <StatCard
+        label="Entregadas"
+        value={counters.entregada}
+        accent="blue"
+        icon={<Package className="h-5 w-5" />}
+        sublabel="Completadas"
       />
       <StatCard
         label="Rechazadas"

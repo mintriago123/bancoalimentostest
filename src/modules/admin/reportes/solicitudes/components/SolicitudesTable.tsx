@@ -9,6 +9,7 @@ import {
   Clock,
   FileText,
   MapPin,
+  Package,
   User,
   XCircle
 } from 'lucide-react';
@@ -20,6 +21,7 @@ interface SolicitudesTableProps {
   onVerDetalle: (solicitud: Solicitud) => void;
   onActualizarEstado: (solicitud: Solicitud, nuevoEstado: 'aprobada' | 'rechazada') => void;
   onRevertir: (solicitud: Solicitud) => void;
+  onMarcarEntregada?: (solicitud: Solicitud) => void;
   estadoIcons: Record<SolicitudEstado, JSX.Element>;
   badgeStyles: Record<SolicitudEstado, string>;
   formatDate: (value?: string | null) => string;
@@ -36,6 +38,7 @@ const SolicitudesTable = ({
   onVerDetalle,
   onActualizarEstado,
   onRevertir,
+  onMarcarEntregada,
   estadoIcons,
   badgeStyles,
   formatDate,
@@ -99,6 +102,17 @@ const SolicitudesTable = ({
           <span className="text-green-600 px-2 py-1 rounded border border-green-200 bg-green-50 text-xs">
             ✓ Descontado de inventario
           </span>
+          {onMarcarEntregada && (
+            <button
+              type="button"
+              onClick={() => onMarcarEntregada(solicitud)}
+              className={`bg-blue-600 hover:bg-blue-700 ${baseButtonClasses}`}
+              title="Marcar como entregada"
+              disabled={isProcessing}
+            >
+              <Package className="w-4 h-4" />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onRevertir(solicitud)}
@@ -108,6 +122,25 @@ const SolicitudesTable = ({
           >
             <Clock className="w-4 h-4" />
           </button>
+        </>
+      );
+    }
+
+    if (solicitud.estado === 'entregada') {
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => onVerDetalle(solicitud)}
+            className={`bg-blue-600 hover:bg-blue-700 ${baseButtonClasses}`}
+            title="Ver detalles"
+            disabled={isProcessing}
+          >
+            <FileText className="w-4 h-4" />
+          </button>
+          <span className="text-blue-600 px-2 py-1 rounded border border-blue-200 bg-blue-50 text-xs">
+            ✓ Entregada - No se puede revertir
+          </span>
         </>
       );
     }

@@ -11,7 +11,7 @@ import { SYSTEM_MESSAGES } from '../constants';
 interface UseSolicitudActionsResult {
   processingId?: string;
   lastError?: string;
-  updateEstado: (solicitud: Solicitud, nuevoEstado: 'aprobada' | 'rechazada', comentario?: string) => Promise<SolicitudActionResponse>;
+  updateEstado: (solicitud: Solicitud, nuevoEstado: 'aprobada' | 'rechazada' | 'entregada', comentario?: string) => Promise<SolicitudActionResponse>;
   revertir: (solicitudId: string) => Promise<SolicitudActionResponse>;
 }
 
@@ -24,7 +24,7 @@ export const useSolicitudActions = (supabaseClient: SupabaseClient): UseSolicitu
     [supabaseClient]
   );
 
-  const updateEstado = useCallback(async (solicitud: Solicitud, nuevoEstado: 'aprobada' | 'rechazada', comentario?: string) => {
+  const updateEstado = useCallback(async (solicitud: Solicitud, nuevoEstado: 'aprobada' | 'rechazada' | 'entregada', comentario?: string) => {
     setProcessingId(solicitud.id);
     setLastError(undefined);
 

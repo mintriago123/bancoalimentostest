@@ -57,6 +57,7 @@ export interface SolicitudCounters {
   pendiente: number;
   aprobada: number;
   rechazada: number;
+  entregada: number;
   total: number;
 }
 

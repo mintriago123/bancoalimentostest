@@ -66,7 +66,7 @@ const applyFilters = (solicitudes: Solicitud[], filters: SolicitudFilters) => {
   }
 
   if (!estados.todos) {
-    const estadosActivos = (['pendiente', 'aprobada', 'rechazada'] as SolicitudEstado[])
+    const estadosActivos = (['pendiente', 'aprobada', 'rechazada', 'entregada'] as SolicitudEstado[])
       .filter(estado => estados[estado]);
 
     if (estadosActivos.length > 0) {
@@ -88,6 +88,7 @@ const buildCounters = (solicitudes: Solicitud[]): SolicitudCounters => {
     pendiente: 0,
     aprobada: 0,
     rechazada: 0,
+    entregada: 0,
     total: 0
   });
 };

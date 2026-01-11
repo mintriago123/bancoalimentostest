@@ -2,7 +2,7 @@
  * @fileoverview Tipos compartidos para el módulo de reportes de solicitudes.
  */
 
-export type SolicitudEstado = 'pendiente' | 'aprobada' | 'rechazada';
+export type SolicitudEstado = 'pendiente' | 'aprobada' | 'rechazada' | 'entregada';
 
 export type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 
@@ -45,6 +45,7 @@ export interface SolicitudEstadoFilter {
   pendiente: boolean;
   aprobada: boolean;
   rechazada: boolean;
+  entregada: boolean;
 }
 
 export interface SolicitudFilters {
@@ -56,6 +57,7 @@ export interface SolicitudCounters {
   pendiente: number;
   aprobada: number;
   rechazada: number;
+  entregada: number;
   total: number;
 }
 
