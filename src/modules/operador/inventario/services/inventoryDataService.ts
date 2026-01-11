@@ -287,6 +287,40 @@ export const createOperadorInventoryDataService = (supabaseClient: SupabaseClien
         };
       }
 
+      // Obtener el item actual para calcular la diferencia
+      const { data: itemActual, error: fetchError } = await supabaseClient
+        .from('inventario')
+        .select(`
+          id_inventario,
+          cantidad_disponible,
+          id_producto,
+          productos:productos_donados!inventario_id_producto_fkey(
+            nombre_producto,
+            unidad_id
+          )
+        `)
+        .eq('id_inventario', idInventario)
+        .single();
+
+      if (fetchError || !itemActual) {
+        logger.error('Error obteniendo item actual', fetchError);
+        return {
+          success: false,
+          error: 'No se pudo obtener la información del inventario',
+          errorDetails: fetchError
+        };
+      }
+
+      const cantidadAnterior = itemActual.cantidad_disponible ?? 0;
+      const diferencia = nuevaCantidad - cantidadAnterior;
+
+      if (diferencia === 0) {
+        return {
+          success: true,
+          data: undefined
+        };
+      }
+
       const { error } = await supabaseClient
         .from('inventario')
         .update({
@@ -304,6 +338,30 @@ export const createOperadorInventoryDataService = (supabaseClient: SupabaseClien
         };
       }
 
+      // Registrar el movimiento con el operador como responsable
+      const movimientoResult = await registrarMovimientoOperador(
+        itemActual,
+        diferencia,
+        nuevaCantidad
+      );
+
+      if (!movimientoResult.success) {
+        // Si falla el registro del movimiento, revertir el cambio
+        await supabaseClient
+          .from('inventario')
+          .update({
+            cantidad_disponible: cantidadAnterior
+          })
+          .eq('id_inventario', idInventario);
+
+        logger.error('Movimiento no registrado, cambios revertidos');
+        return {
+          success: false,
+          error: 'No se pudo registrar el movimiento. Los cambios fueron revertidos.',
+          errorDetails: movimientoResult.errorDetails
+        };
+      }
+
       logger.info('Cantidad actualizada exitosamente', { idInventario, nuevaCantidad });
 
       return {
@@ -315,6 +373,95 @@ export const createOperadorInventoryDataService = (supabaseClient: SupabaseClien
       return {
         success: false,
         error: 'Error inesperado al actualizar cantidad',
+        errorDetails: error
+      };
+    }
+  };
+
+  /**
+   * Registrar movimiento de ajuste realizado por operador
+   */
+  const registrarMovimientoOperador = async (
+    item: any,
+    diferencia: number,
+    cantidadNueva: number
+  ): Promise<ServiceResult<void>> => {
+    try {
+      const { data: auth, error: authError } = await supabaseClient.auth.getUser();
+      if (authError || !auth?.user) {
+        logger.error('No se pudo obtener el usuario autenticado', authError);
+        return {
+          success: false,
+          error: 'No se pudo identificar al usuario operador',
+          errorDetails: authError
+        };
+      }
+
+      const operadorId = auth.user.id;
+      const producto = Array.isArray(item.productos) ? item.productos[0] : item.productos;
+      const nombreProducto = producto?.nombre_producto || 'Producto';
+      const tipoTransaccion = diferencia > 0 ? 'ingreso' : 'egreso';
+      const cantidadMovimiento = Math.abs(diferencia);
+
+      // Crear cabecera del movimiento con el operador como responsable
+      const { data: cabecera, error: cabeceraError } = await supabaseClient
+        .from('movimiento_inventario_cabecera')
+        .insert({
+          fecha_movimiento: new Date().toISOString(),
+          id_donante: operadorId,
+          id_solicitante: operadorId,
+          estado_movimiento: 'completado',
+          observaciones: `Ajuste manual de inventario por operador - ${nombreProducto} (${diferencia > 0 ? '+' : ''}${diferencia} unidades)`
+        })
+        .select('id_movimiento')
+        .single();
+
+      if (cabeceraError || !cabecera) {
+        logger.error('Error creando cabecera del movimiento', cabeceraError);
+        return {
+          success: false,
+          error: 'No se pudo crear el registro del movimiento',
+          errorDetails: cabeceraError
+        };
+      }
+
+      // Crear detalle del movimiento
+      const { error: detalleError } = await supabaseClient
+        .from('movimiento_inventario_detalle')
+        .insert({
+          id_movimiento: cabecera.id_movimiento,
+          id_producto: item.id_producto,
+          cantidad: cantidadMovimiento,
+          tipo_transaccion: tipoTransaccion,
+          rol_usuario: 'distribuidor',
+          observacion_detalle: `Ajuste manual de inventario por operador - ${tipoTransaccion === 'ingreso' ? 'Incremento' : 'Reducción'} de ${cantidadMovimiento} unidades. Stock actualizado a ${cantidadNueva}`,
+          unidad_id: producto?.unidad_id || null
+        });
+
+      if (detalleError) {
+        logger.error('Error creando detalle del movimiento', detalleError);
+        return {
+          success: false,
+          error: 'No se pudo registrar el detalle del movimiento',
+          errorDetails: detalleError
+        };
+      }
+
+      logger.info('Movimiento registrado exitosamente', { 
+        movimiento: cabecera.id_movimiento,
+        tipo: tipoTransaccion,
+        cantidad: cantidadMovimiento
+      });
+
+      return {
+        success: true,
+        data: undefined
+      };
+    } catch (error) {
+      logger.error('Excepción registrando movimiento', error);
+      return {
+        success: false,
+        error: 'Error inesperado al registrar el movimiento',
         errorDetails: error
       };
     }
