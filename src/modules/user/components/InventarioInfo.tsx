@@ -123,16 +123,6 @@ export function InventarioInfo({
                   </p>
                 </div>
               )}
-
-              {stockInfo.total_disponible > 0 && (
-                <button
-                  type="button"
-                  onClick={onUseMaxStock}
-                  className="text-xs text-blue-600 hover:text-blue-700 underline mt-2"
-                >
-                  Usar máximo disponible ({formatQuantity(stockInfo.total_disponible)} {stockInfo.unidad_simbolo || stockInfo.unidad_nombre || 'unidades'})
-                </button>
-              )}
             </>
           ) : (
             <div className="flex items-center text-amber-600 text-sm">

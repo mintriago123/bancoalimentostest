@@ -183,6 +183,13 @@ export default function FormularioSolicitante() {
       return;
     }
 
+    // Verificar que la ubicación esté disponible
+    if (!ubicacion || ubicacion.latitud === null || ubicacion.longitud === null) {
+      setMensaje("Debes compartir tu ubicación para enviar la solicitud. Por favor, permite el acceso a tu ubicación en el navegador.");
+      setLoading(false);
+      return;
+    }
+
     // Verificar stock disponible si hay información de inventario
     if (stockInfo && stockInfo.producto_encontrado && !isStockSufficient(cantidadNum)) {
       const cantidadDisponible = stockInfo.total_formateado
@@ -256,6 +263,23 @@ export default function FormularioSolicitante() {
                 ubicacion={ubicacion}
                 onUbicacionChange={manejarCambioUbicacion}
               />
+            )}
+
+            {/* Alerta de ubicación requerida */}
+            {!ubicacion && (
+              <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4 mb-6">
+                <div className="flex items-start">
+                  <AlertTriangle className="w-5 h-5 text-yellow-600 mr-3 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-semibold text-yellow-800 mb-1">
+                      Ubicación requerida
+                    </h4>
+                    <p className="text-sm text-yellow-700">
+                      Para enviar tu solicitud, debes compartir tu ubicación. Por favor, permite el acceso a tu ubicación en el navegador para continuar.
+                    </p>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Mensajes */}
@@ -334,6 +358,7 @@ export default function FormularioSolicitante() {
                 type="submit"
                 disabled={
                   loading ||
+                  !ubicacion ||
                   (!!cantidad &&
                     parseFloat(cantidad) > 0 &&
                     !!stockInfo &&
@@ -342,6 +367,7 @@ export default function FormularioSolicitante() {
                 }
                 className={`w-full flex items-center justify-center px-6 py-3 rounded-lg shadow-md transition-colors font-semibold ${
                   loading ||
+                  !ubicacion ||
                   (!!cantidad &&
                     parseFloat(cantidad) > 0 &&
                     !!stockInfo &&
@@ -353,6 +379,11 @@ export default function FormularioSolicitante() {
               >
                 {loading ? (
                   "Enviando Solicitud..."
+                ) : !ubicacion ? (
+                  <>
+                    <AlertTriangle className="w-5 h-5 mr-2" />
+                    Ubicación Requerida
+                  </>
                 ) : !!cantidad &&
                   parseFloat(cantidad) > 0 &&
                   !!stockInfo &&
