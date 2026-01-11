@@ -68,7 +68,8 @@ export function useIdentityValidation() {
 
     setConsultando(true);
     try {
-      const url = `${process.env.NEXT_PUBLIC_SERVICIO_CONSULTAS_DINARAP}?identificacion=${cedula}`;
+      // Usar endpoint proxy local para evitar problemas de Mixed Content
+      const url = `/api/proxy/consultar-cedula?identificacion=${cedula}`;
       const respuesta = await fetch(url, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
@@ -124,7 +125,8 @@ export function useIdentityValidation() {
 
     setConsultando(true);
     try {
-      const url = `${process.env.NEXT_PUBLIC_SERVICIO_CONSULTAS_RUC}?ruc=${ruc}`;
+      // Usar endpoint proxy local para evitar problemas de Mixed Content
+      const url = `/api/proxy/consultar-ruc?ruc=${ruc}`;
       const respuesta = await fetch(url, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
