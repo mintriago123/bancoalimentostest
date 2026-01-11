@@ -20,9 +20,9 @@ export async function proxy(request: NextRequest) {
       error = result.error;
     } catch (err: any) {
       // Suprimir logs de errores esperados (refresh token no encontrado)
-      // if (err?.code !== 'refresh_token_not_found') {
-      //   console.error('Error de autenticación en middleware:', err);
-      // }
+      if (err?.code !== 'refresh_token_not_found') {
+        console.error('Error de autenticación en middleware:', err);
+      }
       error = err;
     }
 
@@ -68,7 +68,7 @@ export async function proxy(request: NextRequest) {
         }
       } catch (error) {
         // Si hay error obteniendo el perfil, permitir acceso a auth
-        // console.error('Error obteniendo perfil en middleware:', error);
+        console.error('Error obteniendo perfil en middleware:', error);
         return supabaseResponse;
       }
     }
@@ -173,7 +173,7 @@ export async function proxy(request: NextRequest) {
         }
       } catch (error) {
         // Si hay error obteniendo el perfil, redirigir a login
-        // console.error('Error en middleware al verificar perfil:', error);
+        console.error('Error en middleware al verificar perfil:', error);
         const url = new URL('/auth/iniciar-sesion', request.url);
         return NextResponse.redirect(url);
       }
@@ -203,7 +203,7 @@ export async function proxy(request: NextRequest) {
             }
           }
         } catch (error) {
-          // console.error('Error verificando perfil en página principal:', error);
+          console.error('Error verificando perfil en página principal:', error);
         }
       }
       
@@ -214,9 +214,9 @@ export async function proxy(request: NextRequest) {
     return supabaseResponse;
   } catch (error: any) {
     // Suprimir logs de errores esperados
-    // if (error?.code !== 'refresh_token_not_found' && error?.code !== 'ECONNRESET') {
-    //   console.error('Error inesperado en middleware:', error);
-    // }
+    if (error?.code !== 'refresh_token_not_found' && error?.code !== 'ECONNRESET') {
+      console.error('Error inesperado en middleware:', error);
+    }
     // Si hay error, permitir el acceso y manejar la autenticación en el cliente
     return supabaseResponse;
   }
