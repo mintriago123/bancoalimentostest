@@ -27,6 +27,7 @@ interface UseOperadorInventoryDataResult {
   hasActiveFilters: boolean;
   refetch: () => Promise<void>;
   refetchAlertas: () => Promise<void>;
+  updateCantidad: (idInventario: string, nuevaCantidad: number) => Promise<boolean>;
   setSearch: (value: string) => void;
   setDeposito: (value: string) => void;
   setStockLevel: (value: OperadorInventarioFilters['stockLevel']) => void;
@@ -239,6 +240,16 @@ export const useOperadorInventoryData = (supabaseClient: SupabaseClient): UseOpe
     await loadAlertas();
   }, [loadAlertas]);
 
+  const updateCantidad = useCallback(async (idInventario: string, nuevaCantidad: number): Promise<boolean> => {
+    const result = await dataService.updateCantidad(idInventario, nuevaCantidad);
+    if (result.success) {
+      await refetch();
+      return true;
+    }
+    setErrorMessage(result.error);
+    return false;
+  }, [dataService, refetch]);
+
   return {
     inventario,
     filteredInventario,
@@ -251,6 +262,7 @@ export const useOperadorInventoryData = (supabaseClient: SupabaseClient): UseOpe
     hasActiveFilters,
     refetch,
     refetchAlertas,
+    updateCantidad,
     setSearch,
     setDeposito,
     setStockLevel,

@@ -41,6 +41,7 @@ export default function OperadorInventarioPage() {
     hasActiveFilters,
     refetch,
     refetchAlertas,
+    updateCantidad,
     setSearch,
     setDeposito,
     setStockLevel,
@@ -59,18 +60,19 @@ export default function OperadorInventarioPage() {
     setProcessingId(item.id_inventario);
     
     try {
-      // Aquí iría la llamada al servicio de actualización
-      // Por ahora solo simulamos la actualización
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const success = await updateCantidad(item.id_inventario, nuevaCantidad);
       
-      showSuccess(`Cantidad actualizada: ${item.producto.nombre_producto} - ${nuevaCantidad} unidades`);
-      await refetch();
+      if (success) {
+        showSuccess(`Cantidad actualizada: ${item.producto.nombre_producto} - ${nuevaCantidad} unidades`);
+      } else {
+        showError('Error al actualizar la cantidad');
+      }
     } catch (error) {
       showError('Error al actualizar la cantidad');
     } finally {
       setProcessingId(undefined);
     }
-  }, [refetch, showError, showSuccess]);
+  }, [updateCantidad, showError, showSuccess]);
 
   const handleDecrease = useCallback(async (item: InventarioItem) => {
     const nuevaCantidad = Math.max(0, item.cantidad_disponible - 1);
@@ -274,19 +276,6 @@ export default function OperadorInventarioPage() {
             </div>
           </div>
         )}
-
-        {/* Debug info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
-          <h4 className="font-semibold text-blue-800">Estado del Sistema (Debug):</h4>
-          <div className="mt-2 space-y-1">
-            <p><strong>Estado de carga:</strong> {loadingState}</p>
-            <p><strong>Productos en inventario:</strong> {inventario.length}</p>
-            <p><strong>Productos filtrados:</strong> {filteredInventario.length}</p>
-            <p><strong>Depósitos disponibles:</strong> {depositos.length}</p>
-            <p><strong>Alertas activas:</strong> {alertas.length}</p>
-            {errorMessage && <p className="text-red-600"><strong>Error:</strong> {errorMessage}</p>}
-          </div>
-        </div>
 
         {/* Contenido principal */}
         {renderMainContent()}

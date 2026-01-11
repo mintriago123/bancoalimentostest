@@ -270,12 +270,63 @@ export const createOperadorInventoryDataService = (supabaseClient: SupabaseClien
     }
   };
 
+  /**
+   * Actualizar cantidad de un item de inventario
+   */
+  const updateCantidad = async (
+    idInventario: string,
+    nuevaCantidad: number
+  ): Promise<ServiceResult<void>> => {
+    try {
+      logger.info('Actualizando cantidad de inventario', { idInventario, nuevaCantidad });
+
+      if (nuevaCantidad < 0) {
+        return {
+          success: false,
+          error: 'La cantidad no puede ser negativa'
+        };
+      }
+
+      const { error } = await supabaseClient
+        .from('inventario')
+        .update({
+          cantidad_disponible: nuevaCantidad,
+          fecha_actualizacion: new Date().toISOString()
+        })
+        .eq('id_inventario', idInventario);
+
+      if (error) {
+        logger.error('Error actualizando cantidad', error);
+        return {
+          success: false,
+          error: 'Error al actualizar la cantidad',
+          errorDetails: error
+        };
+      }
+
+      logger.info('Cantidad actualizada exitosamente', { idInventario, nuevaCantidad });
+
+      return {
+        success: true,
+        data: undefined
+      };
+    } catch (error) {
+      logger.error('Excepción actualizando cantidad', error);
+      return {
+        success: false,
+        error: 'Error inesperado al actualizar cantidad',
+        errorDetails: error
+      };
+    }
+  };
+
   return {
     fetchInventario,
     fetchProductosConAlertas,
     fetchOperadorStats,
     fetchDepositos,
-    fetchAlertas
+    fetchAlertas,
+    updateCantidad
   };
 };
 
