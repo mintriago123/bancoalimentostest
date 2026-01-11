@@ -4,7 +4,8 @@
 // ============================================================================
 
 import React from 'react';
-import { Unidad, StockInfo } from '../types';
+import { Unidad } from '../types';
+import { type StockSummary } from '../services/inventoryStockService';
 import { FORM_CONFIG } from '../constants';
 
 interface CantidadUnidadInputsProps {
@@ -12,8 +13,8 @@ interface CantidadUnidadInputsProps {
   unidadId: string;
   unidades: Unidad[];
   loadingUnidades: boolean;
-  stockInfo: StockInfo | null;
-  isStockSufficient: (cantidad: number) => boolean;
+  stockInfo: StockSummary | null;
+  isStockSufficient: (cantidad: number, simboloUnidad?: string) => boolean;
   onCantidadChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onUnidadChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   onUseMaxStock: () => void;
@@ -31,10 +32,12 @@ export function CantidadUnidadInputs({
   onUseMaxStock,
 }: CantidadUnidadInputsProps) {
   const cantidadNum = parseFloat(cantidad) || 0;
+  const unidadSeleccionada = unidades.find(u => u.id === parseInt(unidadId));
+  const simboloUnidad = unidadSeleccionada?.simbolo;
   const hasSufficientStock =
     !stockInfo ||
     !stockInfo.producto_encontrado ||
-    isStockSufficient(cantidadNum);
+    isStockSufficient(cantidadNum, simboloUnidad);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -54,11 +57,6 @@ export function CantidadUnidadInputs({
           required
           min={FORM_CONFIG.CANTIDAD_MIN}
           step={FORM_CONFIG.CANTIDAD_STEP}
-          max={
-            stockInfo && stockInfo.producto_encontrado
-              ? stockInfo.total_disponible
-              : undefined
-          }
           className={`w-full border-2 rounded-lg px-4 py-3 focus:outline-none transition-colors ${
             cantidadNum > 0 &&
             stockInfo &&

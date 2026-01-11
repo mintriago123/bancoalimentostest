@@ -6,7 +6,8 @@
 import React from 'react';
 import { Package, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { LoadingSpinner } from '@/app/components';
-import { StockInfo, LoadingState } from '../types';
+import { type StockSummary } from '../services/inventoryStockService';
+import { type LoadingState } from '../types';
 
 /**
  * Formatea una cantidad numérica con máximo 2 decimales.
@@ -19,12 +20,13 @@ const formatQuantity = (cantidad: number): string => {
 };
 
 interface InventarioInfoProps {
-  stockInfo: StockInfo | null;
+  stockInfo: StockSummary | null;
   loadingState: LoadingState;
   errorMessage: string | null;
   cantidad: number;
-  isStockSufficient: (cantidad: number) => boolean;
-  getStockMessage: (cantidad?: number) => string;
+  simboloUnidad?: string;
+  isStockSufficient: (cantidad: number, simboloUnidad?: string) => boolean;
+  getStockMessage: (cantidad?: number, simboloUnidad?: string) => string;
   onUseMaxStock: () => void;
 }
 
@@ -33,6 +35,7 @@ export function InventarioInfo({
   loadingState,
   errorMessage,
   cantidad,
+  simboloUnidad,
   isStockSufficient,
   getStockMessage,
   onUseMaxStock,
@@ -78,7 +81,7 @@ export function InventarioInfo({
                 ) : (
                   <AlertTriangle className="w-4 h-4 mr-2" />
                 )}
-                {getStockMessage(cantidad || undefined)}
+                {getStockMessage(cantidad || undefined, simboloUnidad)}
               </div>
 
               {stockInfo.depositos.length > 0 && (
@@ -113,7 +116,7 @@ export function InventarioInfo({
                 <div className="mt-2 p-2 bg-white rounded border-l-4 border-blue-400">
                   <p className="text-xs text-blue-700">
                     💡{' '}
-                    {isStockSufficient(cantidad)
+                    {isStockSufficient(cantidad, simboloUnidad)
                       ? 'Hay suficiente stock para tu solicitud'
                       : `Cantidad disponible insuficiente. Considera reducir a máximo ${
                           stockInfo.total_formateado && stockInfo.total_formateado.fue_convertido

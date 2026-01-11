@@ -190,16 +190,17 @@ export default function FormularioSolicitante() {
       return;
     }
 
+    // Obtener el símbolo de la unidad seleccionada
+    const unidadSeleccionada = getUnidadesDisponibles().find(u => u.id === parseInt(unidadId));
+    const simboloUnidadSeleccionada = unidadSeleccionada?.simbolo || '';
+
     // Verificar stock disponible si hay información de inventario
-    if (stockInfo && stockInfo.producto_encontrado && !isStockSufficient(cantidadNum)) {
-      const cantidadDisponible = stockInfo.total_formateado
-        ? `${stockInfo.total_formateado.cantidad} ${stockInfo.total_formateado.simbolo}`
-        : `${stockInfo.total_disponible} ${stockInfo.unidad_simbolo || stockInfo.unidad_nombre || 'unidades'}`;
-      
-      const unidad = stockInfo.unidad_simbolo || stockInfo.unidad_nombre || 'unidades';
+    if (stockInfo && stockInfo.producto_encontrado && !isStockSufficient(cantidadNum, simboloUnidadSeleccionada)) {
+      // Usar el mensaje del hook que ya maneja las conversiones correctamente
+      const mensajeStock = getStockMessage(cantidadNum, simboloUnidadSeleccionada);
       
       setMensaje(
-        `${MESSAGES.SOLICITUD.STOCK_INSUFFICIENT} Solo hay ${cantidadDisponible} disponibles y has solicitado ${cantidadNum} ${unidad}.`
+        `${MESSAGES.SOLICITUD.STOCK_INSUFFICIENT} ${mensajeStock}`
       );
       setLoading(false);
       return;
@@ -328,6 +329,7 @@ export default function FormularioSolicitante() {
                     loadingState={inventoryLoadingState}
                     errorMessage={inventoryErrorMessage || null}
                     cantidad={parseFloat(cantidad) || 0}
+                    simboloUnidad={getUnidadesDisponibles().find(u => u.id === parseInt(unidadId))?.simbolo}
                     isStockSufficient={isStockSufficient}
                     getStockMessage={getStockMessage}
                     onUseMaxStock={manejarUseMaxStock}
@@ -363,7 +365,10 @@ export default function FormularioSolicitante() {
                     parseFloat(cantidad) > 0 &&
                     !!stockInfo &&
                     stockInfo.producto_encontrado &&
-                    !isStockSufficient(parseFloat(cantidad)))
+                    !isStockSufficient(
+                      parseFloat(cantidad),
+                      getUnidadesDisponibles().find(u => u.id === parseInt(unidadId))?.simbolo
+                    ))
                 }
                 className={`w-full flex items-center justify-center px-6 py-3 rounded-lg shadow-md transition-colors font-semibold ${
                   loading ||
@@ -372,7 +377,10 @@ export default function FormularioSolicitante() {
                     parseFloat(cantidad) > 0 &&
                     !!stockInfo &&
                     stockInfo.producto_encontrado &&
-                    !isStockSufficient(parseFloat(cantidad)))
+                    !isStockSufficient(
+                      parseFloat(cantidad),
+                      getUnidadesDisponibles().find(u => u.id === parseInt(unidadId))?.simbolo
+                    ))
                     ? "bg-gray-400 text-gray-200 cursor-not-allowed"
                     : "bg-blue-600 text-white hover:bg-blue-700"
                 }`}
@@ -388,7 +396,10 @@ export default function FormularioSolicitante() {
                   parseFloat(cantidad) > 0 &&
                   !!stockInfo &&
                   stockInfo.producto_encontrado &&
-                  !isStockSufficient(parseFloat(cantidad)) ? (
+                  !isStockSufficient(
+                    parseFloat(cantidad),
+                    getUnidadesDisponibles().find(u => u.id === parseInt(unidadId))?.simbolo
+                  ) ? (
                   <>
                     <AlertTriangle className="w-5 h-5 mr-2" />
                     Stock Insuficiente

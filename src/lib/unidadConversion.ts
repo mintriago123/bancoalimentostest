@@ -269,3 +269,45 @@ export const obtenerTextoConOriginal = (cantidadFormateada: CantidadFormateada):
   
   return textoFormateado;
 };
+
+/**
+ * Convierte una cantidad de una unidad específica a otra unidad específica
+ * Si no hay conversión directa, intenta encontrar una conversión inversa
+ * @param cantidad - La cantidad a convertir
+ * @param simboloOrigen - El símbolo de la unidad origen (ej: "lb", "kg")
+ * @param simboloDestino - El símbolo de la unidad destino
+ * @param conversiones - Array de conversiones disponibles
+ * @returns La cantidad convertida, o null si no se puede convertir
+ */
+export const convertirEntreUnidades = (
+  cantidad: number,
+  simboloOrigen: string,
+  simboloDestino: string,
+  conversiones: ConversionData[]
+): number | null => {
+  // Si las unidades son iguales, no hay conversión
+  if (simboloOrigen === simboloDestino) {
+    return cantidad;
+  }
+
+  // Buscar conversión directa
+  const conversionDirecta = conversiones.find(
+    c => c.simbolo_origen === simboloOrigen && c.simbolo_destino === simboloDestino
+  );
+
+  if (conversionDirecta) {
+    return cantidad * conversionDirecta.factor_conversion;
+  }
+
+  // Buscar conversión inversa
+  const conversionInversa = conversiones.find(
+    c => c.simbolo_origen === simboloDestino && c.simbolo_destino === simboloOrigen
+  );
+
+  if (conversionInversa) {
+    return cantidad / conversionInversa.factor_conversion;
+  }
+
+  // No se encontró conversión
+  return null;
+};

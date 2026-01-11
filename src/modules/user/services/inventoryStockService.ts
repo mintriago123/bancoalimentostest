@@ -267,8 +267,101 @@ export const createInventoryStockService = (supabaseClient: SupabaseClient) => {
     };
   };
 
+  /**
+   * Verifica si hay stock suficiente considerando la conversión de unidades
+   * @param nombreProducto - Nombre del producto a verificar
+   * @param cantidadSolicitada - Cantidad solicitada por el usuario
+   * @param simboloUnidadSolicitada - Símbolo de la unidad solicitada (ej: "lb", "kg")
+   * @returns Resultado con información de suficiencia y conversiones aplicadas
+   */
+  const checkStockSufficiencyWithConversion = async (
+    nombreProducto: string,
+    cantidadSolicitada: number,
+    simboloUnidadSolicitada: string
+  ): Promise<ServiceResult<{
+    sufficient: boolean;
+    available: number;
+    availableSymbol: string;
+    requested: number;
+    requestedSymbol: string;
+    requestedInBaseUnit: number | null;
+    missing: number;
+  }>> => {
+    const stockResult = await getStockByProductName(nombreProducto);
+
+    if (!stockResult.success || !stockResult.data) {
+      return {
+        success: false,
+        error: stockResult.error || 'Error verificando stock'
+      };
+    }
+
+    const stockData = stockResult.data;
+    const available = stockData.total_disponible;
+    const stockSymbol = stockData.unidad_simbolo || '';
+
+    // Si las unidades son iguales, comparación directa
+    if (simboloUnidadSolicitada === stockSymbol) {
+      const sufficient = available >= cantidadSolicitada;
+      const missing = sufficient ? 0 : cantidadSolicitada - available;
+
+      return {
+        success: true,
+        data: {
+          sufficient,
+          available,
+          availableSymbol: stockSymbol,
+          requested: cantidadSolicitada,
+          requestedSymbol: simboloUnidadSolicitada,
+          requestedInBaseUnit: cantidadSolicitada,
+          missing
+        }
+      };
+    }
+
+    // Necesitamos convertir - obtener conversiones
+    const conversiones = await obtenerConversiones();
+    
+    // Importar la función de conversión
+    const { convertirEntreUnidades } = await import('@/lib/unidadConversion');
+    
+    // Convertir la cantidad solicitada a la unidad base del inventario
+    const cantidadConvertida = convertirEntreUnidades(
+      cantidadSolicitada,
+      simboloUnidadSolicitada,
+      stockSymbol,
+      conversiones
+    );
+
+    if (cantidadConvertida === null) {
+      // No se pudo convertir - no hay conversión disponible
+      logger.error(`No se encontró conversión de ${simboloUnidadSolicitada} a ${stockSymbol}`);
+      return {
+        success: false,
+        error: `No se puede convertir de ${simboloUnidadSolicitada} a ${stockSymbol}`
+      };
+    }
+
+    const sufficient = available >= cantidadConvertida;
+    const missing = sufficient ? 0 : cantidadConvertida - available;
+
+    return {
+      success: true,
+      data: {
+        sufficient,
+        available,
+        availableSymbol: stockSymbol,
+        requested: cantidadSolicitada,
+        requestedSymbol: simboloUnidadSolicitada,
+        requestedInBaseUnit: cantidadConvertida,
+        missing
+      }
+    };
+  };
+
   return {
     getStockByProductName,
-    checkStockSufficiency
+    checkStockSufficiency,
+    checkStockSufficiencyWithConversion
   };
 };
