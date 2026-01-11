@@ -43,9 +43,40 @@ export function formatDateInUserTimezone(
 }
 
 /**
+ * Formatea una fecha en formato YYYY-MM-DD (sin zona horaria) directamente
+ * Útil para fechas de inputs de tipo "date" que no tienen información de hora
+ */
+export function formatLocalDate(
+  dateStr: string | null | undefined,
+  formatStr: string = 'dd/MM/yyyy'
+): string {
+  if (!dateStr) return '-';
+  
+  try {
+    // Para fechas sin hora (YYYY-MM-DD), crear la fecha en la zona horaria local
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const localDate = new Date(year, month - 1, day);
+    
+    return format(localDate, formatStr, { locale: es });
+  } catch (error) {
+    console.error('Error formateando fecha local:', error);
+    return '-';
+  }
+}
+
+/**
  * Formatea una fecha de manera corta (dd/MM/yyyy)
+ * Usa formatLocalDate para fechas sin hora (YYYY-MM-DD)
  */
 export function formatShortDate(date: string | Date | null | undefined): string {
+  if (!date) return '-';
+  
+  // Si es un string en formato YYYY-MM-DD (sin hora), usar formatLocalDate
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return formatLocalDate(date, 'dd/MM/yyyy');
+  }
+  
+  // Si tiene información de hora o es un Date object, usar formatDateInUserTimezone
   return formatDateInUserTimezone(date, 'dd/MM/yyyy');
 }
 
