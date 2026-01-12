@@ -39,13 +39,25 @@ export const createUserDataService = (supabaseClient: SupabaseClient) => {
 
   const updateUserRole = async (userId: string, newRole: UserRole): Promise<ServiceResult<void>> => {
     try {
-      const { error } = await supabaseClient
-        .from('usuarios')
-        .update({ rol: newRole })
-        .eq('id', userId);
+      // Usar la API route con cliente admin para bypass RLS
+      const response = await fetch('/api/admin/usuarios', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          updates: { rol: newRole }
+        })
+      });
 
-      if (error) {
-        return { success: false, error: 'No fue posible actualizar el rol', errorDetails: error };
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { 
+          success: false, 
+          error: errorData.error || 'No fue posible actualizar el rol', 
+          errorDetails: errorData 
+        };
       }
 
       return { success: true };
@@ -56,13 +68,25 @@ export const createUserDataService = (supabaseClient: SupabaseClient) => {
 
   const updateUserStatus = async (userId: string, newStatus: UserStatus): Promise<ServiceResult<void>> => {
     try {
-      const { error } = await supabaseClient
-        .from('usuarios')
-        .update({ estado: newStatus })
-        .eq('id', userId);
+      // Usar la API route con cliente admin para bypass RLS
+      const response = await fetch('/api/admin/usuarios', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          updates: { estado: newStatus }
+        })
+      });
 
-      if (error) {
-        return { success: false, error: 'No fue posible actualizar el estado', errorDetails: error };
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { 
+          success: false, 
+          error: errorData.error || 'No fue posible actualizar el estado', 
+          errorDetails: errorData 
+        };
       }
 
       return { success: true };
