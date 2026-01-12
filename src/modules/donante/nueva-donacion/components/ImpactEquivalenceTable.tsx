@@ -26,14 +26,14 @@ export default function ImpactEquivalenceTable() {
           <h5 className="font-semibold text-blue-700 mb-2">Litro (L):</h5>
           <ul className="text-blue-600 space-y-1">
             <li>• 1 L = ~1.5 personas</li>
-            <li>• Bebidas y líquidos</li>
+            <li>• Líquidos (aceites, bebidas, etc.)</li>
           </ul>
         </div>
         <div>
           <h5 className="font-semibold text-blue-700 mb-2">Mililitro (ml):</h5>
           <ul className="text-blue-600 space-y-1">
             <li>• 1000 ml = ~1.5 personas</li>
-            <li>• Bebidas y líquidos</li>
+            <li>• Líquidos (aceites, bebidas, etc.)</li>
           </ul>
         </div>
       </div>
