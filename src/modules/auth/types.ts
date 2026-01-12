@@ -41,6 +41,8 @@ export interface PerfilUsuario {
   representante?: string | null;
   created_at?: string;
   updated_at?: string;
+  fecha_fin_bloqueo?: string | null;
+  motivo_bloqueo?: string | null;
 }
 
 export interface ResultadoAuth {

@@ -15,6 +15,8 @@ export interface UserRecord {
   email?: string | null;
   created_at?: string | null;
   estado?: UserStatus;
+  fecha_fin_bloqueo?: string | null;
+  motivo_bloqueo?: string | null;
 }
 
 export interface UsersStats {

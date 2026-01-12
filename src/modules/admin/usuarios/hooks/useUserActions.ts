@@ -10,7 +10,7 @@ interface UpdateResult {
 
 interface UseUserActionsResult {
   updateRole: (userId: string, newRole: UserRole) => Promise<UpdateResult>;
-  updateStatus: (userId: string, newStatus: UserStatus) => Promise<UpdateResult>;
+  updateStatus: (userId: string, newStatus: UserStatus, fechaFinBloqueo?: string | null, motivoBloqueo?: string | null) => Promise<UpdateResult>;
   processingId?: string;
 }
 
@@ -42,13 +42,18 @@ export const useUserActions = (supabaseClient: SupabaseClient): UseUserActionsRe
     };
   }, [service]);
 
-  const updateStatus = useCallback(async (userId: string, newStatus: UserStatus) => {
+  const updateStatus = useCallback(async (
+    userId: string, 
+    newStatus: UserStatus, 
+    fechaFinBloqueo?: string | null,
+    motivoBloqueo?: string | null
+  ) => {
     setProcessingId(userId);
 
     let result: ServiceResult<void>;
 
     try {
-      result = await service.updateUserStatus(userId, newStatus ?? null);
+      result = await service.updateUserStatus(userId, newStatus ?? null, fechaFinBloqueo, motivoBloqueo);
     } finally {
       setProcessingId(undefined);
     }
@@ -62,8 +67,10 @@ export const useUserActions = (supabaseClient: SupabaseClient): UseUserActionsRe
 
     const successMessages: Record<NonNullable<UserStatus>, string> = {
       activo: 'Usuario activado correctamente',
-      bloqueado: 'Usuario bloqueado correctamente',
-      desactivado: 'Usuario desactivado correctamente'
+      bloqueado: fechaFinBloqueo 
+        ? 'Usuario bloqueado temporalmente' 
+        : 'Usuario bloqueado correctamente',
+      desactivado: 'Usuario desactivado permanentemente'
     };
 
     return {

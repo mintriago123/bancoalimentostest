@@ -13,7 +13,8 @@ const mapUserRow = (row: any): UserRecord => ({
   representante: row.representante ?? undefined,
   email: row.email ?? undefined,
   created_at: row.created_at ?? undefined,
-  estado: row.estado ?? null
+  estado: row.estado ?? null,
+  fecha_fin_bloqueo: row.fecha_fin_bloqueo ?? undefined
 });
 
 export const createUserDataService = (supabaseClient: SupabaseClient) => {
@@ -21,7 +22,7 @@ export const createUserDataService = (supabaseClient: SupabaseClient) => {
     try {
       const { data, error } = await supabaseClient
         .from('usuarios')
-        .select('id, nombre, cedula, ruc, rol, tipo_persona, telefono, direccion, representante, email, created_at, estado')
+        .select('id, nombre, cedula, ruc, rol, tipo_persona, telefono, direccion, representante, email, created_at, estado, fecha_fin_bloqueo, motivo_bloqueo')
         .order('nombre', { ascending: true });
 
       if (error) {
@@ -66,8 +67,35 @@ export const createUserDataService = (supabaseClient: SupabaseClient) => {
     }
   };
 
-  const updateUserStatus = async (userId: string, newStatus: UserStatus): Promise<ServiceResult<void>> => {
+  const updateUserStatus = async (
+    userId: string, 
+    newStatus: UserStatus, 
+    fechaFinBloqueo?: string | null,
+    motivoBloqueo?: string | null
+  ): Promise<ServiceResult<void>> => {
     try {
+      const updates: { estado: UserStatus; fecha_fin_bloqueo?: string | null; motivo_bloqueo?: string | null } = { 
+        estado: newStatus 
+      };
+      
+      // Si es un bloqueo temporal, incluir la fecha de fin y el motivo
+      if (newStatus === 'bloqueado' && fechaFinBloqueo) {
+        updates.fecha_fin_bloqueo = fechaFinBloqueo;
+        updates.motivo_bloqueo = motivoBloqueo || null;
+      }
+      
+      // Si se desactiva, incluir el motivo
+      if (newStatus === 'desactivado') {
+        updates.fecha_fin_bloqueo = null;
+        updates.motivo_bloqueo = motivoBloqueo || null;
+      }
+      
+      // Si se activa, limpiar todo
+      if (newStatus === 'activo') {
+        updates.fecha_fin_bloqueo = null;
+        updates.motivo_bloqueo = null;
+      }
+
       // Usar la API route con cliente admin para bypass RLS
       const response = await fetch('/api/admin/usuarios', {
         method: 'PATCH',
@@ -76,7 +104,7 @@ export const createUserDataService = (supabaseClient: SupabaseClient) => {
         },
         body: JSON.stringify({
           userId,
-          updates: { estado: newStatus }
+          updates
         })
       });
 

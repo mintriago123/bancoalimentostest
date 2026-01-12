@@ -293,6 +293,8 @@ export class AuthService {
         representante: data.representante,
         created_at: data.created_at,
         updated_at: data.updated_at,
+        fecha_fin_bloqueo: data.fecha_fin_bloqueo,
+        motivo_bloqueo: data.motivo_bloqueo,
       } as PerfilUsuario;
     } catch (error) {
       console.error('Error en obtenerPerfil:', error);
@@ -307,16 +309,51 @@ export class AuthService {
     const estadoUsuario = perfil.estado || AUTH_CONSTANTS.ESTADOS_USUARIO.ACTIVO;
 
     if (estadoUsuario === AUTH_CONSTANTS.ESTADOS_USUARIO.BLOQUEADO) {
+      // Verificar si es un bloqueo temporal
+      if (perfil.fecha_fin_bloqueo) {
+        const fechaFin = new Date(perfil.fecha_fin_bloqueo);
+        const ahora = new Date();
+        
+        // Si el bloqueo ya expiró, permitir login (se debería actualizar en la BD)
+        if (fechaFin <= ahora) {
+          return { success: true };
+        }
+        
+        // Calcular tiempo restante
+        const diferenciaMs = fechaFin.getTime() - ahora.getTime();
+        const horasRestantes = Math.ceil(diferenciaMs / (1000 * 60 * 60));
+        const diasRestantes = Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24));
+        
+        let tiempoRestante = '';
+        if (diasRestantes > 1) {
+          tiempoRestante = `${diasRestantes} días`;
+        } else if (horasRestantes > 1) {
+          tiempoRestante = `${horasRestantes} horas`;
+        } else {
+          tiempoRestante = 'menos de 1 hora';
+        }
+        
+        const motivo = perfil.motivo_bloqueo ? `\n\nMotivo: ${perfil.motivo_bloqueo}` : '';
+        
+        return {
+          success: false,
+          error: `Tu cuenta ha sido bloqueada temporalmente.\n\nTiempo restante: ${tiempoRestante}${motivo}`
+        };
+      }
+      
+      // Bloqueo sin fecha (tratarlo como desactivación)
+      const motivo = perfil.motivo_bloqueo ? `\n\nMotivo: ${perfil.motivo_bloqueo}` : '';
       return {
         success: false,
-        error: AUTH_CONSTANTS.MENSAJES.CUENTA_BLOQUEADA,
+        error: `Tu cuenta ha sido bloqueada.${motivo}\n\nPara más información, contacta con la administración.`
       };
     }
 
     if (estadoUsuario === AUTH_CONSTANTS.ESTADOS_USUARIO.DESACTIVADO) {
+      const motivo = perfil.motivo_bloqueo ? `\n\nMotivo: ${perfil.motivo_bloqueo}` : '';
       return {
         success: false,
-        error: AUTH_CONSTANTS.MENSAJES.CUENTA_DESACTIVADA,
+        error: `Tu cuenta ha sido desactivada permanentemente.${motivo}\n\nSi crees que esto es un error, contacta con la administración.`
       };
     }
 
