@@ -168,23 +168,11 @@ export default function HomePage() {
               <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Participa</h3>
               <ul className="space-y-3">
                 <li>
-                  <Link href="/donar" className="text-gray-300 hover:text-blue-400 transition-colors duration-300">
+                  <Link href="/auth/iniciar-sesion" className="text-gray-300 hover:text-blue-400 transition-colors duration-300">
                     Donar alimentos
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    href="/voluntariado"
-                    className="text-gray-300 hover:text-blue-400 transition-colors duration-300"
-                  >
-                    Ser voluntario
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/empresas" className="text-gray-300 hover:text-blue-400 transition-colors duration-300">
-                    Para empresas
-                  </Link>
-                </li>
+                
               </ul>
             </div>
 
