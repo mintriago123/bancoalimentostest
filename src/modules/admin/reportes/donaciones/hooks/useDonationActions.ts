@@ -2,7 +2,7 @@
  * @fileoverview Hook para acciones sobre donaciones (cambio de estado e integración).
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Donation, DonationEstado } from '../types';
 import { createDonationActionService } from '../services/donationActionService';
@@ -22,6 +22,7 @@ interface UseDonationActionsResult {
 export const useDonationActions = (supabaseClient: SupabaseClient): UseDonationActionsResult => {
   const [processingId, setProcessingId] = useState<number | undefined>();
   const [lastError, setLastError] = useState<string | undefined>();
+  const processingRef = useRef<Set<number>>(new Set());
 
   const service = useMemo(
     () => createDonationActionService(supabaseClient),
@@ -29,6 +30,19 @@ export const useDonationActions = (supabaseClient: SupabaseClient): UseDonationA
   );
 
   const updateEstado = useCallback(async (donation: Donation, nuevoEstado: DonationEstado) => {
+    // Prevenir ejecuciones simultáneas en el lado del cliente
+    if (processingRef.current.has(donation.id)) {
+      console.warn('⚠️ Intento de actualización duplicada bloqueado en el cliente', { 
+        donacionId: donation.id, 
+        estado: nuevoEstado 
+      });
+      return {
+        success: false,
+        message: 'Ya hay una actualización en proceso para esta donación'
+      };
+    }
+    
+    processingRef.current.add(donation.id);
     setProcessingId(donation.id);
     setLastError(undefined);
 
@@ -50,6 +64,7 @@ export const useDonationActions = (supabaseClient: SupabaseClient): UseDonationA
         message
       };
     } finally {
+      processingRef.current.delete(donation.id);
       setProcessingId(undefined);
     }
   }, [service]);
