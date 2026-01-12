@@ -13,7 +13,7 @@ interface UsuariosRow {
 }
 
 interface SolicitudesRow {
-  estado: 'pendiente' | 'aprobada' | 'rechazada';
+  estado: 'pendiente' | 'aprobada' | 'rechazada' | 'entregada';
 }
 
 const MAX_ROWS = 1000;
@@ -65,7 +65,7 @@ export const createDashboardDataService = (supabaseClient: SupabaseClient) => {
         acc[solicitud.estado] = (acc[solicitud.estado] ?? 0) + 1;
         return acc;
       },
-      { pendiente: 0, aprobada: 0, rechazada: 0 } as Record<SolicitudesRow['estado'], number>
+      { pendiente: 0, aprobada: 0, rechazada: 0, entregada: 0 } as Record<SolicitudesRow['estado'], number>
     );
 
     const tasaAprobacionBase = requestCounts.aprobada + requestCounts.rechazada;
@@ -105,6 +105,12 @@ export const createDashboardDataService = (supabaseClient: SupabaseClient) => {
         count: requestCounts.rechazada,
         percentage: totalSolicitudes > 0 ? Math.round((requestCounts.rechazada / totalSolicitudes) * 100) : 0,
         accent: 'red'
+      },
+      {
+        label: 'Entregadas',
+        count: requestCounts.entregada,
+        percentage: totalSolicitudes > 0 ? Math.round((requestCounts.entregada / totalSolicitudes) * 100) : 0,
+        accent: 'blue'
       }
     ];
 

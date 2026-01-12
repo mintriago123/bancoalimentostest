@@ -15,7 +15,7 @@ export interface RequestStatusItem {
   label: string;
   count: number;
   percentage: number;
-  accent: 'yellow' | 'green' | 'red';
+  accent: 'yellow' | 'green' | 'red' | 'blue';
 }
 
 export interface UserTypeItem {

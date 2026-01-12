@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, Package } from 'lucide-react';
 import type { RequestStatusItem } from '../types';
 
 interface RequestStatusProps {
@@ -8,7 +8,8 @@ interface RequestStatusProps {
 const ICON_MAP = {
   yellow: Clock,
   green: CheckCircle,
-  red: AlertTriangle
+  red: AlertTriangle,
+  blue: Package
 };
 
 const RequestStatus = ({ items }: RequestStatusProps) => (
@@ -24,6 +25,8 @@ const RequestStatus = ({ items }: RequestStatusProps) => (
           accentColor = 'text-amber-500';
         } else if (item.accent === 'green') {
           accentColor = 'text-emerald-500';
+        } else if (item.accent === 'blue') {
+          accentColor = 'text-blue-500';
         } else {
           accentColor = 'text-rose-500';
         }
@@ -33,6 +36,8 @@ const RequestStatus = ({ items }: RequestStatusProps) => (
           barColor = 'from-amber-400 to-amber-300';
         } else if (item.accent === 'green') {
           barColor = 'from-emerald-500 to-emerald-400';
+        } else if (item.accent === 'blue') {
+          barColor = 'from-blue-500 to-blue-400';
         } else {
           barColor = 'from-rose-500 to-rose-400';
         }

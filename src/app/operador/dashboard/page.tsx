@@ -5,7 +5,8 @@ import DashboardLayout from '@/app/components/DashboardLayout';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import { RefreshCw } from 'lucide-react';
 
-import { useDashboardData, RequestStatus } from '@/modules/shared/dashboard';
+import { useDashboardData } from '@/modules/admin/dashboard/hooks/useDashboardData';
+import { RequestStatus } from '@/modules/shared/dashboard';
 
 export default function OperadorDashboardPage() {
   const { supabase } = useSupabase();
@@ -17,15 +18,17 @@ export default function OperadorDashboardPage() {
   const operadorStats = useMemo(() => {
     if (!data) return null;
     
-    // Calcular estadísticas desde requestStatus
-    const pendientes = data.requestStatus?.find(s => s.label === 'Pendiente')?.count || 0;
-    const aprobadas = data.requestStatus?.find(s => s.label === 'Aprobada')?.count || 0;
-    const rechazadas = data.requestStatus?.find(s => s.label === 'Rechazada')?.count || 0;
+    // Calcular estadísticas desde requestStatus con los labels correctos
+    const pendientes = data.requestStatus?.find(s => s.label === 'Pendientes')?.count || 0;
+    const aprobadas = data.requestStatus?.find(s => s.label === 'Aprobadas')?.count || 0;
+    const rechazadas = data.requestStatus?.find(s => s.label === 'Rechazadas')?.count || 0;
+    const entregadas = data.requestStatus?.find(s => s.label === 'Entregadas')?.count || 0;
     
     return {
       solicitudesPendientes: pendientes,
       solicitudesAprobadas: aprobadas,
       solicitudesRechazadas: rechazadas,
+      solicitudesEntregadas: entregadas,
       totalSolicitudes: data.counts?.totalSolicitudes || 0,
       totalUsuarios: data.counts?.totalUsuarios || 0
     };
@@ -88,7 +91,7 @@ export default function OperadorDashboardPage() {
         {hasData && operadorStats && (
           <>
             {/* Tarjetas de resumen para operadores */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {/* Solicitudes Pendientes */}
               <div className="bg-white rounded-2xl border border-orange-200 p-6 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between">
@@ -125,6 +128,24 @@ export default function OperadorDashboardPage() {
                 <p className="text-xs text-gray-500 mt-3">Procesadas exitosamente</p>
               </div>
 
+              {/* Solicitudes Entregadas */}
+              <div className="bg-white rounded-2xl border border-blue-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Solicitudes Entregadas</p>
+                    <p className="text-3xl font-bold text-blue-600 mt-2">
+                      {operadorStats.solicitudesEntregadas}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-3">Completadas</p>
+              </div>
+
               {/* Solicitudes Rechazadas */}
               <div className="bg-white rounded-2xl border border-red-200 p-6 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between">
@@ -144,16 +165,16 @@ export default function OperadorDashboardPage() {
               </div>
 
               {/* Total Solicitudes */}
-              <div className="bg-white rounded-2xl border border-blue-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="bg-white rounded-2xl border border-purple-200 p-6 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Total Solicitudes</p>
-                    <p className="text-3xl font-bold text-blue-600 mt-2">
+                    <p className="text-3xl font-bold text-purple-600 mt-2">
                       {operadorStats.totalSolicitudes}
                     </p>
                   </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   </div>
