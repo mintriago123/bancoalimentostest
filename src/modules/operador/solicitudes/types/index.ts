@@ -3,7 +3,7 @@
  * Los operadores pueden aprobar y rechazar solicitudes, pero NO pueden revertirlas.
  */
 
-export type SolicitudEstado = 'pendiente' | 'aprobada' | 'rechazada';
+export type SolicitudEstado = 'pendiente' | 'aprobada' | 'rechazada' | 'entregada';
 
 export type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 
@@ -46,6 +46,7 @@ export interface SolicitudEstadoFilter {
   pendiente: boolean;
   aprobada: boolean;
   rechazada: boolean;
+  entregada: boolean;
 }
 
 export interface SolicitudFilters {
