@@ -27,12 +27,12 @@ export function DashboardCardsGrid({ nombre }: DashboardCardsGridProps) {
         />
 
         <DashboardCard
-          href="/donante/solicitudes"
-          title="Ver solicitudes"
-          description="Consulta el estado de tus solicitudes."
-          bgColor="bg-purple-50"
-          hoverColor="hover:bg-purple-100"
-          textColor="text-purple-700"
+          href="/donante/donaciones"
+          title="Ver mis donaciones"
+          description="Consulta el estado de tus donaciones."
+          bgColor="bg-green-50"
+          hoverColor="hover:bg-green-100"
+          textColor="text-green-700"
         />
       </div>
     </div>
