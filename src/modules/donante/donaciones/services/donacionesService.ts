@@ -29,14 +29,26 @@ export class DonacionesService {
   }
 
   async eliminarDonacion(id: number): Promise<void> {
-    const { error } = await this.supabase
+    console.log('🗑️ Intentando eliminar donación con ID:', id);
+    
+    const { data, error } = await this.supabase
       .from('donaciones')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
     if (error) {
+      console.error('❌ Error al eliminar donación:', error);
       throw new Error(`Error al eliminar donación: ${error.message}`);
     }
+    
+    // Verificar que realmente se eliminó algo
+    if (!data || data.length === 0) {
+      console.error('⚠️ No se eliminó ninguna fila. Posible problema de permisos RLS');
+      throw new Error('No se pudo eliminar la donación. Verifica los permisos o que la donación exista.');
+    }
+    
+    console.log('✅ Donación eliminada exitosamente:', data);
   }
 
   async actualizarDonacion(donacion: Donacion): Promise<void> {

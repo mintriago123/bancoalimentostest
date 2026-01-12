@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { SupabaseClient, User } from '@supabase/supabase-js';
 import { DonacionesService } from '../services/donacionesService';
 import { Donacion } from '../types';
@@ -8,7 +8,7 @@ export function useDonacionesData(supabase: SupabaseClient, user: User | null) {
   const [cargando, setCargando] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
-  const service = new DonacionesService(supabase);
+  const service = useMemo(() => new DonacionesService(supabase), [supabase]);
 
   const cargarDonaciones = useCallback(async () => {
     if (!user) return;
@@ -25,25 +25,32 @@ export function useDonacionesData(supabase: SupabaseClient, user: User | null) {
     } finally {
       setCargando(false);
     }
-  }, [user]);
+  }, [user, service]);
 
   const eliminarDonacion = useCallback(async (id: number): Promise<boolean> => {
+    console.log('🔍 Solicitando confirmación para eliminar donación ID:', id);
+    
     if (!window.confirm('¿Estás seguro de que deseas eliminar esta donación?')) {
+      console.log('❌ Eliminación cancelada por el usuario');
       return false;
     }
 
+    console.log('✅ Usuario confirmó eliminación, procediendo...');
+    
     try {
       await service.eliminarDonacion(id);
+      console.log('📝 Actualizando estado local después de eliminar');
       setDonaciones(prev => prev.filter(d => d.id !== id));
       setMensaje('Donación eliminada exitosamente');
       setTimeout(() => setMensaje(''), 3000);
       return true;
     } catch (error: any) {
+      console.error('💥 Error capturado al eliminar:', error);
       setMensaje(error.message || 'Error al eliminar donación');
       console.error('Error al eliminar:', error);
       return false;
     }
-  }, []);
+  }, [service]);
 
   const actualizarDonacion = useCallback(async (donacion: Donacion): Promise<boolean> => {
     try {
@@ -59,7 +66,7 @@ export function useDonacionesData(supabase: SupabaseClient, user: User | null) {
       console.error('Error al actualizar:', error);
       return false;
     }
-  }, []);
+  }, [service]);
 
   return {
     donaciones,
