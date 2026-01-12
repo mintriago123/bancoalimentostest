@@ -57,10 +57,11 @@ export function DonacionEdicionModal({
             <input
               type="number"
               name="cantidad"
-              value={donacion.cantidad}
+              value={donacion.cantidad === 0 ? '' : donacion.cantidad}
               onChange={onChange}
-              min="0"
+              min="0.01"
               step="0.1"
+              placeholder="Ingrese la cantidad"
               className="border border-gray-300 rounded-md p-2 w-full"
             />
           </div>

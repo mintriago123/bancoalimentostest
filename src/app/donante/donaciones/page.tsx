@@ -55,6 +55,13 @@ export default function MisDonacionesPage() {
   // Handlers
   const handleActualizarDonacion = async () => {
     if (!modalEdicion.data) return;
+    
+    // Validar que la cantidad sea un número válido mayor a 0
+    if (!modalEdicion.data.cantidad || modalEdicion.data.cantidad <= 0) {
+      alert('La cantidad debe ser mayor a 0');
+      return;
+    }
+    
     const exito = await actualizar(modalEdicion.data);
     if (exito) {
       modalEdicion.close();
@@ -64,10 +71,19 @@ export default function MisDonacionesPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (modalEdicion.data) {
-      modalEdicion.setData({ 
-        ...modalEdicion.data, 
-        [name]: name === 'cantidad' ? parseFloat(value) || 0 : value 
-      });
+      if (name === 'cantidad') {
+        // Si el valor está vacío, establecer en 0 pero permitir que se muestre vacío en el input
+        const cantidad = value === '' ? 0 : parseFloat(value);
+        modalEdicion.setData({ 
+          ...modalEdicion.data, 
+          cantidad: isNaN(cantidad) ? 0 : cantidad
+        });
+      } else {
+        modalEdicion.setData({ 
+          ...modalEdicion.data, 
+          [name]: value 
+        });
+      }
     }
   };
 
