@@ -39,10 +39,16 @@ export const createInventoryDataService = (supabaseClient: SupabaseClient) => {
             unidad_id,
             fecha_caducidad,
             fecha_donacion,
+            alimento_id,
             unidades:unidades(
               id,
               nombre,
               simbolo
+            ),
+            alimentos:alimentos(
+              id,
+              nombre,
+              categoria
             )
           )
         `)
@@ -127,6 +133,12 @@ const mapInventarioRowToDomain = (row: SupabaseInventarioRow): InventarioItem =>
     ? (Array.isArray(unidadInfo) ? unidadInfo[0] : unidadInfo)
     : null;
 
+  // Normalizar la información del alimento
+  const alimentoInfo = producto?.alimentos;
+  const alimentoNormalizado = alimentoInfo 
+    ? (Array.isArray(alimentoInfo) ? alimentoInfo[0] : alimentoInfo)
+    : null;
+
   return {
     id_inventario: row.id_inventario,
     id_deposito: row.id_deposito,
@@ -142,6 +154,7 @@ const mapInventarioRowToDomain = (row: SupabaseInventarioRow): InventarioItem =>
       id_producto: producto?.id_producto ?? row.id_producto,
       nombre_producto: producto?.nombre_producto ?? 'Sin nombre',
       descripcion: producto?.descripcion ?? null,
+      categoria: alimentoNormalizado?.categoria ?? null,
       unidad_medida: producto?.unidad_medida ?? null,
       unidad_id: producto?.unidad_id ?? null,
       unidad_nombre: unidadNormalizada?.nombre ?? null,

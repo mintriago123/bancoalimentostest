@@ -17,6 +17,7 @@ export interface ProductoInventario {
   id_producto: string;
   nombre_producto: string;
   descripcion: string | null;
+  categoria: string | null;
   unidad_medida: string | null;
   unidad_id: number | null;
   unidad_nombre: string | null;
@@ -49,10 +50,16 @@ export type SupabaseProductoRelation = {
   unidad_id?: number | null;
   fecha_caducidad?: string | null;
   fecha_donacion?: string | null;
+  alimento_id?: number | null;
   unidades?: {
     id?: number | null;
     nombre?: string | null;
     simbolo?: string | null;
+  } | null;
+  alimentos?: {
+    id?: number | null;
+    nombre?: string | null;
+    categoria?: string | null;
   } | null;
 } | null;
 

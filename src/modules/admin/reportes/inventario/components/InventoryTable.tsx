@@ -122,7 +122,7 @@ const InventoryTable = ({
                           {item.producto.nombre_producto || 'Sin nombre'}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {item.producto.descripcion || 'Sin descripción'}
+                          {item.producto.categoria || 'Sin categoría'}
                         </div>
                         <div className="text-xs text-gray-400">
                           Unidad: {item.producto.unidad_medida || 'No especificada'}
