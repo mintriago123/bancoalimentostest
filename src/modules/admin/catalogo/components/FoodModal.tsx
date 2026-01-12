@@ -2,31 +2,27 @@ import { FormEvent, useEffect, useState } from 'react';
 import { X, CheckCircle2 } from 'lucide-react';
 import type { FoodFormValues, FoodRecord, Unidad } from '../types';
 
-const BASE_CATEGORIES = [
-  'Granos y Cereales',
-  'Legumbres',
-  'Lácteos',
-  'Carnes y Proteínas',
-  'Frutas',
-  'Verduras',
-  'Aceites y Grasas',
-  'Condimentos',
-  'Bebidas',
-  'Productos Enlatados',
-  'Otros'
-];
-
 interface FoodModalProps {
   open: boolean;
   mode: 'create' | 'edit';
   initialData?: FoodRecord | null;
   unidadesDisponibles: Unidad[];
   loadingUnidades: boolean;
+  categories: string[]; // Nueva prop para categorías dinámicas
   onClose: () => void;
   onSubmit: (values: FoodFormValues) => Promise<void>;
 }
 
-const FoodModal = ({ open, mode, initialData, unidadesDisponibles, loadingUnidades, onClose, onSubmit }: FoodModalProps) => {
+const FoodModal = ({ 
+  open, 
+  mode, 
+  initialData, 
+  unidadesDisponibles, 
+  loadingUnidades, 
+  categories,
+  onClose, 
+  onSubmit 
+}: FoodModalProps) => {
   const [nombre, setNombre] = useState('');
   const [categoria, setCategoria] = useState('');
   const [categoriaPersonalizada, setCategoriaPersonalizada] = useState('');
@@ -39,7 +35,11 @@ const FoodModal = ({ open, mode, initialData, unidadesDisponibles, loadingUnidad
     if (open) {
       setNombre(initialData?.nombre ?? '');
       const categoriaActual = initialData?.categoria ?? '';
-      if (categoriaActual && !BASE_CATEGORIES.includes(categoriaActual)) {
+      
+      // Filtrar categorías reales (sin 'todos' ni 'Sin categoría')
+      const categoriasReales = categories.filter(c => c !== 'todos' && c !== 'Sin categoría');
+      
+      if (categoriaActual && !categoriasReales.includes(categoriaActual)) {
         setCategoria('personalizada');
         setCategoriaPersonalizada(categoriaActual);
       } else {
@@ -60,7 +60,7 @@ const FoodModal = ({ open, mode, initialData, unidadesDisponibles, loadingUnidad
         setMostrarSeccionUnidades(false);
       }
     }
-  }, [open, initialData]);
+  }, [open, initialData, categories]);
 
   const toggleUnidad = (unidadId: number) => {
     setUnidadesSeleccionadas(prev => {
@@ -164,11 +164,13 @@ const FoodModal = ({ open, mode, initialData, unidadesDisponibles, loadingUnidad
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-inner focus:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-400"
             >
               <option value="">Selecciona una categoría</option>
-              {BASE_CATEGORIES.map(option => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
+              {categories
+                .filter(cat => cat !== 'todos' && cat !== 'Sin categoría')
+                .map(option => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
               <option value="personalizada">Agregar nueva categoría</option>
             </select>
           </div>

@@ -8,20 +8,6 @@ const DEFAULT_FILTERS: CatalogFilters = {
   category: 'todos'
 };
 
-const NORMALIZED_CATEGORIES = [
-  'Granos y Cereales',
-  'Legumbres',
-  'Lácteos',
-  'Carnes y Proteínas',
-  'Frutas',
-  'Verduras',
-  'Aceites y Grasas',
-  'Condimentos',
-  'Bebidas',
-  'Productos Enlatados',
-  'Otros'
-];
-
 const computeStats = (foods: FoodRecord[]): CatalogStats => {
   const uniqueCategories = new Set(
     foods
@@ -165,18 +151,18 @@ export const useCatalogData = (supabaseClient: SupabaseClient) => {
   }, []);
 
   const categories = useMemo(() => {
+    // Obtener solo las categorías dinámicas de la base de datos
     const dynamicCategories = Array.from(
       new Set(
         foods
           .filter(food => food.categoria)
           .map(food => food.categoria.trim())
       )
-    );
-    const combined = new Set([...NORMALIZED_CATEGORIES, ...dynamicCategories]);
+    ).sort(); // Ordenar alfabéticamente
     
     // Verificar si hay alimentos sin categoría
     const hasFoodWithoutCategory = foods.some(food => !food.categoria);
-    const categoriesArray = ['todos', ...Array.from(combined)];
+    const categoriesArray = ['todos', ...dynamicCategories];
     
     if (hasFoodWithoutCategory) {
       categoriesArray.push('Sin categoría');

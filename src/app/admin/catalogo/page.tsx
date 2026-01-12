@@ -217,6 +217,7 @@ export default function AdminCatalogPage() {
         open={formOpen}
         mode={formMode}
         initialData={selectedFood}
+        categories={categories}
         unidadesDisponibles={unidades}
         loadingUnidades={loadingUnidades}
         onClose={() => setFormOpen(false)}

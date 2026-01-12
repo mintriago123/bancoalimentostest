@@ -332,8 +332,41 @@ export const createCatalogService = (supabaseClient: SupabaseClient) => {
     }
   };
 
+  const fetchCategories = async (): Promise<ServiceResult<string[]>> => {
+    try {
+      const { data, error } = await supabaseClient
+        .from('alimentos')
+        .select('categoria')
+        .not('categoria', 'is', null)
+        .order('categoria', { ascending: true });
+
+      if (error) {
+        return {
+          success: false,
+          error: 'No fue posible cargar las categorías',
+          errorDetails: error
+        };
+      }
+
+      // Obtener categorías únicas
+      const categoriasUnicas = [...new Set((data ?? []).map(item => item.categoria).filter(Boolean))];
+
+      return {
+        success: true,
+        data: categoriasUnicas
+      };
+    } catch (err) {
+      return {
+        success: false,
+        error: 'Error inesperado al cargar las categorías',
+        errorDetails: err
+      };
+    }
+  };
+
   return {
     fetchFoods,
+    fetchCategories,
     createFood,
     updateFood,
     deleteFood,
