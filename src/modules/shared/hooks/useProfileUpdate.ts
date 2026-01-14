@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 interface ProfileUpdateData {
@@ -9,6 +9,8 @@ interface ProfileUpdateData {
   direccion?: string;
   telefono?: string;
   representante?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
 }
 
 export function useProfileUpdate(supabase: SupabaseClient) {
@@ -16,12 +18,12 @@ export function useProfileUpdate(supabase: SupabaseClient) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const clearMessages = () => {
+  const clearMessages = useCallback(() => {
     setError(null);
     setSuccess(null);
-  };
+  }, []);
 
-  const checkDuplicateIdentification = async (
+  const checkDuplicateIdentification = useCallback(async (
     tipo: 'Natural' | 'Juridica',
     value: string,
     currentUserId: string
@@ -39,11 +41,12 @@ export function useProfileUpdate(supabase: SupabaseClient) {
       return true;
     }
     return false;
-  };
+  }, [supabase]);
 
-  const loadUserProfile = async (userId: string) => {
+  const loadUserProfile = useCallback(async (userId: string) => {
     setLoading(true);
-    clearMessages();
+    setError(null);
+    setSuccess(null);
     
     try {
       const { data, error: fetchError } = await supabase
@@ -63,14 +66,15 @@ export function useProfileUpdate(supabase: SupabaseClient) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]);
 
-  const updateProfile = async (
+  const updateProfile = useCallback(async (
     userId: string,
     profileData: ProfileUpdateData
   ): Promise<boolean> => {
     setLoading(true);
-    clearMessages();
+    setError(null);
+    setSuccess(null);
 
     try {
       const { error: updateError } = await supabase
@@ -91,14 +95,15 @@ export function useProfileUpdate(supabase: SupabaseClient) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]);
 
-  const saveProfile = async (
+  const saveProfile = useCallback(async (
     userId: string,
     profileData: ProfileUpdateData
   ): Promise<boolean> => {
     setLoading(true);
-    clearMessages();
+    setError(null);
+    setSuccess(null);
 
     try {
       const { error: updateError } = await supabase
@@ -119,7 +124,7 @@ export function useProfileUpdate(supabase: SupabaseClient) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]);
 
   return {
     loading,
