@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useSupabase } from "@/app/components/SupabaseProvider";
 import {
@@ -10,6 +10,10 @@ import {
   useProfileUpdate,
 } from "@/modules/shared";
 import { validarCedulaEcuatoriana, validarRucEcuatoriano } from "@/lib/validaciones";
+import { Loader2 } from "lucide-react";
+
+// Lazy load del componente de mapa para mejor rendimiento
+const MapboxLocationPicker = lazy(() => import("@/modules/shared/components/MapboxLocationPicker"));
 
 export default function CompletarPerfil() {
   const router = useRouter();
@@ -32,6 +36,7 @@ export default function CompletarPerfil() {
     handleChange,
     updateField,
     updateMultipleFields,
+    updateLocation,
     resetForm,
     lockName,
     validateTelefono,
@@ -181,6 +186,11 @@ export default function CompletarPerfil() {
       return;
     }
 
+    if (!form.direccion || !form.latitud || !form.longitud) {
+      setError("Debes seleccionar una ubicación en el mapa.");
+      return;
+    }
+
     // Validación natural usando ambas fechas posibles
     if (form.tipo_persona === "Natural" && fechasValidasNatural.length) {
       if (!form.fechaEmisionIngresada) {
@@ -237,6 +247,8 @@ export default function CompletarPerfil() {
       direccion: form.direccion,
       telefono: form.telefono,
       representante: form.representante || null,
+      latitud: form.latitud,
+      longitud: form.longitud,
     });
 
     if (success) {
@@ -386,23 +398,31 @@ export default function CompletarPerfil() {
           </div>
         )}
 
+        {/* CAMPO UBICACIÓN CON MAPA */}
         <div>
-          <label
-            htmlFor="direccion"
-            className="font-semibold text-gray-700 block mb-1"
-          >
-            Dirección <span className="text-red-600">*</span>
+          <label className="font-semibold text-gray-700 block mb-2">
+            Ubicación <span className="text-red-600">*</span>
           </label>
-          <input
-            name="direccion"
-            id="direccion"
-            type="text"
-            placeholder="Dirección"
-            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
-            value={form.direccion}
-            onChange={handleChange}
-          />
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-2 text-gray-500">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="text-sm">Cargando mapa...</span>
+                </div>
+              </div>
+            }
+          >
+            <MapboxLocationPicker
+              initialAddress={form.direccion}
+              initialLatitude={form.latitud || -2.1894}
+              initialLongitude={form.longitud || -79.8891}
+              onLocationSelect={updateLocation}
+              placeholder="Buscar tu dirección..."
+            />
+          </Suspense>
         </div>
+
         <div>
           <label
             htmlFor="telefono"

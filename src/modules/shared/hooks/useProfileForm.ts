@@ -10,6 +10,8 @@ interface ProfileFormData {
   fechaEmisionIngresada: string;
   fechaExpRepreIngresada: string;
   representante: string;
+  latitud: number | null;
+  longitud: number | null;
 }
 
 const initialFormState: ProfileFormData = {
@@ -22,6 +24,8 @@ const initialFormState: ProfileFormData = {
   fechaEmisionIngresada: '',
   fechaExpRepreIngresada: '',
   representante: '',
+  latitud: null,
+  longitud: null,
 };
 
 export function useProfileForm() {
@@ -35,12 +39,21 @@ export function useProfileForm() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const updateField = (field: keyof ProfileFormData, value: string) => {
+  const updateField = (field: keyof ProfileFormData, value: string | number | null) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const updateMultipleFields = (fields: Partial<ProfileFormData>) => {
     setForm((prev) => ({ ...prev, ...fields }));
+  };
+
+  const updateLocation = (data: { address: string; latitude: number; longitude: number }) => {
+    setForm((prev) => ({
+      ...prev,
+      direccion: data.address,
+      latitud: data.latitude,
+      longitud: data.longitude,
+    }));
   };
 
   const resetForm = (tipo?: 'Natural' | 'Juridica') => {
@@ -66,6 +79,7 @@ export function useProfileForm() {
     handleChange,
     updateField,
     updateMultipleFields,
+    updateLocation,
     resetForm,
     lockName,
     validateTelefono,

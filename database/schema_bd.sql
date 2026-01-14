@@ -212,6 +212,8 @@ CREATE TABLE public.usuarios (
   recibir_notificaciones boolean DEFAULT true,
   fecha_fin_bloqueo timestamp with time zone,
   motivo_bloqueo text,
+  latitud double precision,
+  longitud double precision,
   CONSTRAINT usuarios_pkey PRIMARY KEY (id),
   CONSTRAINT usuarios_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );

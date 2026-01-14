@@ -9,6 +9,8 @@ interface ProfileUpdateData {
   direccion?: string;
   telefono?: string;
   representante?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
 }
 
 export function useProfileUpdate(supabase: SupabaseClient) {

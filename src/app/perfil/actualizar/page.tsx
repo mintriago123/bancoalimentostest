@@ -1,10 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { useProfileForm, useProfileUpdate } from '@/modules/shared';
+import { Loader2 } from 'lucide-react';
+
+// Lazy load del componente de mapa para mejor rendimiento
+const MapboxLocationPicker = lazy(() => import('@/modules/shared/components/MapboxLocationPicker'));
 
 export default function ActualizarPerfil() {
   const router = useRouter();
@@ -17,6 +21,7 @@ export default function ActualizarPerfil() {
     form,
     handleChange,
     updateMultipleFields,
+    updateLocation,
     validateTelefono,
   } = useProfileForm();
 
@@ -38,15 +43,21 @@ export default function ActualizarPerfil() {
       }
 
       const userId = userData.user.id;
-      const data = await loadUserProfile(userId);
+      
+      // Cargar perfil con coordenadas
+      const { data, error: fetchError } = await supabase
+        .from('usuarios')
+        .select('tipo_persona, cedula, ruc, nombre, direccion, telefono, latitud, longitud')
+        .eq('id', userId)
+        .single();
 
-      if (data) {
+      if (!fetchError && data) {
         updateMultipleFields(data);
       }
     };
 
     cargarDatos();
-  }, [supabase, loadUserProfile, updateMultipleFields, setError]);
+  }, [supabase, updateMultipleFields, setError]);
 
   // Manejo de Cerrar sesión
   const manejarCerrarSesion = async () => {
@@ -97,6 +108,8 @@ export default function ActualizarPerfil() {
     const success = await updateProfile(userId, {
       direccion: form.direccion,
       telefono: form.telefono,
+      latitud: form.latitud,
+      longitud: form.longitud,
     });
 
     if (success) {
@@ -207,16 +220,25 @@ export default function ActualizarPerfil() {
       </div>
 
       <div>
-        <label htmlFor="direccion" className="font-semibold text-gray-700 block mb-1">Dirección</label>
-        <input
-          name="direccion"
-          id="direccion"
-          type="text"
-          placeholder="Dirección"
-          className="w-full border border-gray-300 rounded-lg px-4 py-2"
-          value={form.direccion}
-          onChange={handleChange}
-        />
+        <label className="font-semibold text-gray-700 block mb-2">Ubicación</label>
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-2 text-gray-500">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Cargando mapa...</span>
+              </div>
+            </div>
+          }
+        >
+          <MapboxLocationPicker
+            initialAddress={form.direccion}
+            initialLatitude={form.latitud || -2.1894}
+            initialLongitude={form.longitud || -79.8891}
+            onLocationSelect={updateLocation}
+            placeholder="Buscar tu dirección..."
+          />
+        </Suspense>
       </div>
 
       <div>
