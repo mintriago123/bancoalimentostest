@@ -26,50 +26,65 @@ export default function MapboxStaticMap({
   height = '200px',
 }: MapboxStaticMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
+  const mapInstance = useRef<mapboxgl.Map | null>(null);
+  const markerInstance = useRef<mapboxgl.Marker | null>(null);
+  const isInitialized = useRef(false);
   const [mapLoaded, setMapLoaded] = useState(false);
 
   useEffect(() => {
-    if (map.current) return;
+    // Evitar doble inicialización
+    if (isInitialized.current || !mapContainer.current) return;
+    isInitialized.current = true;
 
-    if (mapContainer.current) {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [longitude, latitude],
-        zoom: zoom,
-        attributionControl: false,
-        interactive: false, // Deshabilitar interacción
-      });
+    const container = mapContainer.current;
 
-      // Evento cuando el mapa termina de cargar
-      map.current.on('load', () => {
-        setMapLoaded(true);
-        if (map.current) {
-          map.current.resize();
-        }
-      });
+    const newMap = new mapboxgl.Map({
+      container: container,
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [longitude, latitude],
+      zoom: zoom,
+      attributionControl: false,
+      interactive: false, // Deshabilitar interacción
+    });
 
-      // Crear y agregar el marcador
-      new mapboxgl.Marker({
-        color: '#3b82f6',
-      })
-        .setLngLat([longitude, latitude])
-        .addTo(map.current);
+    mapInstance.current = newMap;
 
-      // Redimensionar después de montar
-      setTimeout(() => {
-        if (map.current) {
-          map.current.resize();
-        }
-      }, 100);
-    }
+    // Evento cuando el mapa termina de cargar
+    newMap.on('load', () => {
+      setMapLoaded(true);
+      newMap.resize();
+    });
+
+    // Crear y agregar el marcador
+    const newMarker = new mapboxgl.Marker({
+      color: '#3b82f6',
+    })
+      .setLngLat([longitude, latitude])
+      .addTo(newMap);
+
+    markerInstance.current = newMarker;
+
+    // Redimensionar después de montar
+    const resizeTimeout = setTimeout(() => {
+      if (mapInstance.current) {
+        mapInstance.current.resize();
+      }
+    }, 100);
 
     return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
+      clearTimeout(resizeTimeout);
+      
+      if (markerInstance.current) {
+        markerInstance.current.remove();
+        markerInstance.current = null;
       }
+      
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+        mapInstance.current = null;
+      }
+      
+      isInitialized.current = false;
     };
   }, [latitude, longitude, zoom]);
 

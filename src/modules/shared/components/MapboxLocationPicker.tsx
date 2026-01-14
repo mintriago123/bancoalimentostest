@@ -40,8 +40,9 @@ export default function MapboxLocationPicker({
   className = '',
 }: MapboxLocationPickerProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const marker = useRef<mapboxgl.Marker | null>(null);
+  const mapInstance = useRef<mapboxgl.Map | null>(null);
+  const markerInstance = useRef<mapboxgl.Marker | null>(null);
+  const isInitialized = useRef(false);
   
   const [searchQuery, setSearchQuery] = useState(initialAddress);
   const [searchResults, setSearchResults] = useState<LocationResult[]>([]);
@@ -55,6 +56,12 @@ export default function MapboxLocationPicker({
   const [mapLoaded, setMapLoaded] = useState(false);
   
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const onLocationSelectRef = useRef(onLocationSelect);
+  
+  // Mantener la ref actualizada
+  useEffect(() => {
+    onLocationSelectRef.current = onLocationSelect;
+  }, [onLocationSelect]);
 
   // Función para hacer geocoding inverso (coordenadas -> dirección)
   const reverseGeocode = useCallback(async (lat: number, lng: number) => {
@@ -68,7 +75,7 @@ export default function MapboxLocationPicker({
         const address = data.features[0].place_name;
         setSelectedAddress(address);
         setSearchQuery(address);
-        onLocationSelect({
+        onLocationSelectRef.current({
           address,
           latitude: lat,
           longitude: lng,
@@ -77,7 +84,7 @@ export default function MapboxLocationPicker({
     } catch (error) {
       console.error('Error en geocoding inverso:', error);
     }
-  }, [onLocationSelect]);
+  }, []);
 
   // Función para buscar direcciones
   const searchAddresses = useCallback(async (query: string) => {
@@ -124,7 +131,7 @@ export default function MapboxLocationPicker({
   };
 
   // Seleccionar una dirección de los resultados
-  const handleSelectLocation = (result: LocationResult) => {
+  const handleSelectLocation = useCallback((result: LocationResult) => {
     const [lng, lat] = result.center;
     
     setSelectedAddress(result.place_name);
@@ -134,22 +141,22 @@ export default function MapboxLocationPicker({
     setSearchResults([]);
     
     // Actualizar mapa y marcador
-    if (map.current && marker.current) {
-      map.current.flyTo({
+    if (mapInstance.current && markerInstance.current) {
+      mapInstance.current.flyTo({
         center: [lng, lat],
         zoom: 16,
         duration: 1500,
       });
-      marker.current.setLngLat([lng, lat]);
+      markerInstance.current.setLngLat([lng, lat]);
     }
     
     // Notificar al padre
-    onLocationSelect({
+    onLocationSelectRef.current({
       address: result.place_name,
       latitude: lat,
       longitude: lng,
     });
-  };
+  }, []);
 
   // Limpiar búsqueda
   const handleClearSearch = () => {
@@ -158,95 +165,112 @@ export default function MapboxLocationPicker({
     setShowResults(false);
   };
 
-  // Inicializar mapa
+  // Inicializar y limpiar mapa
   useEffect(() => {
-    if (map.current) return;
+    // Evitar doble inicialización
+    if (isInitialized.current || !mapContainer.current) return;
+    isInitialized.current = true;
+
+    const container = mapContainer.current;
     
-    if (mapContainer.current) {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [coordinates.lng, coordinates.lat],
-        zoom: 14,
-        attributionControl: false,
-      });
+    // Crear el mapa
+    const newMap = new mapboxgl.Map({
+      container: container,
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [initialLongitude, initialLatitude],
+      zoom: 14,
+      attributionControl: false,
+    });
 
-      // Agregar controles de navegación
-      map.current.addControl(
-        new mapboxgl.NavigationControl({
-          showCompass: false,
-          showZoom: true,
-        }),
-        'top-right'
-      );
+    mapInstance.current = newMap;
 
-      // Agregar control de geolocalización
-      map.current.addControl(
-        new mapboxgl.GeolocateControl({
-          positionOptions: {
-            enableHighAccuracy: true,
-          },
-          trackUserLocation: false,
-          showUserHeading: false,
-        }),
-        'top-right'
-      );
+    // Agregar controles de navegación
+    newMap.addControl(
+      new mapboxgl.NavigationControl({
+        showCompass: false,
+        showZoom: true,
+      }),
+      'top-right'
+    );
 
-      // Evento cuando el mapa termina de cargar
-      map.current.on('load', () => {
-        setMapLoaded(true);
-        if (map.current) {
-          map.current.resize();
-        }
-      });
+    // Agregar control de geolocalización
+    newMap.addControl(
+      new mapboxgl.GeolocateControl({
+        positionOptions: {
+          enableHighAccuracy: true,
+        },
+        trackUserLocation: false,
+        showUserHeading: false,
+      }),
+      'top-right'
+    );
 
-      // Crear y agregar el marcador
-      marker.current = new mapboxgl.Marker({
-        color: '#3b82f6',
-        draggable: true,
-      })
-        .setLngLat([coordinates.lng, coordinates.lat])
-        .addTo(map.current);
+    // Evento cuando el mapa termina de cargar
+    newMap.on('load', () => {
+      setMapLoaded(true);
+      newMap.resize();
+    });
 
-      // Manejar el evento de arrastrar
-      marker.current.on('dragend', () => {
-        if (marker.current) {
-          const lngLat = marker.current.getLngLat();
-          setCoordinates({ lat: lngLat.lat, lng: lngLat.lng });
-          reverseGeocode(lngLat.lat, lngLat.lng);
-        }
-      });
+    // Crear y agregar el marcador
+    const newMarker = new mapboxgl.Marker({
+      color: '#3b82f6',
+      draggable: true,
+    })
+      .setLngLat([initialLongitude, initialLatitude])
+      .addTo(newMap);
 
-      // Agregar evento de clic en el mapa
-      map.current.on('click', (e) => {
-        const { lng, lat } = e.lngLat;
-        
-        // Mover el marcador a la nueva posición
-        if (marker.current) {
-          marker.current.setLngLat([lng, lat]);
-        }
-        
-        setCoordinates({ lat, lng });
-        reverseGeocode(lat, lng);
-      });
+    markerInstance.current = newMarker;
 
-      // Redimensionar el mapa después de que se monte
-      setTimeout(() => {
-        if (map.current) {
-          map.current.resize();
-        }
-      }, 100);
-    }
-  }, [coordinates.lat, coordinates.lng, reverseGeocode]);
+    // Manejar el evento de arrastrar
+    newMarker.on('dragend', () => {
+      const lngLat = newMarker.getLngLat();
+      setCoordinates({ lat: lngLat.lat, lng: lngLat.lng });
+      reverseGeocode(lngLat.lat, lngLat.lng);
+    });
 
-  // Limpiar timeout al desmontar
-  useEffect(() => {
+    // Agregar evento de clic en el mapa
+    newMap.on('click', (e) => {
+      const { lng, lat } = e.lngLat;
+      
+      // Mover el marcador a la nueva posición
+      if (markerInstance.current) {
+        markerInstance.current.setLngLat([lng, lat]);
+      }
+      
+      setCoordinates({ lat, lng });
+      reverseGeocode(lat, lng);
+    });
+
+    // Redimensionar el mapa después de que se monte
+    const resizeTimeout = setTimeout(() => {
+      if (mapInstance.current) {
+        mapInstance.current.resize();
+      }
+    }, 100);
+
+    // Cleanup function
     return () => {
+      clearTimeout(resizeTimeout);
+      
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
+      
+      // Remover marcador primero
+      if (markerInstance.current) {
+        markerInstance.current.remove();
+        markerInstance.current = null;
+      }
+      
+      // Luego remover el mapa
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+        mapInstance.current = null;
+      }
+      
+      isInitialized.current = false;
     };
-  }, []);
+  }, [initialLatitude, initialLongitude, reverseGeocode]);
 
   return (
     <div className={`space-y-3 ${className}`}>
