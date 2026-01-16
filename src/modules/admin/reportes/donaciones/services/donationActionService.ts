@@ -23,6 +23,7 @@ import {
   buildDonacionEntregadaEmailTemplate,
   buildDonacionCanceladaEmailTemplate,
 } from '@/lib/email/templates/donacionEmail';
+import { getBaseUrl } from '@/lib/getBaseUrl';
 
 const logger = {
   info: (message: string, details?: unknown) => console.info(`[DonationActionService] ${message}`, details),
@@ -127,7 +128,7 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
     codigoComprobanteGuardado?: string | null
   ) => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+      const baseUrl = getBaseUrl();
 
       // Usar el código guardado en BD o generar uno nuevo
       const codigoComprobante = codigoComprobanteGuardado ?? generarCodigoComprobante('donacion', String(donation.id));

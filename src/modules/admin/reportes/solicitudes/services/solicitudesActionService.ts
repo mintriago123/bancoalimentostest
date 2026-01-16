@@ -24,6 +24,7 @@ import {
   buildSolicitudAprobadaEmailTemplate,
   buildSolicitudRechazadaEmailTemplate,
 } from '@/lib/email/templates/solicitudEmail';
+import { getBaseUrl } from '@/lib/getBaseUrl';
 
 const logger = {
   info: (message: string, details?: unknown) => console.info(`[SolicitudesActionService] ${message}`, details),
@@ -678,7 +679,7 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
     codigoComprobanteGuardado?: string | null
   ) => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+      const baseUrl = getBaseUrl();
       
       // Usar el código guardado en BD o generar uno nuevo para el comprobante visual
       const codigoComprobante = codigoComprobanteGuardado ?? generarCodigoComprobante('solicitud', solicitud.id);
