@@ -14,6 +14,16 @@ import type {
 } from '../types';
 import { createSolicitudesDataService } from './solicitudesDataService';
 import { sendNotification } from '@/modules/shared/services/notificationClient';
+import {
+  generarCodigoComprobante,
+  generarURLComprobante,
+  generarQRBase64,
+  generarDatosComprobante,
+} from '@/lib/comprobante';
+import {
+  buildSolicitudAprobadaEmailTemplate,
+  buildSolicitudRechazadaEmailTemplate,
+} from '@/lib/email/templates/solicitudEmail';
 
 const logger = {
   info: (message: string, details?: unknown) => console.info(`[SolicitudesActionService] ${message}`, details),
@@ -45,12 +55,18 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         }
       }
 
+      // Generar código de comprobante si se aprueba
+      const codigoComprobante = nuevoEstado === 'aprobada' 
+        ? generarCodigoComprobante('solicitud', solicitud.id)
+        : null;
+
       const { error: updateError } = await supabaseClient
         .from('solicitudes')
         .update({
           estado: nuevoEstado,
           fecha_respuesta: new Date().toISOString(),
-          comentario_admin: comentarioAdmin?.trim() ? comentarioAdmin.trim() : null
+          comentario_admin: comentarioAdmin?.trim() ? comentarioAdmin.trim() : null,
+          ...(codigoComprobante && { codigo_comprobante: codigoComprobante })
         })
         .eq('id', solicitud.id);
 
@@ -68,7 +84,7 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         await registrarMovimientoSolicitud(solicitud, resultadoInventario);
 
         const mensaje = buildResultadoMensaje(solicitud, resultadoInventario);
-        await notificarCambioEstado(solicitud, nuevoEstado, mensaje, comentarioAdmin);
+        await notificarCambioEstado(solicitud, nuevoEstado, mensaje, comentarioAdmin, codigoComprobante);
         return {
           success: true,
           data: {
@@ -80,7 +96,7 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
       }
 
       if (nuevoEstado === 'entregada') {
-        await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin);
+        await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin, null);
         return {
           success: true,
           data: {
@@ -91,7 +107,7 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         };
       }
 
-      await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin);
+      await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin, null);
 
       return {
         success: true,
@@ -658,43 +674,126 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
     solicitud: Solicitud,
     nuevoEstado: 'aprobada' | 'rechazada' | 'entregada',
     mensajeInventario?: string,
-    comentarioAdmin?: string
+    comentarioAdmin?: string,
+    codigoComprobanteGuardado?: string | null
   ) => {
-    const titulo = (() => {
-      if (nuevoEstado === 'aprobada') return 'Tu solicitud ha sido aprobada';
-      if (nuevoEstado === 'entregada') return 'Tu solicitud ha sido entregada';
-      return 'Tu solicitud ha sido rechazada';
-    })();
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+      
+      // Usar el código guardado en BD o generar uno nuevo para el comprobante visual
+      const codigoComprobante = codigoComprobanteGuardado ?? generarCodigoComprobante('solicitud', solicitud.id);
+      
+      // Datos del usuario
+      const datosUsuario = {
+        id: solicitud.usuario_id,
+        nombre: solicitud.usuarios?.nombre ?? 'Usuario',
+        email: solicitud.usuarios?.email ?? '',
+        telefono: solicitud.usuarios?.telefono,
+        direccion: solicitud.usuarios?.direccion,
+        documento: solicitud.usuarios?.cedula,
+      };
 
-    const mensaje = (() => {
+      // Datos del pedido
+      const datosPedido = {
+        id: solicitud.id,
+        tipo: 'solicitud' as const,
+        tipoAlimento: solicitud.tipo_alimento,
+        cantidad: solicitud.cantidad,
+        unidad: solicitud.unidades?.simbolo ?? 'unidades',
+        estado: nuevoEstado,
+        fechaCreacion: solicitud.created_at,
+        fechaAprobacion: new Date().toISOString(),
+        comentarioAdmin,
+      };
+
+      // Generar comprobante con el código correcto
+      const comprobante = {
+        ...generarDatosComprobante('solicitud', datosUsuario, datosPedido, comentarioAdmin),
+        codigoComprobante, // Usar el código guardado en BD
+      };
+
+      // Configurar notificación y email según el estado
       if (nuevoEstado === 'aprobada') {
-        if (mensajeInventario) return mensajeInventario;
-        return `Tu solicitud de ${solicitud.cantidad} ${solicitud.unidades?.simbolo ?? ''} de ${solicitud.tipo_alimento} ha sido aprobada.`;
+        // Generar QR para solicitud aprobada
+        const urlComprobante = generarURLComprobante(
+          baseUrl,
+          comprobante.codigoComprobante,
+          'solicitud',
+          solicitud.usuario_id,
+          solicitud.id
+        );
+        const qrImageBase64 = await generarQRBase64(urlComprobante);
+
+        // Construir email con template mejorado
+        const emailTemplate = buildSolicitudAprobadaEmailTemplate({
+          comprobante,
+          qrImageBase64,
+          baseUrl,
+        });
+
+        await sendNotification({
+          titulo: `✅ Solicitud Aprobada - Código: ${comprobante.codigoComprobante}`,
+          mensaje: `Estimado/a ${datosUsuario.nombre}, su solicitud de ${solicitud.cantidad} ${datosPedido.unidad} de ${solicitud.tipo_alimento} ha sido aprobada. Presente el código QR adjunto al momento de retirar los alimentos. Válido hasta: ${new Date(comprobante.fechaVencimiento).toLocaleDateString('es-ES')}.`,
+          categoria: 'solicitud',
+          tipo: 'success',
+          destinatarioId: solicitud.usuario_id,
+          urlAccion: '/user/solicitudes',
+          metadatos: {
+            solicitudId: solicitud.id,
+            nuevoEstado,
+            codigoComprobante: comprobante.codigoComprobante,
+            fechaVencimiento: comprobante.fechaVencimiento,
+          },
+          email: {
+            subject: emailTemplate.subject,
+            html: emailTemplate.html,
+            text: emailTemplate.text,
+          },
+        });
+      } else if (nuevoEstado === 'rechazada') {
+        // Email para solicitud rechazada
+        const emailTemplate = buildSolicitudRechazadaEmailTemplate({
+          comprobante,
+          baseUrl,
+        });
+
+        await sendNotification({
+          titulo: '❌ Solicitud No Aprobada',
+          mensaje: comentarioAdmin 
+            ? `Estimado/a ${datosUsuario.nombre}, lamentamos informarle que su solicitud de ${solicitud.tipo_alimento} no ha sido aprobada. Motivo: ${comentarioAdmin}. Puede realizar una nueva solicitud en cualquier momento.`
+            : `Estimado/a ${datosUsuario.nombre}, lamentamos informarle que su solicitud de ${solicitud.tipo_alimento} no ha sido aprobada en esta ocasión. Puede realizar una nueva solicitud en cualquier momento.`,
+          categoria: 'solicitud',
+          tipo: 'warning',
+          destinatarioId: solicitud.usuario_id,
+          urlAccion: '/user/formulario',
+          metadatos: {
+            solicitudId: solicitud.id,
+            nuevoEstado,
+          },
+          email: {
+            subject: emailTemplate.subject,
+            html: emailTemplate.html,
+            text: emailTemplate.text,
+          },
+        });
+      } else if (nuevoEstado === 'entregada') {
+        // Notificación simple para entrega
+        await sendNotification({
+          titulo: '📦 Solicitud Entregada',
+          mensaje: `Estimado/a ${datosUsuario.nombre}, confirmamos que su solicitud de ${solicitud.cantidad} ${datosPedido.unidad} de ${solicitud.tipo_alimento} ha sido entregada exitosamente. ¡Gracias por confiar en el Banco de Alimentos!`,
+          categoria: 'solicitud',
+          tipo: 'success',
+          destinatarioId: solicitud.usuario_id,
+          urlAccion: '/user/solicitudes',
+          metadatos: {
+            solicitudId: solicitud.id,
+            nuevoEstado,
+          },
+        });
       }
-
-      if (nuevoEstado === 'entregada') {
-        return `Tu solicitud de ${solicitud.cantidad} ${solicitud.unidades?.simbolo ?? ''} de ${solicitud.tipo_alimento} ha sido entregada. ¡Gracias!`;
-      }
-
-      if (comentarioAdmin && comentarioAdmin.trim().length > 0) {
-        return `Tu solicitud fue rechazada. Comentario del administrador: ${comentarioAdmin.trim()}`;
-      }
-
-      return `Tu solicitud de ${solicitud.tipo_alimento} fue rechazada.`;
-    })();
-
-    await sendNotification({
-      titulo,
-      mensaje,
-      categoria: 'solicitud',
-      tipo: nuevoEstado === 'aprobada' || nuevoEstado === 'entregada' ? 'success' : 'warning',
-      destinatarioId: solicitud.usuario_id,
-      urlAccion: '/user/solicitudes',
-      metadatos: {
-        solicitudId: solicitud.id,
-        nuevoEstado,
-      },
-    });
+    } catch (error) {
+      logger.error('Error enviando notificación de solicitud', error);
+    }
   };
 
   const buscarProductosCoincidentes = async (tipoAlimento: string): Promise<ProductoInventario[]> => {

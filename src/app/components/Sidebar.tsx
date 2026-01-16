@@ -16,7 +16,8 @@ import {
   Cog6ToothIcon,
   PowerIcon,
   ChevronDownIcon,
-  ChevronUpIcon
+  ChevronUpIcon,
+  QrCodeIcon
 } from '@heroicons/react/24/outline';
 
 interface SidebarProps {
@@ -130,6 +131,13 @@ const menuItems: MenuItem[] = [
     href: '/operador/inventario',
     icon: ChartBarIcon,
     description: 'Control de stock disponible',
+    operadorOnly: true
+  },
+  {
+    name: 'Validar Comprobante',
+    href: '/operador/validar-comprobante',
+    icon: QrCodeIcon,
+    description: 'Buscar por código de comprobante',
     operadorOnly: true
   },
   
