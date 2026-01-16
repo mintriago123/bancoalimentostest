@@ -38,6 +38,7 @@ export interface Solicitud {
   unidad_id?: number;
   unidades?: SolicitudUnidad | null;
   usuarios: SolicitudUsuario | null;
+  codigo_comprobante?: string;
 }
 
 export interface SolicitudEstadoFilter {
@@ -143,6 +144,7 @@ export interface SupabaseSolicitudRow {
   unidad_id?: number | null;
   unidades?: SupabaseSolicitudUnidad | null;
   usuarios: SupabaseSolicitudUsuario | null;
+  codigo_comprobante?: string | null;
 }
 
 export interface SupabaseInventarioDisponibleRow {

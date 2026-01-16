@@ -43,6 +43,7 @@ export interface Donation {
   creado_en: string;
   actualizado_en: string;
   alimento?: DonationAlimento | null;
+  codigo_comprobante?: string;
 }
 
 export interface DonationEstadoFilter {
@@ -115,6 +116,7 @@ export interface SupabaseDonationRow {
   estado: DonationEstado;
   creado_en: string;
   actualizado_en: string;
+  codigo_comprobante?: string | null;
 }
 
 export interface SupabaseAlimentoRow {

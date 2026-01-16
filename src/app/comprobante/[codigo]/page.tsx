@@ -84,6 +84,12 @@ export default function ComprobantePage() {
 
   const { comprobante, tipo, formatoFechas } = data;
   const esSolicitud = tipo === 'solicitud';
+  
+  // Determinar si está aprobada o rechazada/cancelada
+  const estadoLower = comprobante.pedido.estado.toLowerCase();
+  const esAprobada = ['aprobada', 'aprobado', 'entregada', 'entregado', 'recogida', 'recogido'].includes(estadoLower);
+  const esRechazada = ['rechazada', 'rechazado', 'cancelada', 'cancelado'].includes(estadoLower);
+  const esPendiente = ['pendiente'].includes(estadoLower);
 
   return (
     <>
@@ -113,7 +119,7 @@ export default function ComprobantePage() {
         <div className="max-w-3xl mx-auto mb-4 no-print">
           <button
             onClick={handlePrint}
-            className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-lg"
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-lg"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -124,8 +130,14 @@ export default function ComprobantePage() {
 
         {/* Comprobante */}
         <div id="comprobante-print" ref={printRef} className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
-          {/* Header */}
-          <div className={`${esSolicitud ? 'bg-gradient-to-r from-red-600 to-red-700' : 'bg-gradient-to-r from-green-600 to-green-700'} text-white p-8`}>
+          {/* Header - Color según estado */}
+          <div className={`${
+            esRechazada 
+              ? 'bg-gradient-to-r from-red-600 to-red-700' 
+              : esAprobada 
+                ? 'bg-gradient-to-r from-green-600 to-green-700' 
+                : 'bg-gradient-to-r from-yellow-500 to-yellow-600'
+          } text-white p-8`}>
             <div className="flex justify-between items-start">
               <div>
                 <h1 className="text-3xl font-bold mb-2">Banco de Alimentos</h1>
@@ -138,28 +150,45 @@ export default function ComprobantePage() {
             </div>
           </div>
 
-          {/* Tipo de comprobante */}
-          <div className={`${esSolicitud ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'} border-b px-8 py-4`}>
+          {/* Tipo de comprobante - Color según estado */}
+          <div className={`${
+            esRechazada 
+              ? 'bg-red-50 border-red-200' 
+              : esAprobada 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-yellow-50 border-yellow-200'
+          } border-b px-8 py-4`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className={`text-2xl`}>{esSolicitud ? '📦' : '🎁'}</span>
                 <div>
-                  <h2 className={`font-bold ${esSolicitud ? 'text-red-800' : 'text-green-800'}`}>
+                  <h2 className={`font-bold ${
+                    esRechazada 
+                      ? 'text-red-800' 
+                      : esAprobada 
+                        ? 'text-green-800' 
+                        : 'text-yellow-800'
+                  }`}>
                     {esSolicitud ? 'COMPROBANTE DE ENTREGA' : 'COMPROBANTE DE DONACIÓN'}
                   </h2>
-                  <p className={`text-sm ${esSolicitud ? 'text-red-600' : 'text-green-600'}`}>
-                    {esSolicitud ? 'Entrega de alimentos al beneficiario' : 'Recepción de donación'}
+                  <p className={`text-sm ${
+                    esRechazada 
+                      ? 'text-red-600' 
+                      : esAprobada 
+                        ? 'text-green-600' 
+                        : 'text-yellow-600'
+                  }`}>
+                    {esSolicitud 
+                      ? (esRechazada ? 'Solicitud rechazada' : 'Entrega de alimentos al beneficiario') 
+                      : 'Recepción de donación'}
                   </p>
                 </div>
               </div>
               <div className={`px-4 py-2 rounded-full font-semibold text-sm ${
-                comprobante.pedido.estado === 'aprobada' || comprobante.pedido.estado === 'Entregada'
+                esAprobada
                   ? 'bg-green-100 text-green-800'
-                  : comprobante.pedido.estado === 'pendiente' || comprobante.pedido.estado === 'Pendiente'
-                  ? 'bg-yellow-100 text-yellow-800'
-                  : comprobante.pedido.estado === 'Recogida'
-                  ? 'bg-blue-100 text-blue-800'
-                  : 'bg-gray-100 text-gray-800'
+                  : esRechazada
+                  ? 'bg-red-100 text-red-800'
+                  : 'bg-yellow-100 text-yellow-800'
               }`}>
                 {comprobante.pedido.estado.toUpperCase()}
               </div>
@@ -187,7 +216,6 @@ export default function ComprobantePage() {
             {/* Datos del Usuario */}
             <div>
               <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">👤</span>
                 Datos del {esSolicitud ? 'Beneficiario' : 'Donante'}
               </h3>
               <div className="grid md:grid-cols-2 gap-4 p-4 border border-gray-200 rounded-xl">
@@ -219,7 +247,6 @@ export default function ComprobantePage() {
             {/* Detalles del Pedido */}
             <div>
               <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">📋</span>
                 Detalles del {esSolicitud ? 'Pedido' : 'Producto Donado'}
               </h3>
               <div className="border border-gray-200 rounded-xl overflow-hidden">
@@ -234,18 +261,12 @@ export default function ComprobantePage() {
                   <tbody>
                     <tr className="border-t border-gray-100">
                       <td className="px-4 py-4 font-semibold text-gray-900">{comprobante.pedido.tipoAlimento}</td>
-                      <td className="px-4 py-4 text-center font-bold text-xl text-red-600">{comprobante.pedido.cantidad}</td>
+                      <td className="px-4 py-4 text-center font-bold text-xl text-black-600">{comprobante.pedido.cantidad}</td>
                       <td className="px-4 py-4 text-center text-gray-600">{comprobante.pedido.unidad}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-            </div>
-
-            {/* Sobre el Proyecto */}
-            <div className="p-4 bg-red-50 border-l-4 border-red-600 rounded-r-xl">
-              <h3 className="font-bold text-red-800 mb-2">🏛️ Sobre el Banco de Alimentos</h3>
-              <p className="text-sm text-red-700 leading-relaxed">{comprobante.descripcionProyecto}</p>
             </div>
 
             {/* Firmas */}
@@ -293,11 +314,21 @@ export default function ComprobantePage() {
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="bg-gray-50 border-t border-gray-200 px-8 py-6">
-            <div className="flex justify-between items-center text-sm text-gray-500">
-              <p>© {new Date().getFullYear()} Banco de Alimentos - Todos los derechos reservados</p>
-              <p>Documento generado electrónicamente</p>
+          {/* Footer - Color según estado */}
+          <div className={`${
+            esRechazada 
+              ? 'bg-red-50 border-t border-red-200' 
+              : esAprobada 
+                ? 'bg-green-50 border-t border-green-200' 
+                : 'bg-yellow-50 border-t border-yellow-200'
+          } px-8 py-6`}>
+            <div className="flex justify-between items-center text-sm text-gray-600">
+              <p>© {new Date().getFullYear()} Banco de Alimentos - ULEAM</p>
+              <p className={`font-semibold ${
+                esRechazada ? 'text-red-600' : esAprobada ? 'text-green-600' : 'text-yellow-600'
+              }`}>
+                {esRechazada ? '❌ SOLICITUD RECHAZADA' : esAprobada ? '✓ DOCUMENTO VÁLIDO' : '⏳ PENDIENTE DE APROBACIÓN'}
+              </p>
             </div>
           </div>
         </div>

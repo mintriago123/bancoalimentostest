@@ -36,6 +36,7 @@ export const createSolicitudesDataService = (supabaseClient: SupabaseClient) => 
           fecha_respuesta,
           comentario_admin,
           unidad_id,
+          codigo_comprobante,
           unidades:unidad_id (
             id,
             nombre,
@@ -148,7 +149,8 @@ const mapSolicitudRowToDomain = (row: SupabaseSolicitudRow): Solicitud => ({
   comentario_admin: row.comentario_admin ?? undefined,
   unidad_id: row.unidad_id ?? undefined,
   unidades: mapSolicitudUnidad(row.unidades),
-  usuarios: mapSolicitudUsuario(row.usuarios)
+  usuarios: mapSolicitudUsuario(row.usuarios),
+  codigo_comprobante: row.codigo_comprobante ?? undefined
 });
 
 const mapSolicitudUsuario = (usuario: SupabaseSolicitudUsuario | null): SolicitudUsuario | null => {

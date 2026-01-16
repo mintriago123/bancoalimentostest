@@ -15,6 +15,10 @@ export interface Solicitud {
   longitud: number | null;
   created_at: string;
   updated_at?: string;
+  codigo_comprobante?: string;
+  fecha_respuesta?: string;
+  comentario_admin?: string;
+  unidad_simbolo?: string;
 }
 
 export type SolicitudEstado = 'pendiente' | 'aprobada' | 'rechazada';

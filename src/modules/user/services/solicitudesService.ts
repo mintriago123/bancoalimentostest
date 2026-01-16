@@ -23,7 +23,12 @@ export class SolicitudesService {
     try {
       let query = this.supabase
         .from('solicitudes')
-        .select('*')
+        .select(`
+          *,
+          unidades:unidad_id (
+            simbolo
+          )
+        `)
         .eq('usuario_id', usuarioId)
         .order('created_at', { ascending: false });
 
