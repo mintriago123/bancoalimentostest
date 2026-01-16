@@ -39,6 +39,7 @@ export interface Solicitud {
   unidad_id?: number;
   unidades?: SolicitudUnidad | null;
   usuarios: SolicitudUsuario | null;
+  codigo_comprobante?: string;
 }
 
 export interface SolicitudEstadoFilter {

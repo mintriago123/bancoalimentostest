@@ -27,6 +27,7 @@ export interface Donacion {
   estado: 'Pendiente' | 'Recogida' | 'Entregada' | 'Cancelada';
   creado_en: string;
   actualizado_en: string;
+  codigo_comprobante?: string;
 }
 
 export interface DonacionEstadisticas {

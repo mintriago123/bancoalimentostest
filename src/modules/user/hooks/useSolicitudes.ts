@@ -51,7 +51,12 @@ export function useSolicitudes(
       setError(MESSAGES.SOLICITUD.ERROR_LOAD);
       setLoading('error');
     } else {
-      setSolicitudes(data || []);
+      // Mapear datos para incluir el símbolo de unidad
+      const solicitudesMapeadas = (data || []).map((sol: any) => ({
+        ...sol,
+        unidad_simbolo: sol.unidades?.simbolo || 'unidades'
+      }));
+      setSolicitudes(solicitudesMapeadas);
       setLoading('success');
     }
   }, [usuarioId, filtroEstado]);

@@ -1,5 +1,6 @@
 import { Donacion } from '../types';
 import { useDateFormatter } from '@/modules/shared/hooks/useDateFormatter';
+import { QrCode, ExternalLink } from 'lucide-react';
 
 interface DonacionDetalleModalProps {
   donacion: Donacion;
@@ -114,6 +115,33 @@ export function DonacionDetalleModal({ donacion, isOpen, onClose }: DonacionDeta
               <h4 className="font-semibold text-gray-700 mb-2">Observaciones</h4>
               <div className="bg-gray-50 p-3 rounded-md">
                 <p>{donacion.observaciones}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Código de Verificación */}
+          {donacion.codigo_comprobante && (
+            <div className="md:col-span-2">
+              <h4 className="font-semibold text-gray-700 mb-2 flex items-center">
+                <QrCode className="w-4 h-4 mr-2 text-red-600" />
+                Código de Verificación
+              </h4>
+              <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 p-4 rounded-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Código de Comprobante</p>
+                    <p className="font-mono font-bold text-lg text-red-700">{donacion.codigo_comprobante}</p>
+                  </div>
+                  <a
+                    href={`/comprobante/${donacion.codigo_comprobante}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Ver Comprobante
+                  </a>
+                </div>
               </div>
             </div>
           )}
