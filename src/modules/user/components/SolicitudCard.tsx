@@ -3,7 +3,7 @@
 // Tarjeta individual de solicitud con opciones de edición y eliminación
 // ============================================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Clock,
   CheckCircle,
@@ -17,9 +17,11 @@ import {
   Hash,
   Send,
   X,
+  AlertCircle,
 } from 'lucide-react';
 import { Solicitud, SolicitudEditData } from '../types';
 import { useDateFormatter } from '@/modules/shared/hooks/useDateFormatter';
+import { createClient } from '@/lib/supabase';
 
 interface SolicitudCardProps {
   solicitud: Solicitud;
@@ -42,6 +44,18 @@ export function SolicitudCard({
     comentarios: solicitud.comentarios || '',
   });
   const [loadingEdit, setLoadingEdit] = useState(false);
+  const [mostrarDetallesRechazo, setMostrarDetallesRechazo] = useState(false);
+  const [mostrarDetallesAprobacion, setMostrarDetallesAprobacion] = useState(false);
+  const [datosRechazo, setDatosRechazo] = useState<{
+    nombreOperador: string;
+    rolOperador: string;
+  } | null>(null);
+  const [datosAprobacion, setDatosAprobacion] = useState<{
+    nombreOperador: string;
+    rolOperador: string;
+  } | null>(null);
+  const [cargandoRechazo, setCargandoRechazo] = useState(false);
+  const [cargandoAprobacion, setCargandoAprobacion] = useState(false);
 
   const getEstadoIcono = (estado: string) => {
     switch (estado.toLowerCase()) {
@@ -85,6 +99,126 @@ export function SolicitudCard({
     canDelete &&
     (solicitud.estado.toUpperCase() === 'RECHAZADA' ||
       solicitud.estado.toUpperCase() === 'PENDIENTE');
+  
+  const esRechazada = solicitud.estado.toUpperCase() === 'RECHAZADA';
+  const esAprobada = solicitud.estado.toUpperCase() === 'APROBADA' || solicitud.estado.toUpperCase() === 'ENTREGADA';
+
+  // Cargar datos del operador/admin que rechazó
+  useEffect(() => {
+    if (mostrarDetallesRechazo && solicitud.operador_rechazo_id && !datosRechazo) {
+      const cargarDatosOperador = async () => {
+        setCargandoRechazo(true);
+        try {
+          const supabase = createClient();
+          console.log('🔍 Cargando datos del operador que rechazó. ID:', solicitud.operador_rechazo_id);
+          
+          const { data, error } = await supabase
+            .from('usuarios')
+            .select('nombre, rol')
+            .eq('id', solicitud.operador_rechazo_id)
+            .single();
+
+          console.log('📊 Respuesta de Supabase:', { data, error });
+
+          if (error) {
+            console.error('❌ Error al cargar datos del operador:', error);
+            setDatosRechazo({
+              nombreOperador: 'Sistema',
+              rolOperador: 'OPERADOR',
+            });
+          } else if (data) {
+            console.log('✅ Datos cargados correctamente:', data);
+            console.log('🏷️ Rol recibido:', data.rol);
+            setDatosRechazo({
+              nombreOperador: data.nombre || 'Sistema',
+              rolOperador: data.rol || 'OPERADOR',
+            });
+          } else {
+            console.warn('⚠️ No se recibieron datos de Supabase');
+            setDatosRechazo({
+              nombreOperador: 'Sistema',
+              rolOperador: 'OPERADOR',
+            });
+          }
+        } catch (error) {
+          console.error('💥 Excepción al cargar datos del operador:', error);
+          setDatosRechazo({
+            nombreOperador: 'Sistema',
+            rolOperador: 'OPERADOR',
+          });
+        } finally {
+          setCargandoRechazo(false);
+        }
+      };
+
+      void cargarDatosOperador();
+    }
+  }, [mostrarDetallesRechazo, solicitud.operador_rechazo_id, datosRechazo]);
+
+  // Cargar datos del operador/admin que aprobó
+  useEffect(() => {
+    if (mostrarDetallesAprobacion && solicitud.operador_aprobacion_id && !datosAprobacion) {
+      const cargarDatosAprobador = async () => {
+        setCargandoAprobacion(true);
+        try {
+          const supabase = createClient();
+          console.log('🔍 Cargando datos del operador que aprobó. ID:', solicitud.operador_aprobacion_id);
+          
+          const { data, error } = await supabase
+            .from('usuarios')
+            .select('nombre, rol')
+            .eq('id', solicitud.operador_aprobacion_id)
+            .single();
+
+          console.log('📊 Respuesta de Supabase (aprobación):', { data, error });
+
+          if (error) {
+            console.error('❌ Error al cargar datos del aprobador:', error);
+            setDatosAprobacion({
+              nombreOperador: 'Sistema',
+              rolOperador: 'OPERADOR',
+            });
+          } else if (data) {
+            console.log('✅ Datos de aprobación cargados correctamente:', data);
+            console.log('🏷️ Rol recibido:', data.rol);
+            setDatosAprobacion({
+              nombreOperador: data.nombre || 'Sistema',
+              rolOperador: data.rol || 'OPERADOR',
+            });
+          } else {
+            console.warn('⚠️ No se recibieron datos de Supabase para aprobación');
+            setDatosAprobacion({
+              nombreOperador: 'Sistema',
+              rolOperador: 'OPERADOR',
+            });
+          }
+        } catch (error) {
+          console.error('💥 Excepción al cargar datos del aprobador:', error);
+          setDatosAprobacion({
+            nombreOperador: 'Sistema',
+            rolOperador: 'OPERADOR',
+          });
+        } finally {
+          setCargandoAprobacion(false);
+        }
+      };
+
+      void cargarDatosAprobador();
+    }
+  }, [mostrarDetallesAprobacion, solicitud.operador_aprobacion_id, datosAprobacion]);
+
+  const getMotivoRechazoLabel = (motivo: string | null | undefined) => {
+    const motivos: Record<string, string> = {
+      stock_insuficiente: 'Stock insuficiente',
+      producto_no_disponible: 'Producto no disponible',
+      datos_incompletos: 'Datos incompletos',
+      solicitante_ineligible: 'Solicitante inelegible',
+      duplicada: 'Solicitud duplicada',
+      vencimiento_proximo: 'Productos próximos a vencer',
+      otro: 'Otro motivo',
+    };
+    return motivos[motivo || ''] || 'No especificado';
+  };
 
   return (
     <div className="border p-4 rounded-lg shadow-sm space-y-2 relative bg-white">
@@ -182,6 +316,32 @@ export function SolicitudCard({
         </div>
       )}
 
+      {/* Botón Ver Más para solicitudes rechazadas */}
+      {esRechazada && (
+        <div className="mt-3">
+          <button
+            onClick={() => setMostrarDetallesRechazo(!mostrarDetallesRechazo)}
+            className="flex items-center gap-2 text-red-600 hover:text-red-700 font-medium text-sm transition"
+          >
+            <AlertCircle className="w-4 h-4" />
+            {mostrarDetallesRechazo ? 'Ocultar detalles del rechazo' : 'Ver detalles del rechazo'}
+          </button>
+        </div>
+      )}
+
+      {/* Botón Ver Más para solicitudes aprobadas */}
+      {esAprobada && solicitud.operador_aprobacion_id && (
+        <div className="mt-3">
+          <button
+            onClick={() => setMostrarDetallesAprobacion(!mostrarDetallesAprobacion)}
+            className="flex items-center gap-2 text-green-600 hover:text-green-700 font-medium text-sm transition"
+          >
+            <CheckCircle className="w-4 h-4" />
+            {mostrarDetallesAprobacion ? 'Ocultar detalles de aprobación' : 'Ver detalles de aprobación'}
+          </button>
+        </div>
+      )}
+
       {/* Botones de edición */}
       {editandoId === solicitud.id && (
         <div className="flex gap-2 mt-2">
@@ -201,6 +361,178 @@ export function SolicitudCard({
             <X className="w-4 h-4" />
             Cancelar
           </button>
+        </div>
+      )}
+
+      {/* Modal de Detalles de Rechazo */}
+      {mostrarDetallesRechazo && esRechazada && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-red-600 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                Detalles del Rechazo
+              </h3>
+              <button
+                onClick={() => setMostrarDetallesRechazo(false)}
+                className="text-gray-500 hover:text-gray-700 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Motivo del Rechazo */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-sm font-semibold text-red-800 mb-1">Motivo del Rechazo</p>
+                <p className="text-sm text-red-700">
+                  {getMotivoRechazoLabel(solicitud.motivo_rechazo)}
+                </p>
+              </div>
+
+              {/* Comentario del Administrador/Operador */}
+              {solicitud.comentario_admin && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-gray-800 mb-1">Comentario</p>
+                  <p className="text-sm text-gray-700">{solicitud.comentario_admin}</p>
+                </div>
+              )}
+
+              {/* Fecha y Hora del Rechazo */}
+              {solicitud.fecha_rechazo && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-gray-800 mb-1">Fecha y Hora del Rechazo</p>
+                  <p className="text-sm text-gray-700">{formatDateTime(solicitud.fecha_rechazo)}</p>
+                </div>
+              )}
+
+              {/* Quién rechazó */}
+              {solicitud.operador_rechazo_id && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-gray-800 mb-1">Rechazado por</p>
+                  {cargandoRechazo ? (
+                    <p className="text-sm text-gray-600">Cargando...</p>
+                  ) : datosRechazo ? (
+                    <div className="text-sm text-gray-700">
+                      <span
+                        className={`inline-block px-3 py-1.5 rounded text-sm font-semibold ${
+                          datosRechazo.rolOperador === 'ADMIN'
+                            ? 'bg-purple-100 text-purple-800'
+                            : datosRechazo.rolOperador === 'OPERADOR'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {datosRechazo.rolOperador === 'ADMIN' 
+                          ? 'Administrador' 
+                          : datosRechazo.rolOperador === 'OPERADOR' 
+                          ? 'Operador' 
+                          : datosRechazo.rolOperador}
+                      </span>
+                      {/* Debug info - remover después */}
+                      <p className="text-xs text-gray-500 mt-1">
+                        (Rol: {datosRechazo.rolOperador})
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600">No disponible</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Botón Cerrar */}
+            <div className="mt-6">
+              <button
+                onClick={() => setMostrarDetallesRechazo(false)}
+                className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalles de Aprobación */}
+      {mostrarDetallesAprobacion && esAprobada && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-green-600 flex items-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                Detalles de la Aprobación
+              </h3>
+              <button
+                onClick={() => setMostrarDetallesAprobacion(false)}
+                className="text-gray-500 hover:text-gray-700 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Comentario del Administrador/Operador */}
+              {solicitud.comentario_admin && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-green-800 mb-1">Comentario</p>
+                  <p className="text-sm text-green-700">{solicitud.comentario_admin}</p>
+                </div>
+              )}
+
+              {/* Fecha y Hora de Aprobación */}
+              {solicitud.fecha_aprobacion && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-gray-800 mb-1">Fecha y Hora de Aprobación</p>
+                  <p className="text-sm text-gray-700">{formatDateTime(solicitud.fecha_aprobacion)}</p>
+                </div>
+              )}
+
+              {/* Quién aprobó */}
+              {solicitud.operador_aprobacion_id && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-gray-800 mb-1">Aprobado por</p>
+                  {cargandoAprobacion ? (
+                    <p className="text-sm text-gray-600">Cargando...</p>
+                  ) : datosAprobacion ? (
+                    <div className="text-sm text-gray-700">
+                      <span
+                        className={`inline-block px-3 py-1.5 rounded text-sm font-semibold ${
+                          datosAprobacion.rolOperador === 'ADMIN'
+                            ? 'bg-purple-100 text-purple-800'
+                            : datosAprobacion.rolOperador === 'OPERADOR'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {datosAprobacion.rolOperador === 'ADMIN' 
+                          ? 'Administrador' 
+                          : datosAprobacion.rolOperador === 'OPERADOR' 
+                          ? 'Operador' 
+                          : datosAprobacion.rolOperador}
+                      </span>
+                      {/* Debug info - remover después */}
+                      <p className="text-xs text-gray-500 mt-1">
+                        (Rol: {datosAprobacion.rolOperador})
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600">No disponible</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Botón Cerrar */}
+            <div className="mt-6">
+              <button
+                onClick={() => setMostrarDetallesAprobacion(false)}
+                className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

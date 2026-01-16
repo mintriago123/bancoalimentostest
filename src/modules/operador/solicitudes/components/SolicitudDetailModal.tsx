@@ -14,11 +14,13 @@ import {
   XCircle
 } from 'lucide-react';
 import type { JSX } from 'react';
+import { useState } from 'react';
 import type {
   InventarioDisponible,
   Solicitud,
   SolicitudEstado
 } from '../types';
+import { MOTIVOS_RECHAZO } from '../constants';
 
 /**
  * Formatea una cantidad numérica con máximo 2 decimales.
@@ -44,6 +46,8 @@ interface SolicitudDetailModalProps {
   onAprobar: () => void;
   onRechazar: () => void;
   isProcessing: boolean;
+  motivoRechazo?: string;
+  onMotivoRechazoChange?: (value: string) => void;
 }
 
 const SolicitudDetailModal = ({
@@ -59,12 +63,30 @@ const SolicitudDetailModal = ({
   onComentarioChange,
   onAprobar,
   onRechazar,
-  isProcessing
+  isProcessing,
+  motivoRechazo = '',
+  onMotivoRechazoChange
 }: SolicitudDetailModalProps) => {
+  const [modoRechazo, setModoRechazo] = useState(false);
   const totalDisponible = inventario.reduce(
     (total, item) => total + (item.cantidad_disponible ?? 0),
     0
   );
+
+  // Validación para rechazos
+  const puedeRechazar = motivoRechazo?.trim().length > 0 && comentarioAdmin?.trim().length > 0;
+
+  const handleToggleModoRechazo = () => {
+    setModoRechazo(!modoRechazo);
+  };
+
+  const handleRechazarConMotivo = async () => {
+    if (!puedeRechazar) {
+      return;
+    }
+    await onRechazar();
+    setModoRechazo(false);
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -244,44 +266,154 @@ const SolicitudDetailModal = ({
           )}
 
           {solicitud.estado === 'pendiente' && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-3">Gestionar Solicitud</h4>
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="comentario-admin" className="block text-sm font-medium text-gray-700 mb-2">
-                    Comentario administrativo (opcional)
-                  </label>
-                  <textarea
-                    id="comentario-admin"
-                    value={comentarioAdmin}
-                    onChange={(event) => onComentarioChange(event.target.value)}
-                    placeholder="Agregar comentarios sobre la decisión..."
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    rows={3}
-                    disabled={isProcessing}
-                  />
-                </div>
-                <div className="flex space-x-3">
+            <div className="space-y-4">
+              {/* Sección de Aprobación */}
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 className="font-semibold text-green-900 mb-3 flex items-center">
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Aprobar Solicitud
+                </h4>
+                <div className="space-y-3">
+                  <div>
+                    <label htmlFor="comentario-admin-aprobacion" className="block text-sm font-medium text-gray-700 mb-2">
+                      Comentario administrativo (opcional)
+                    </label>
+                    <textarea
+                      id="comentario-admin-aprobacion"
+                      value={modoRechazo ? '' : comentarioAdmin}
+                      onChange={(event) => !modoRechazo && onComentarioChange(event.target.value)}
+                      placeholder="Agregar comentarios sobre la aprobación..."
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      rows={2}
+                      disabled={isProcessing || modoRechazo}
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={onAprobar}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={isProcessing || inventarioLoading || totalDisponible < solicitud.cantidad}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed w-full justify-center"
+                    disabled={isProcessing || inventarioLoading || totalDisponible < solicitud.cantidad || modoRechazo}
                     title={totalDisponible < solicitud.cantidad ? 'Stock insuficiente para aprobar esta solicitud' : ''}
                   >
                     <CheckCircle className="w-4 h-4" />
                     <span>Aprobar Solicitud</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={onRechazar}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={isProcessing}
-                  >
-                    <XCircle className="w-4 h-4" />
-                    <span>Rechazar Solicitud</span>
-                  </button>
                 </div>
+              </div>
+
+              {/* Sección de Rechazo */}
+              <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-red-900 flex items-center">
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Rechazar Solicitud
+                  </h4>
+                  {!modoRechazo && (
+                    <button
+                      type="button"
+                      onClick={handleToggleModoRechazo}
+                      className="text-sm text-red-600 hover:text-red-700 underline"
+                    >
+                      Mostrar opciones
+                    </button>
+                  )}
+                </div>
+
+                {modoRechazo ? (
+                  <div className="space-y-3">
+                    {/* Motivo de Rechazo - Obligatorio */}
+                    <div>
+                      <label htmlFor="motivo-rechazo" className="block text-sm font-medium text-gray-700 mb-2">
+                        Motivo del Rechazo <span className="text-red-600">*</span> (Obligatorio)
+                      </label>
+                      <select
+                        id="motivo-rechazo"
+                        value={motivoRechazo || ''}
+                        onChange={(event) => onMotivoRechazoChange?.(event.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        disabled={isProcessing}
+                      >
+                        <option value="">-- Selecciona un motivo --</option>
+                        {MOTIVOS_RECHAZO.map(motivo => (
+                          <option key={motivo.id} value={motivo.id}>
+                            {motivo.label}
+                          </option>
+                        ))}
+                      </select>
+                      {motivoRechazo && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {MOTIVOS_RECHAZO.find(m => m.id === motivoRechazo)?.descripcion}
+                        </p>
+                      )}
+                      {!motivoRechazo && modoRechazo && (
+                        <p className="text-xs text-red-600 mt-1">Este campo es obligatorio</p>
+                      )}
+                    </div>
+
+                    {/* Comentario - Obligatorio para rechazos */}
+                    <div>
+                      <label htmlFor="comentario-rechazo" className="block text-sm font-medium text-gray-700 mb-2">
+                        Comentario Detallado <span className="text-red-600">*</span> (Obligatorio)
+                      </label>
+                      <textarea
+                        id="comentario-rechazo"
+                        value={comentarioAdmin}
+                        onChange={(event) => onComentarioChange(event.target.value)}
+                        placeholder="Explica en detalle el motivo del rechazo. Este mensaje será enviado al solicitante..."
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        rows={3}
+                        disabled={isProcessing}
+                        minLength={10}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Mínimo 10 caracteres. El solicitante recibirá este comentario.
+                      </p>
+                      {comentarioAdmin.length < 10 && modoRechazo && (
+                        <p className="text-xs text-red-600 mt-1">
+                          Este campo es obligatorio (mínimo 10 caracteres)
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Información importante */}
+                    <div className="bg-orange-50 border border-orange-200 rounded p-3">
+                      <p className="text-xs text-orange-800">
+                        <strong>Nota:</strong> El solicitante recibirá una notificación con:
+                        <ul className="list-disc ml-4 mt-1">
+                          <li>Motivo del rechazo</li>
+                          <li>Fecha y hora del rechazo</li>
+                          <li>Tu comentario detallado</li>
+                        </ul>
+                      </p>
+                    </div>
+
+                    {/* Botones de acción */}
+                    <div className="flex space-x-2">
+                      <button
+                        type="button"
+                        onClick={handleRechazarConMotivo}
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                        disabled={!puedeRechazar || isProcessing}
+                        title={!puedeRechazar ? 'Completa todos los campos obligatorios' : 'Rechazar solicitud'}
+                      >
+                        <XCircle className="w-4 h-4" />
+                        <span>Confirmar Rechazo</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleToggleModoRechazo}
+                        className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition-colors"
+                        disabled={isProcessing}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600">
+                    Haz clic en "Mostrar opciones" para rechazar esta solicitud.
+                  </p>
+                )}
               </div>
             </div>
           )}

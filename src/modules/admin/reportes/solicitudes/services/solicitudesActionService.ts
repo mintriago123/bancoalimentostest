@@ -27,7 +27,9 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
   const updateSolicitudEstado = async (
     solicitud: Solicitud,
     nuevoEstado: 'aprobada' | 'rechazada' | 'entregada',
-    comentarioAdmin?: string
+    comentarioAdmin?: string,
+    motivoRechazo?: string,
+    operadorId?: string
   ): Promise<ServiceResult<SolicitudActionResponse>> => {
     try {
       logger.info(`Actualizando estado de solicitud ${solicitud.id} a ${nuevoEstado}`);
@@ -45,13 +47,29 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         }
       }
 
+      // Preparar objeto de actualización
+      const updateData: Record<string, unknown> = {
+        estado: nuevoEstado,
+        fecha_respuesta: new Date().toISOString(),
+        comentario_admin: comentarioAdmin?.trim() ? comentarioAdmin.trim() : null
+      };
+
+      // Si es un rechazo, registrar detalles del rechazo
+      if (nuevoEstado === 'rechazada') {
+        updateData.motivo_rechazo = motivoRechazo || null;
+        updateData.operador_rechazo_id = operadorId || null;
+        updateData.fecha_rechazo = new Date().toISOString();
+      }
+
+      // Si es una aprobación, registrar quién aprobó
+      if (nuevoEstado === 'aprobada') {
+        updateData.operador_aprobacion_id = operadorId || null;
+        updateData.fecha_aprobacion = new Date().toISOString();
+      }
+
       const { error: updateError } = await supabaseClient
         .from('solicitudes')
-        .update({
-          estado: nuevoEstado,
-          fecha_respuesta: new Date().toISOString(),
-          comentario_admin: comentarioAdmin?.trim() ? comentarioAdmin.trim() : null
-        })
+        .update(updateData)
         .eq('id', solicitud.id);
 
       if (updateError) {
@@ -86,6 +104,19 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
           data: {
             success: true,
             message: 'Solicitud marcada como entregada exitosamente',
+            warning: false
+          }
+        };
+      }
+
+      // Para rechazos, incluir información adicional
+      if (nuevoEstado === 'rechazada') {
+        await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin, motivoRechazo);
+        return {
+          success: true,
+          data: {
+            success: true,
+            message: `Solicitud rechazada exitosamente. El solicitante ha sido notificado con la fecha, hora y motivo del rechazo.`,
             warning: false
           }
         };
@@ -658,13 +689,26 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
     solicitud: Solicitud,
     nuevoEstado: 'aprobada' | 'rechazada' | 'entregada',
     mensajeInventario?: string,
-    comentarioAdmin?: string
+    comentarioAdmin?: string,
+    motivoRechazo?: string
   ) => {
     const titulo = (() => {
       if (nuevoEstado === 'aprobada') return 'Tu solicitud ha sido aprobada';
       if (nuevoEstado === 'entregada') return 'Tu solicitud ha sido entregada';
       return 'Tu solicitud ha sido rechazada';
     })();
+
+    const ahora = new Date();
+    const fechaFormato = ahora.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const horaFormato = ahora.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
 
     const mensaje = (() => {
       if (nuevoEstado === 'aprobada') {
@@ -676,8 +720,31 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         return `Tu solicitud de ${solicitud.cantidad} ${solicitud.unidades?.simbolo ?? ''} de ${solicitud.tipo_alimento} ha sido entregada. ¡Gracias!`;
       }
 
-      if (comentarioAdmin && comentarioAdmin.trim().length > 0) {
-        return `Tu solicitud fue rechazada. Comentario del administrador: ${comentarioAdmin.trim()}`;
+      // Para rechazos, incluir información completa
+      if (nuevoEstado === 'rechazada') {
+        let mensajeRechazo = `Tu solicitud de ${solicitud.cantidad} ${solicitud.unidades?.simbolo ?? ''} de ${solicitud.tipo_alimento} ha sido rechazada.\n\n`;
+        
+        if (motivoRechazo) {
+          // Mostrar etiqueta del motivo
+          const MOTIVOS_MAP: Record<string, string> = {
+            stock_insuficiente: 'Stock insuficiente',
+            producto_no_disponible: 'Producto no disponible',
+            datos_incompletos: 'Datos incompletos',
+            solicitante_ineligible: 'Solicitante ineligible',
+            duplicada: 'Solicitud duplicada',
+            vencimiento_proximo: 'Productos próximos a vencer',
+            otro: 'Otro motivo'
+          };
+          mensajeRechazo += `Motivo: ${MOTIVOS_MAP[motivoRechazo] || motivoRechazo}\n`;
+        }
+        
+        mensajeRechazo += `Fecha: ${fechaFormato}\nHora: ${horaFormato}\n\n`;
+        
+        if (comentarioAdmin && comentarioAdmin.trim().length > 0) {
+          mensajeRechazo += `Detalles: ${comentarioAdmin.trim()}`;
+        }
+
+        return mensajeRechazo;
       }
 
       return `Tu solicitud de ${solicitud.tipo_alimento} fue rechazada.`;
@@ -693,6 +760,8 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
       metadatos: {
         solicitudId: solicitud.id,
         nuevoEstado,
+        motivoRechazo: nuevoEstado === 'rechazada' ? motivoRechazo : undefined,
+        fechaRechazo: nuevoEstado === 'rechazada' ? ahora.toISOString() : undefined
       },
     });
   };

@@ -36,6 +36,11 @@ export interface Solicitud {
   fecha_respuesta?: string;
   comentario_admin?: string;
   unidad_id?: number;
+  motivo_rechazo?: string | null;
+  operador_rechazo_id?: string | null;
+  fecha_rechazo?: string | null;
+  operador_aprobacion_id?: string | null;
+  fecha_aprobacion?: string | null;
   unidades?: SolicitudUnidad | null;
   usuarios: SolicitudUsuario | null;
 }
@@ -141,6 +146,11 @@ export interface SupabaseSolicitudRow {
   fecha_respuesta?: string | null;
   comentario_admin?: string | null;
   unidad_id?: number | null;
+  motivo_rechazo?: string | null;
+  operador_rechazo_id?: string | null;
+  fecha_rechazo?: string | null;
+  operador_aprobacion_id?: string | null;
+  fecha_aprobacion?: string | null;
   unidades?: SupabaseSolicitudUnidad | null;
   usuarios: SupabaseSolicitudUsuario | null;
 }

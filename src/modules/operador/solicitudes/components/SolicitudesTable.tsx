@@ -77,7 +77,7 @@ const SolicitudesTable = ({
             type="button"
             onClick={() => onActualizarEstado(solicitud, 'rechazada')}
             className={`bg-red-600 hover:bg-red-700 ${baseButtonClasses}`}
-            title="Rechazar"
+            title="Rechazar (requiere motivo y comentario)"
             disabled={isProcessing}
           >
             <XCircle className="w-3 h-3 sm:w-4 sm:h-4" />

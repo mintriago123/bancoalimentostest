@@ -219,6 +219,9 @@ CREATE TABLE public.solicitudes (
   fecha_respuesta timestamp with time zone,
   comentario_admin text,
   unidad_id bigint,
+  motivo_rechazo text,
+  operador_rechazo_id uuid,
+  fecha_rechazo timestamp with time zone,
   CONSTRAINT solicitudes_pkey PRIMARY KEY (id)
 );
 
