@@ -165,6 +165,8 @@ const SolicitudDetailModal = ({
               </div>
             )}
 
+            {/* Solo mostrar inventario disponible si la solicitud está pendiente */}
+            {solicitud.estado === 'pendiente' && (
             <div className="bg-white p-4 rounded-lg border">
               <h4 className="font-semibold text-gray-900 mb-3">
                 Inventario disponible para "{solicitud.tipo_alimento}"
@@ -251,6 +253,7 @@ const SolicitudDetailModal = ({
                 </div>
               )}
             </div>
+            )}
           </div>
 
           {solicitud.latitud && solicitud.longitud && (

@@ -155,92 +155,95 @@ const SolicitudDetailModal = ({
               </div>
             )}
 
-            <div className="bg-white p-4 rounded-lg border">
-              <h4 className="font-semibold text-gray-900 mb-3">
-                Inventario disponible para “{solicitud.tipo_alimento}”
-              </h4>
+            {/* Solo mostrar inventario disponible si la solicitud está pendiente */}
+            {solicitud.estado === 'pendiente' && (
+              <div className="bg-white p-4 rounded-lg border">
+                <h4 className="font-semibold text-gray-900 mb-3">
+                  Inventario disponible para "{solicitud.tipo_alimento}"
+                </h4>
 
-              {inventarioLoading && (
-                <div className="text-center py-6 text-sm text-gray-500">
-                  Cargando inventario...
-                </div>
-              )}
+                {inventarioLoading && (
+                  <div className="text-center py-6 text-sm text-gray-500">
+                    Cargando inventario...
+                  </div>
+                )}
 
-              {!inventarioLoading && inventarioError && (
-                <div className="text-center py-6 text-sm text-red-600">
-                  {inventarioError}
-                </div>
-              )}
+                {!inventarioLoading && inventarioError && (
+                  <div className="text-center py-6 text-sm text-red-600">
+                    {inventarioError}
+                  </div>
+                )}
 
-              {!inventarioLoading && !inventarioError && inventario.length > 0 && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {inventario.map(item => {
-                      const unidad = item.unidad_simbolo || item.unidad_nombre || 'unidades';
-                      return (
-                        <div key={item.id} className="border rounded-lg p-3">
-                          <div className="font-semibold text-gray-900">
-                            {item.tipo_alimento}
+                {!inventarioLoading && !inventarioError && inventario.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {inventario.map(item => {
+                        const unidad = item.unidad_simbolo || item.unidad_nombre || 'unidades';
+                        return (
+                          <div key={item.id} className="border rounded-lg p-3">
+                            <div className="font-semibold text-gray-900">
+                              {item.tipo_alimento}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              Depósito: {item.deposito}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              Disponible: <span className="font-medium">{item.cantidad_disponible} {unidad}</span>
+                            </div>
+                            {item.fecha_vencimiento && (
+                              <div className="text-xs text-gray-500">
+                                Actualizado: {formatDate(item.fecha_vencimiento)}
+                              </div>
+                            )}
                           </div>
-                          <div className="text-sm text-gray-600">
-                            Depósito: {item.deposito}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            Disponible: <span className="font-medium">{item.cantidad_disponible} {unidad}</span>
-                          </div>
-                          {item.fecha_vencimiento && (
-                            <div className="text-xs text-gray-500">
-                              Actualizado: {formatDate(item.fecha_vencimiento)}
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-4 p-3 bg-white rounded border">
+                      <div className="text-sm">
+                        <div className="font-medium text-gray-900">Resumen</div>
+                        <div className="mt-1">
+                          <span className="text-gray-600">Cantidad solicitada: </span>
+                          <span className="font-semibold">{solicitud.cantidad} {solicitud.unidades?.simbolo ?? 'unidades'}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Total disponible: </span>
+                          <span className={`font-semibold ${totalDisponible >= solicitud.cantidad ? 'text-green-600' : 'text-red-600'}`}>
+                            {totalDisponible} {solicitud.unidades?.simbolo ?? 'unidades'}
+                          </span>
+                        </div>
+                        <div className="mt-2">
+                          {totalDisponible >= solicitud.cantidad ? (
+                            <div className="flex items-center text-green-600 text-sm">
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Suficiente stock disponible
+                            </div>
+                          ) : (
+                            <div className="flex items-center text-red-600 text-sm">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Stock insuficiente ({totalDisponible} de {solicitud.cantidad} disponibles)
                             </div>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="mt-4 p-3 bg-white rounded border">
-                    <div className="text-sm">
-                      <div className="font-medium text-gray-900">Resumen</div>
-                      <div className="mt-1">
-                        <span className="text-gray-600">Cantidad solicitada: </span>
-                        <span className="font-semibold">{solicitud.cantidad} {solicitud.unidades?.simbolo ?? 'unidades'}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Total disponible: </span>
-                        <span className={`font-semibold ${totalDisponible >= solicitud.cantidad ? 'text-green-600' : 'text-red-600'}`}>
-                          {totalDisponible} {solicitud.unidades?.simbolo ?? 'unidades'}
-                        </span>
-                      </div>
-                      <div className="mt-2">
-                        {totalDisponible >= solicitud.cantidad ? (
-                          <div className="flex items-center text-green-600 text-sm">
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Suficiente stock disponible
-                          </div>
-                        ) : (
-                          <div className="flex items-center text-red-600 text-sm">
-                            <XCircle className="w-4 h-4 mr-1" />
-                            Stock insuficiente ({totalDisponible} de {solicitud.cantidad} disponibles)
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {!inventarioLoading && !inventarioError && inventario.length === 0 && (
-                <div className="text-center py-4">
-                  <XCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">
-                    No hay stock disponible de “{solicitud.tipo_alimento}” en el inventario
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    La solicitud no puede ser satisfecha en este momento
-                  </p>
-                </div>
-              )}
-            </div>
+                {!inventarioLoading && !inventarioError && inventario.length === 0 && (
+                  <div className="text-center py-4">
+                    <XCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">
+                      No hay stock disponible de "{solicitud.tipo_alimento}" en el inventario
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      La solicitud no puede ser satisfecha en este momento
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {solicitud.latitud && solicitud.longitud && (

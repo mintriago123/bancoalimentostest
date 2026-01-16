@@ -146,7 +146,7 @@ export function SolicitudCard({
         <div className="bg-green-50 border border-green-200 p-2 rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-green-600 font-medium">📋 Código:</span>
+              <span className="text-green-600 font-medium">Código:</span>
               <span className="font-mono font-bold text-green-700">
                 {solicitud.codigo_comprobante}
               </span>
