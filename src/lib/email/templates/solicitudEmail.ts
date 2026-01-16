@@ -48,7 +48,7 @@ export function buildSolicitudAprobadaEmailTemplate({
           <tr>
             <td style="background: linear-gradient(135deg, #26dc3b 0%, #1cb933 100%); padding: 32px; text-align: center;">
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
-                🎉 ¡Solicitud Aprobada!
+                ¡Solicitud Aprobada!
               </h1>
               <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">
                 Banco de Alimentos - Sistema de Gestión
@@ -87,7 +87,7 @@ export function buildSolicitudAprobadaEmailTemplate({
           <tr>
             <td style="padding: 24px 32px;">
               <h2 style="margin: 0 0 16px; font-size: 18px; color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
-                📦 Detalles del Pedido
+                Detalles del Pedido
               </h2>
               <table role="presentation" style="width: 100%; border-collapse: collapse;">
                 <tr>
@@ -254,7 +254,7 @@ export function buildSolicitudRechazadaEmailTemplate({
   const { usuario, pedido, fechaEmision } = comprobante;
   const comentario = pedido.comentarioAdmin;
 
-  const subject = `❌ Solicitud No Aprobada - Banco de Alimentos`;
+  const subject = `Solicitud No Aprobada - Banco de Alimentos`;
 
   const html = `
 <!DOCTYPE html>
@@ -299,7 +299,7 @@ export function buildSolicitudRechazadaEmailTemplate({
           <tr>
             <td style="padding: 24px 32px;">
               <h2 style="margin: 0 0 16px; font-size: 18px; color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
-                📦 Detalles de la Solicitud
+                Detalles de la Solicitud
               </h2>
               <table role="presentation" style="width: 100%; border-collapse: collapse;">
                 <tr>
@@ -328,7 +328,7 @@ export function buildSolicitudRechazadaEmailTemplate({
             <td style="padding: 0 32px 24px;">
               <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 20px;">
                 <h3 style="margin: 0 0 12px; font-size: 15px; color: #991b1b;">
-                  💬 Comentario del Administrador
+                  Comentario del Administrador
                 </h3>
                 <p style="margin: 0; font-size: 14px; color: #7f1d1d; line-height: 1.6; font-style: italic;">
                   "${escapeHtml(comentario)}"

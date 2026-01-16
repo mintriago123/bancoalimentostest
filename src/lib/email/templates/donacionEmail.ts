@@ -28,7 +28,7 @@ export function buildDonacionAprobadaEmailTemplate({
 }: Omit<DonacionEmailTemplateInput, 'estado'>): { subject: string; html: string; text: string } {
   const { usuario, pedido, codigoComprobante, fechaEmision, instrucciones, descripcionProyecto } = comprobante;
 
-  const subject = `🎁 Donación Confirmada - Código: ${codigoComprobante}`;
+  const subject = `Donación Confirmada - Código: ${codigoComprobante}`;
 
   const html = `
 <!DOCTYPE html>
@@ -48,7 +48,7 @@ export function buildDonacionAprobadaEmailTemplate({
           <tr>
             <td style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 32px; text-align: center;">
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
-                🎁 ¡Gracias por tu Donación!
+                ¡Gracias por tu Donación!
               </h1>
               <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">
                 Banco de Alimentos - Sistema de Gestión
@@ -488,7 +488,7 @@ export function buildDonacionEntregadaEmailTemplate({
           <tr>
             <td style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 32px; text-align: center;">
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
-                ✅ Donación Procesada
+                Donación Procesada
               </h1>
               <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">
                 ¡Su aporte ya está ayudando a familias!
