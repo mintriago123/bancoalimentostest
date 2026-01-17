@@ -58,7 +58,6 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         }
       }
 
-<<<<<<< HEAD
       // Preparar objeto de actualización
       const updateData: Record<string, unknown> = {
         estado: nuevoEstado,
@@ -82,21 +81,6 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
       const { error: updateError } = await supabaseClient
         .from('solicitudes')
         .update(updateData)
-=======
-      // Generar código de comprobante si se aprueba
-      const codigoComprobante = nuevoEstado === 'aprobada' 
-        ? generarCodigoComprobante('solicitud', solicitud.id)
-        : null;
-
-      const { error: updateError } = await supabaseClient
-        .from('solicitudes')
-        .update({
-          estado: nuevoEstado,
-          fecha_respuesta: new Date().toISOString(),
-          comentario_admin: comentarioAdmin?.trim() ? comentarioAdmin.trim() : null,
-          ...(codigoComprobante && { codigo_comprobante: codigoComprobante })
-        })
->>>>>>> f5323e18e22aaab84da7eaf989c15e8c101eb06f
         .eq('id', solicitud.id);
 
       if (updateError) {
@@ -109,11 +93,24 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
       }
 
       if (nuevoEstado === 'aprobada' && solicitud.estado === 'pendiente') {
+        // Generar código de comprobante
+        const codigoComprobante = generarCodigoComprobante('solicitud', solicitud.id);
+        
+        // Actualizar con el código de comprobante
+        const { error: updateCodigoError } = await supabaseClient
+          .from('solicitudes')
+          .update({ codigo_comprobante: codigoComprobante })
+          .eq('id', solicitud.id);
+
+        if (updateCodigoError) {
+          logger.error('Error actualizando código de comprobante', updateCodigoError);
+        }
+
         const resultadoInventario = await descontarDelInventario(solicitud);
         await registrarMovimientoSolicitud(solicitud, resultadoInventario);
 
         const mensaje = buildResultadoMensaje(solicitud, resultadoInventario);
-        await notificarCambioEstado(solicitud, nuevoEstado, mensaje, comentarioAdmin, codigoComprobante);
+        await notificarCambioEstado(solicitud, nuevoEstado, mensaje, comentarioAdmin, motivoRechazo, codigoComprobante);
         return {
           success: true,
           data: {
@@ -125,7 +122,7 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
       }
 
       if (nuevoEstado === 'entregada') {
-        await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin, null);
+        await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin, null, null);
         return {
           success: true,
           data: {
@@ -136,10 +133,9 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         };
       }
 
-<<<<<<< HEAD
       // Para rechazos, incluir información adicional
       if (nuevoEstado === 'rechazada') {
-        await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin, motivoRechazo);
+        await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin, motivoRechazo, null);
         return {
           success: true,
           data: {
@@ -150,10 +146,7 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         };
       }
 
-      await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin);
-=======
-      await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin, null);
->>>>>>> f5323e18e22aaab84da7eaf989c15e8c101eb06f
+      await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin, null, null);
 
       return {
         success: true,
@@ -721,11 +714,8 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
     nuevoEstado: 'aprobada' | 'rechazada' | 'entregada',
     mensajeInventario?: string,
     comentarioAdmin?: string,
-<<<<<<< HEAD
-    motivoRechazo?: string
-=======
+    motivoRechazo?: string | null,
     codigoComprobanteGuardado?: string | null
->>>>>>> f5323e18e22aaab84da7eaf989c15e8c101eb06f
   ) => {
     try {
       const baseUrl = getBaseUrl();
@@ -743,21 +733,6 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         documento: solicitud.usuarios?.cedula,
       };
 
-<<<<<<< HEAD
-    const ahora = new Date();
-    const fechaFormato = ahora.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-    const horaFormato = ahora.toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-
-    const mensaje = (() => {
-=======
       // Datos del pedido
       const datosPedido = {
         id: solicitud.id,
@@ -778,7 +753,6 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
       };
 
       // Configurar notificación y email según el estado
->>>>>>> f5323e18e22aaab84da7eaf989c15e8c101eb06f
       if (nuevoEstado === 'aprobada') {
         // Generar QR para solicitud aprobada
         const urlComprobante = generarURLComprobante(
@@ -857,61 +831,9 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
           },
         });
       }
-<<<<<<< HEAD
-
-      if (nuevoEstado === 'entregada') {
-        return `Tu solicitud de ${solicitud.cantidad} ${solicitud.unidades?.simbolo ?? ''} de ${solicitud.tipo_alimento} ha sido entregada. ¡Gracias!`;
-      }
-
-      // Para rechazos, incluir información completa
-      if (nuevoEstado === 'rechazada') {
-        let mensajeRechazo = `Tu solicitud de ${solicitud.cantidad} ${solicitud.unidades?.simbolo ?? ''} de ${solicitud.tipo_alimento} ha sido rechazada.\n\n`;
-        
-        if (motivoRechazo) {
-          // Mostrar etiqueta del motivo
-          const MOTIVOS_MAP: Record<string, string> = {
-            stock_insuficiente: 'Stock insuficiente',
-            producto_no_disponible: 'Producto no disponible',
-            datos_incompletos: 'Datos incompletos',
-            solicitante_ineligible: 'Solicitante ineligible',
-            duplicada: 'Solicitud duplicada',
-            vencimiento_proximo: 'Productos próximos a vencer',
-            otro: 'Otro motivo'
-          };
-          mensajeRechazo += `Motivo: ${MOTIVOS_MAP[motivoRechazo] || motivoRechazo}\n`;
-        }
-        
-        mensajeRechazo += `Fecha: ${fechaFormato}\nHora: ${horaFormato}\n\n`;
-        
-        if (comentarioAdmin && comentarioAdmin.trim().length > 0) {
-          mensajeRechazo += `Detalles: ${comentarioAdmin.trim()}`;
-        }
-
-        return mensajeRechazo;
-      }
-
-      return `Tu solicitud de ${solicitud.tipo_alimento} fue rechazada.`;
-    })();
-
-    await sendNotification({
-      titulo,
-      mensaje,
-      categoria: 'solicitud',
-      tipo: nuevoEstado === 'aprobada' || nuevoEstado === 'entregada' ? 'success' : 'warning',
-      destinatarioId: solicitud.usuario_id,
-      urlAccion: '/user/solicitudes',
-      metadatos: {
-        solicitudId: solicitud.id,
-        nuevoEstado,
-        motivoRechazo: nuevoEstado === 'rechazada' ? motivoRechazo : undefined,
-        fechaRechazo: nuevoEstado === 'rechazada' ? ahora.toISOString() : undefined
-      },
-    });
-=======
     } catch (error) {
       logger.error('Error enviando notificación de solicitud', error);
     }
->>>>>>> f5323e18e22aaab84da7eaf989c15e8c101eb06f
   };
 
   const buscarProductosCoincidentes = async (tipoAlimento: string): Promise<ProductoInventario[]> => {

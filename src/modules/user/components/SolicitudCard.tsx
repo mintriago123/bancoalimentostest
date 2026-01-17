@@ -17,9 +17,14 @@ import {
   Hash,
   Send,
   X,
+  Package,
+  Eye,
+  AlertCircle,
 } from 'lucide-react';
 import { Solicitud, SolicitudEditData } from '../types';
 import { useDateFormatter } from '@/modules/shared/hooks/useDateFormatter';
+import { createClient } from '@/lib/supabase';
+import { SolicitudDetalleModal } from './SolicitudDetalleModal';
 
 interface SolicitudCardProps {
   solicitud: Solicitud;

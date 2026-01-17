@@ -36,15 +36,12 @@ export const createSolicitudesDataService = (supabaseClient: SupabaseClient) => 
           fecha_respuesta,
           comentario_admin,
           unidad_id,
-<<<<<<< HEAD
           motivo_rechazo,
           operador_rechazo_id,
           fecha_rechazo,
           operador_aprobacion_id,
           fecha_aprobacion,
-=======
           codigo_comprobante,
->>>>>>> f5323e18e22aaab84da7eaf989c15e8c101eb06f
           unidades:unidad_id (
             id,
             nombre,

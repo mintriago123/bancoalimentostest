@@ -271,7 +271,6 @@ const SolicitudDetailModal = ({
               </div>
             )}
 
-<<<<<<< HEAD
             {solicitud.estado === 'rechazada' && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <h4 className="font-semibold text-red-800 mb-3 flex items-center">
@@ -336,18 +335,12 @@ const SolicitudDetailModal = ({
               </div>
             )}
 
-            <div className="bg-white p-4 rounded-lg border">
-              <h4 className="font-semibold text-gray-900 mb-3">
-                Inventario disponible para “{solicitud.tipo_alimento}”
-              </h4>
-=======
             {/* Solo mostrar inventario disponible si la solicitud está pendiente */}
             {solicitud.estado === 'pendiente' && (
               <div className="bg-white p-4 rounded-lg border">
                 <h4 className="font-semibold text-gray-900 mb-3">
                   Inventario disponible para "{solicitud.tipo_alimento}"
                 </h4>
->>>>>>> f5323e18e22aaab84da7eaf989c15e8c101eb06f
 
                 {inventarioLoading && (
                   <div className="text-center py-6 text-sm text-gray-500">
