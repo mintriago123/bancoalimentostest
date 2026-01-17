@@ -43,6 +43,7 @@ export interface Solicitud {
   fecha_aprobacion?: string | null;
   unidades?: SolicitudUnidad | null;
   usuarios: SolicitudUsuario | null;
+  codigo_comprobante?: string;
 }
 
 export interface SolicitudEstadoFilter {
@@ -153,6 +154,7 @@ export interface SupabaseSolicitudRow {
   fecha_aprobacion?: string | null;
   unidades?: SupabaseSolicitudUnidad | null;
   usuarios: SupabaseSolicitudUsuario | null;
+  codigo_comprobante?: string | null;
 }
 
 export interface SupabaseInventarioDisponibleRow {

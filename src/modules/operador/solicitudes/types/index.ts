@@ -44,6 +44,7 @@ export interface Solicitud {
   fecha_aprobacion?: string | null;
   unidades?: SolicitudUnidad | null;
   usuarios: SolicitudUsuario | null;
+  codigo_comprobante?: string;
 }
 
 export interface SolicitudEstadoFilter {

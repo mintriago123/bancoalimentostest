@@ -13,7 +13,9 @@ import {
   Phone,
   User,
   X,
-  XCircle
+  XCircle,
+  QrCode,
+  ExternalLink
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
 import type { JSX } from 'react';
@@ -233,6 +235,31 @@ const SolicitudDetailModal = ({
             </div>
           </div>
 
+          {/* Código de Verificación */}
+          {solicitud.codigo_comprobante && (
+            <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 p-4 rounded-lg">
+              <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                <QrCode className="w-5 h-5 mr-2 text-red-600" />
+                Código de Verificación
+              </h3>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Código de Comprobante</p>
+                  <p className="font-mono font-bold text-lg text-red-700">{solicitud.codigo_comprobante}</p>
+                </div>
+                <a
+                  href={`/comprobante/${solicitud.codigo_comprobante}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Ver Comprobante
+                </a>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4">
             {solicitud.comentarios && (
               <div className="bg-blue-50 p-4 rounded-lg">
@@ -244,6 +271,7 @@ const SolicitudDetailModal = ({
               </div>
             )}
 
+<<<<<<< HEAD
             {solicitud.estado === 'rechazada' && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <h4 className="font-semibold text-red-800 mb-3 flex items-center">
@@ -312,88 +340,97 @@ const SolicitudDetailModal = ({
               <h4 className="font-semibold text-gray-900 mb-3">
                 Inventario disponible para “{solicitud.tipo_alimento}”
               </h4>
+=======
+            {/* Solo mostrar inventario disponible si la solicitud está pendiente */}
+            {solicitud.estado === 'pendiente' && (
+              <div className="bg-white p-4 rounded-lg border">
+                <h4 className="font-semibold text-gray-900 mb-3">
+                  Inventario disponible para "{solicitud.tipo_alimento}"
+                </h4>
+>>>>>>> f5323e18e22aaab84da7eaf989c15e8c101eb06f
 
-              {inventarioLoading && (
-                <div className="text-center py-6 text-sm text-gray-500">
-                  Cargando inventario...
-                </div>
-              )}
+                {inventarioLoading && (
+                  <div className="text-center py-6 text-sm text-gray-500">
+                    Cargando inventario...
+                  </div>
+                )}
 
-              {!inventarioLoading && inventarioError && (
-                <div className="text-center py-6 text-sm text-red-600">
-                  {inventarioError}
-                </div>
-              )}
+                {!inventarioLoading && inventarioError && (
+                  <div className="text-center py-6 text-sm text-red-600">
+                    {inventarioError}
+                  </div>
+                )}
 
-              {!inventarioLoading && !inventarioError && inventario.length > 0 && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {inventario.map(item => {
-                      const unidad = item.unidad_simbolo || item.unidad_nombre || 'unidades';
-                      return (
-                        <div key={item.id} className="border rounded-lg p-3">
-                          <div className="font-semibold text-gray-900">
-                            {item.tipo_alimento}
+                {!inventarioLoading && !inventarioError && inventario.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {inventario.map(item => {
+                        const unidad = item.unidad_simbolo || item.unidad_nombre || 'unidades';
+                        return (
+                          <div key={item.id} className="border rounded-lg p-3">
+                            <div className="font-semibold text-gray-900">
+                              {item.tipo_alimento}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              Depósito: {item.deposito}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              Disponible: <span className="font-medium">{item.cantidad_disponible} {unidad}</span>
+                            </div>
+                            {item.fecha_vencimiento && (
+                              <div className="text-xs text-gray-500">
+                                Actualizado: {formatDate(item.fecha_vencimiento)}
+                              </div>
+                            )}
                           </div>
-                          <div className="text-sm text-gray-600">
-                            Depósito: {item.deposito}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            Disponible: <span className="font-medium">{item.cantidad_disponible} {unidad}</span>
-                          </div>
-                          {item.fecha_vencimiento && (
-                            <div className="text-xs text-gray-500">
-                              Actualizado: {formatDate(item.fecha_vencimiento)}
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-4 p-3 bg-white rounded border">
+                      <div className="text-sm">
+                        <div className="font-medium text-gray-900">Resumen</div>
+                        <div className="mt-1">
+                          <span className="text-gray-600">Cantidad solicitada: </span>
+                          <span className="font-semibold">{solicitud.cantidad} {solicitud.unidades?.simbolo ?? 'unidades'}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Total disponible: </span>
+                          <span className={`font-semibold ${totalDisponible >= solicitud.cantidad ? 'text-green-600' : 'text-red-600'}`}>
+                            {totalDisponible} {solicitud.unidades?.simbolo ?? 'unidades'}
+                          </span>
+                        </div>
+                        <div className="mt-2">
+                          {totalDisponible >= solicitud.cantidad ? (
+                            <div className="flex items-center text-green-600 text-sm">
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Suficiente stock disponible
+                            </div>
+                          ) : (
+                            <div className="flex items-center text-red-600 text-sm">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Stock insuficiente ({totalDisponible} de {solicitud.cantidad} disponibles)
                             </div>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="mt-4 p-3 bg-white rounded border">
-                    <div className="text-sm">
-                      <div className="font-medium text-gray-900">Resumen</div>
-                      <div className="mt-1">
-                        <span className="text-gray-600">Cantidad solicitada: </span>
-                        <span className="font-semibold">{solicitud.cantidad} {solicitud.unidades?.simbolo ?? 'unidades'}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Total disponible: </span>
-                        <span className={`font-semibold ${totalDisponible >= solicitud.cantidad ? 'text-green-600' : 'text-red-600'}`}>
-                          {totalDisponible} {solicitud.unidades?.simbolo ?? 'unidades'}
-                        </span>
-                      </div>
-                      <div className="mt-2">
-                        {totalDisponible >= solicitud.cantidad ? (
-                          <div className="flex items-center text-green-600 text-sm">
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Suficiente stock disponible
-                          </div>
-                        ) : (
-                          <div className="flex items-center text-red-600 text-sm">
-                            <XCircle className="w-4 h-4 mr-1" />
-                            Stock insuficiente ({totalDisponible} de {solicitud.cantidad} disponibles)
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {!inventarioLoading && !inventarioError && inventario.length === 0 && (
-                <div className="text-center py-4">
-                  <XCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">
-                    No hay stock disponible de “{solicitud.tipo_alimento}” en el inventario
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    La solicitud no puede ser satisfecha en este momento
-                  </p>
-                </div>
-              )}
-            </div>
+                {!inventarioLoading && !inventarioError && inventario.length === 0 && (
+                  <div className="text-center py-4">
+                    <XCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">
+                      No hay stock disponible de "{solicitud.tipo_alimento}" en el inventario
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      La solicitud no puede ser satisfecha en este momento
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {solicitud.latitud && solicitud.longitud && (

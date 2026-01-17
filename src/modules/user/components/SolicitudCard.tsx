@@ -17,11 +17,9 @@ import {
   Hash,
   Send,
   X,
-  AlertCircle,
 } from 'lucide-react';
 import { Solicitud, SolicitudEditData } from '../types';
 import { useDateFormatter } from '@/modules/shared/hooks/useDateFormatter';
-import { createClient } from '@/lib/supabase';
 
 interface SolicitudCardProps {
   solicitud: Solicitud;
@@ -40,6 +38,7 @@ export function SolicitudCard({
 }: SolicitudCardProps) {
   const { formatDateTime } = useDateFormatter();
   const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [showDetalle, setShowDetalle] = useState(false);
   const [formEdit, setFormEdit] = useState<SolicitudEditData>({
     comentarios: solicitud.comentarios || '',
   });
@@ -65,6 +64,8 @@ export function SolicitudCard({
         return <CheckCircle className="text-green-600 w-4 h-4" />;
       case 'rechazada':
         return <XCircle className="text-red-600 w-4 h-4" />;
+      case 'entregada':
+        return <Package className="text-blue-600 w-4 h-4" />;
       default:
         return null;
     }
@@ -222,8 +223,24 @@ export function SolicitudCard({
 
   return (
     <div className="border p-4 rounded-lg shadow-sm space-y-2 relative bg-white">
+      {/* Modal de Detalle */}
+      <SolicitudDetalleModal
+        solicitud={solicitud}
+        isOpen={showDetalle}
+        onClose={() => setShowDetalle(false)}
+      />
+
       {/* Botones de acción */}
       <div className="absolute top-2 right-2 flex items-center gap-2">
+        {/* Botón Ver Detalles */}
+        <button
+          onClick={() => setShowDetalle(true)}
+          className="text-blue-500 hover:text-blue-700 transition"
+          title="Ver detalles"
+        >
+          <Eye className="w-4 h-4" />
+        </button>
+
         {puedeEliminar && (
           <button
             onClick={() => onDelete(solicitud)}
@@ -253,6 +270,26 @@ export function SolicitudCard({
         </p>
       </div>
 
+      {/* Código de Comprobante - Solo si está aprobada */}
+      {solicitud.codigo_comprobante && (
+        <div className="bg-green-50 border border-green-200 p-2 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-green-600 font-medium">Código:</span>
+              <span className="font-mono font-bold text-green-700">
+                {solicitud.codigo_comprobante}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowDetalle(true)}
+              className="text-xs text-green-600 hover:text-green-800 underline"
+            >
+              Ver comprobante
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Alimento */}
       <div className="flex items-center gap-2 text-sm text-gray-700">
         <ShoppingBasket className="w-4 h-4" />
@@ -265,7 +302,7 @@ export function SolicitudCard({
       <div className="flex items-center gap-2 text-sm text-gray-700">
         <Hash className="w-4 h-4" />
         <p>
-          <strong>Cantidad:</strong> {solicitud.cantidad}
+          <strong>Cantidad:</strong> {solicitud.cantidad} {solicitud.unidad_simbolo || 'unidades'}
         </p>
       </div>
 

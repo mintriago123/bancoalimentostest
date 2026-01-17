@@ -15,12 +15,19 @@ export interface Solicitud {
   longitud: number | null;
   created_at: string;
   updated_at?: string;
+<<<<<<< HEAD
   motivo_rechazo?: string | null;
   comentario_admin?: string | null;
   operador_rechazo_id?: string | null;
   fecha_rechazo?: string | null;
   operador_aprobacion_id?: string | null;
   fecha_aprobacion?: string | null;
+=======
+  codigo_comprobante?: string;
+  fecha_respuesta?: string;
+  comentario_admin?: string;
+  unidad_simbolo?: string;
+>>>>>>> f5323e18e22aaab84da7eaf989c15e8c101eb06f
 }
 
 export type SolicitudEstado = 'pendiente' | 'aprobada' | 'rechazada';

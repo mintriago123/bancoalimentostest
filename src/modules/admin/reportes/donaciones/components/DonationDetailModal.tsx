@@ -17,7 +17,9 @@ import {
   CheckCircle,
   Clock,
   Truck,
-  XCircle
+  XCircle,
+  QrCode,
+  ExternalLink
 } from 'lucide-react';
 import type { Donation, DonationEstado } from '../types';
 import { isExpired, isNearExpiration } from '../utils/formatters';
@@ -281,6 +283,33 @@ const DonationDetailModal = ({ donation, isOpen, onClose }: DonationDetailModalP
               </div>
             </div>
           </div>
+
+          {/* Código de Verificación */}
+          {donation.codigo_comprobante && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                <QrCode className="w-5 h-5 mr-2 text-red-600" />
+                Código de Verificación
+              </h3>
+              <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Código de Comprobante</p>
+                    <p className="font-mono font-bold text-xl text-red-700">{donation.codigo_comprobante}</p>
+                  </div>
+                  <a
+                    href={`/comprobante/${donation.codigo_comprobante}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Ver Comprobante
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
