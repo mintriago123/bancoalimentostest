@@ -45,6 +45,8 @@ export interface Solicitud {
   unidades?: SolicitudUnidad | null;
   usuarios: SolicitudUsuario | null;
   codigo_comprobante?: string;
+  cantidad_entregada?: number;
+  tiene_entregas_parciales?: boolean;
 }
 
 export interface SolicitudEstadoFilter {

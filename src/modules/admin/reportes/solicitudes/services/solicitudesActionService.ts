@@ -1129,9 +1129,128 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
     return 'Solicitud aprobada y descontada del inventario exitosamente.';
   };
 
+  /**
+   * Registra una donación con la cantidad especificada y guarda el historial.
+   * Permite entregas parciales y registra el porcentaje entregado.
+   */
+  const procesarDonacion = async (
+    solicitud: Solicitud,
+    cantidadDonar: number,
+    porcentaje: number,
+    comentario?: string,
+    operadorId?: string
+  ): Promise<ServiceResult<SolicitudActionResponse>> => {
+    try {
+      logger.info(`Procesando donación para solicitud ${solicitud.id}`, { cantidadDonar, porcentaje });
+
+      // Validar que la cantidad sea válida
+      if (cantidadDonar <= 0 || cantidadDonar > solicitud.cantidad) {
+        return {
+          success: false,
+          error: `La cantidad a donar debe ser mayor a 0 y menor o igual a ${solicitud.cantidad}`
+        };
+      }
+
+      // Validar stock disponible
+      const validacionStock = await validarStockDisponible(solicitud);
+      if (!validacionStock.suficiente || validacionStock.disponible < cantidadDonar) {
+        return {
+          success: false,
+          error: `Stock insuficiente. Disponible: ${validacionStock.disponible} ${solicitud.unidades?.simbolo ?? 'unidades'}`
+        };
+      }
+
+      // Generar código de comprobante
+      const codigoComprobante = generarCodigoComprobante('solicitud', solicitud.id);
+
+      // Calcular cantidad entregada acumulada
+      const cantidadAnterior = solicitud.cantidad_entregada || 0;
+      const nuevaCantidadTotal = cantidadAnterior + cantidadDonar;
+      const esEntregaCompleta = nuevaCantidadTotal >= solicitud.cantidad;
+
+      // Determinar el nuevo estado
+      const nuevoEstado = esEntregaCompleta ? 'aprobada' : solicitud.estado;
+
+      // Actualizar la solicitud
+      const updateData: Record<string, unknown> = {
+        cantidad_entregada: nuevaCantidadTotal,
+        tiene_entregas_parciales: !esEntregaCompleta || cantidadAnterior > 0,
+        codigo_comprobante: codigoComprobante,
+        comentario_admin: comentario?.trim() || null
+      };
+
+      if (esEntregaCompleta) {
+        updateData.estado = 'aprobada';
+        updateData.fecha_respuesta = new Date().toISOString();
+        updateData.operador_aprobacion_id = operadorId || null;
+        updateData.fecha_aprobacion = new Date().toISOString();
+      }
+
+      const { error: updateError } = await supabaseClient
+        .from('solicitudes')
+        .update(updateData)
+        .eq('id', solicitud.id);
+
+      if (updateError) {
+        logger.error('Error actualizando solicitud con donación', updateError);
+        return {
+          success: false,
+          error: 'No fue posible registrar la donación'
+        };
+      }
+
+      // Registrar en el historial de donaciones
+      const { error: historialError } = await supabaseClient
+        .from('historial_donaciones')
+        .insert({
+          solicitud_id: solicitud.id,
+          cantidad_entregada: cantidadDonar,
+          porcentaje_entregado: porcentaje,
+          cantidad_solicitada: solicitud.cantidad,
+          operador_id: operadorId,
+          comentario: comentario?.trim() || null
+        });
+
+      if (historialError) {
+        logger.error('Error registrando historial de donación', historialError);
+        // No fallar la operación por esto
+      }
+
+      // Descontar del inventario solo la cantidad donada
+      const solicitudTemporal = { ...solicitud, cantidad: cantidadDonar };
+      const resultadoInventario = await descontarDelInventario(solicitudTemporal);
+      await registrarMovimientoSolicitud(solicitudTemporal, resultadoInventario);
+
+      // Notificar al usuario
+      let mensaje = '';
+      if (esEntregaCompleta) {
+        mensaje = `Donación completada: ${nuevaCantidadTotal} ${solicitud.unidades?.simbolo ?? 'unidades'} de ${solicitud.tipo_alimento}`;
+        await notificarCambioEstado(solicitud, 'aprobada', mensaje, comentario, null, codigoComprobante);
+      } else {
+        mensaje = `Entrega parcial registrada: ${cantidadDonar} ${solicitud.unidades?.simbolo ?? 'unidades'} (${porcentaje}% del total). Total entregado: ${nuevaCantidadTotal}/${solicitud.cantidad}`;
+      }
+
+      return {
+        success: true,
+        data: {
+          success: true,
+          message: mensaje,
+          warning: resultadoInventario.error || resultadoInventario.noStock
+        }
+      };
+    } catch (err) {
+      logger.error('Excepción al procesar donación', err);
+      return {
+        success: false,
+        error: 'Error inesperado al procesar la donación'
+      };
+    }
+  };
+
   return {
     ...dataService,
     updateSolicitudEstado,
-    revertirSolicitud
+    revertirSolicitud,
+    procesarDonacion
   };
 };

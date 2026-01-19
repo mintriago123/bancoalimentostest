@@ -51,6 +51,7 @@ export default function OperadorSolicitudesPage() {
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [mostrarDialogoRechazo, setMostrarDialogoRechazo] = useState(false);
   const [solicitudParaRechazar, setSolicitudParaRechazar] = useState<Solicitud | null>(null);
+  const [abrirEnModoDonacion, setAbrirEnModoDonacion] = useState(false);
 
   const {
     solicitudes,
@@ -68,7 +69,7 @@ export default function OperadorSolicitudesPage() {
     refetch
   } = useSolicitudesData(supabase);
 
-  const { processingId, updateEstado } = useSolicitudActions(supabase);
+  const { processingId, updateEstado, procesarDonacion } = useSolicitudActions(supabase);
 
   const {
     inventario,
@@ -92,6 +93,7 @@ export default function OperadorSolicitudesPage() {
     setSolicitudSeleccionada(null);
     setComentarioAdmin('');
     setMotivoRechazo('');
+    setAbrirEnModoDonacion(false);
     resetInventario();
   }, [resetInventario]);
 
@@ -202,10 +204,11 @@ export default function OperadorSolicitudesPage() {
     await refetch();
   }, [updateEstado, refetch, showError, showSuccess, confirm]);
 
-  const handleOpenModal = useCallback((solicitud: Solicitud) => {
+  const handleOpenModal = useCallback((solicitud: Solicitud, abrirModoDonacion = false) => {
     setSolicitudSeleccionada(solicitud);
     setComentarioAdmin(solicitud.comentario_admin ?? '');
     setMotivoRechazo('');
+    setAbrirEnModoDonacion(abrirModoDonacion);
     setMostrarModal(true);
     void loadInventario(solicitud.tipo_alimento);
   }, [loadInventario]);
@@ -221,6 +224,40 @@ export default function OperadorSolicitudesPage() {
     const success = await handleEstadoChange(solicitudSeleccionada, 'rechazada', comentarioAdmin, motivoRechazo);
     if (success) closeModal();
   }, [solicitudSeleccionada, comentarioAdmin, motivoRechazo, handleEstadoChange, closeModal]);
+
+  const handleDonacion = useCallback(async (cantidad: number, porcentaje: number, comentario: string) => {
+    if (!solicitudSeleccionada) return;
+
+    // Obtener el ID del usuario actual
+    const { data: { user } } = await supabase.auth.getUser();
+    const operadorId = user?.id;
+
+    const confirmed = await confirm({
+      title: 'Confirmar Donación',
+      description: `Se entregará ${cantidad} ${solicitudSeleccionada.unidades?.simbolo ?? 'unidades'} (${porcentaje}% de lo solicitado). Esta acción descuenta del inventario.`,
+      confirmLabel: 'Confirmar Donación',
+      cancelLabel: 'Cancelar',
+      variant: 'warning'
+    });
+
+    if (!confirmed) return;
+
+    const result = await procesarDonacion(solicitudSeleccionada, cantidad, porcentaje, comentario, operadorId);
+
+    if (!result.success) {
+      showError(result.message);
+      return;
+    }
+
+    if (result.warning) {
+      showWarning(result.message);
+    } else {
+      showSuccess(result.message);
+    }
+
+    closeModal();
+    await refetch();
+  }, [solicitudSeleccionada, procesarDonacion, showError, showSuccess, showWarning, closeModal, refetch, confirm, supabase]);
 
   const handleToggleEstado = useCallback((estado: keyof typeof filters.estados) => {
     toggleEstadoFilter(estado);
@@ -330,6 +367,8 @@ export default function OperadorSolicitudesPage() {
             isProcessing={processingId === solicitudSeleccionada.id}
             motivoRechazo={motivoRechazo}
             onMotivoRechazoChange={setMotivoRechazo}
+            onDonar={handleDonacion}
+            abrirEnModoDonacion={abrirEnModoDonacion}
           />
         )}
 
