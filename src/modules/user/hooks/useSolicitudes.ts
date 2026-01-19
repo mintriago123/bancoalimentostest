@@ -20,8 +20,8 @@ interface UseSolicitudesResult {
   loading: LoadingState;
   error: string | null;
   createSolicitud: (data: SolicitudFormData) => Promise<boolean>;
-  updateSolicitud: (id: number, data: SolicitudEditData) => Promise<boolean>;
-  deleteSolicitud: (id: number) => Promise<boolean>;
+  updateSolicitud: (id: string, data: SolicitudEditData) => Promise<boolean>;
+  deleteSolicitud: (id: string) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
 
@@ -86,7 +86,7 @@ export function useSolicitudes(
   };
 
   const updateSolicitud = async (
-    id: number,
+    id: string,
     data: SolicitudEditData
   ): Promise<boolean> => {
     const { error: updateError } = await service.updateSolicitud(id, data);
@@ -104,7 +104,7 @@ export function useSolicitudes(
     return true;
   };
 
-  const deleteSolicitud = async (id: number): Promise<boolean> => {
+  const deleteSolicitud = async (id: string): Promise<boolean> => {
     const { error: deleteError } = await service.deleteSolicitud(id);
 
     if (deleteError) {

@@ -4,7 +4,7 @@
 
 // ---------- Solicitudes ----------
 export interface Solicitud {
-  id: number;
+  id: string; // UUID en la base de datos
   usuario_id: string;
   tipo_alimento: string;
   cantidad: number;
@@ -19,6 +19,13 @@ export interface Solicitud {
   fecha_respuesta?: string;
   comentario_admin?: string;
   unidad_simbolo?: string;
+  // Campos relacionados con rechazo
+  motivo_rechazo?: string | null;
+  fecha_rechazo?: string | null;
+  operador_rechazo_id?: string | null;
+  // Campos relacionados con aprobación
+  fecha_aprobacion?: string | null;
+  operador_aprobacion_id?: string | null;
 }
 
 export type SolicitudEstado = 'pendiente' | 'aprobada' | 'rechazada';

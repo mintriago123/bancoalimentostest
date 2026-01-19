@@ -4,6 +4,7 @@
 
 import {
   CheckCircle,
+  Clock,
   FileText,
   Mail,
   MapPin,
@@ -13,14 +14,22 @@ import {
   X,
   XCircle,
   QrCode,
-  ExternalLink
+  ExternalLink,
+  Package,
+  TrendingUp,
+  History
 } from 'lucide-react';
 import type { JSX } from 'react';
+import { useState, useEffect } from 'react';
 import type {
   InventarioDisponible,
   Solicitud,
   SolicitudEstado
 } from '../types';
+import { MOTIVOS_RECHAZO } from '../constants';
+import type { HistorialDonacion } from '../services/historialDonacionesService';
+import { obtenerHistorialDonaciones } from '../services/historialDonacionesService';
+import { useSupabase } from '@/app/components/SupabaseProvider';
 
 /**
  * Formatea una cantidad numérica con máximo 2 decimales.
@@ -46,6 +55,10 @@ interface SolicitudDetailModalProps {
   onAprobar: () => void;
   onRechazar: () => void;
   isProcessing: boolean;
+  motivoRechazo?: string;
+  onMotivoRechazoChange?: (value: string) => void;
+  onDonar?: (cantidad: number, porcentaje: number, comentario: string) => void;
+  abrirEnModoDonacion?: boolean;
 }
 
 const SolicitudDetailModal = ({
@@ -61,12 +74,68 @@ const SolicitudDetailModal = ({
   onComentarioChange,
   onAprobar,
   onRechazar,
-  isProcessing
+  isProcessing,
+  motivoRechazo = '',
+  onMotivoRechazoChange,
+  onDonar,
+  abrirEnModoDonacion = false
 }: SolicitudDetailModalProps) => {
+  const { supabase } = useSupabase();
+  const [cantidadDonar, setCantidadDonar] = useState<number>(0);
+  const [comentarioDonacion, setComentarioDonacion] = useState<string>('');
+  const [modoDonacion, setModoDonacion] = useState(abrirEnModoDonacion);
+  const [historial, setHistorial] = useState<HistorialDonacion[]>([]);
+  const [cargandoHistorial, setCargandoHistorial] = useState(false);
+
+  // Cargar historial cuando el modal se abre
+  useEffect(() => {
+    const cargarHistorial = async () => {
+      if (solicitud.tiene_entregas_parciales || (solicitud.cantidad_entregada && solicitud.cantidad_entregada > 0)) {
+        setCargandoHistorial(true);
+        const datos = await obtenerHistorialDonaciones(supabase, solicitud.id);
+        setHistorial(datos);
+        setCargandoHistorial(false);
+      }
+    };
+    void cargarHistorial();
+  }, [solicitud.id, solicitud.tiene_entregas_parciales, solicitud.cantidad_entregada, supabase]);
+
   const totalDisponible = inventario.reduce(
     (total, item) => total + (item.cantidad_disponible ?? 0),
     0
   );
+
+  // Actualizar cantidad a donar cuando cambie el inventario disponible
+  useEffect(() => {
+    // Calcular la cantidad máxima que se puede donar
+    const maxDisponible = Math.min(solicitud.cantidad, totalDisponible);
+    const cantidadInicial = Math.floor(maxDisponible);
+    
+    // Solo actualizar si es diferente de 0 o si el inventario ha sido cargado
+    if (!inventarioLoading && cantidadInicial >= 0) {
+      setCantidadDonar(cantidadInicial);
+    }
+  }, [totalDisponible, solicitud.cantidad, inventarioLoading]);
+
+  const handleDonacionSubmit = () => {
+    if (onDonar && cantidadDonar > 0 && cantidadDonar <= solicitud.cantidad) {
+      // Calcular porcentaje automáticamente para el backend
+      const porcentaje = Math.round((cantidadDonar / solicitud.cantidad) * 100);
+      onDonar(cantidadDonar, porcentaje, comentarioDonacion);
+    }
+  };
+
+  const handleCantidadChange = (value: string) => {
+    // Solo aceptar números enteros
+    const cantidad = parseInt(value) || 0;
+    const maxDisponible = Math.min(solicitud.cantidad, totalDisponible);
+    setCantidadDonar(Math.min(Math.max(0, cantidad), maxDisponible));
+  };
+
+  const setearMaximo = () => {
+    const maxDisponible = Math.min(solicitud.cantidad, totalDisponible);
+    setCantidadDonar(Math.floor(maxDisponible)); // Redondear hacia abajo para asegurar entero
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -150,6 +219,104 @@ const SolicitudDetailModal = ({
                   <ExternalLink className="w-4 h-4" />
                   Ver Comprobante
                 </a>
+              </div>
+            </div>
+          )}
+
+          {/* Información de Donación (Parcial o Completa) */}
+          {((solicitud.estado === 'aprobada' && solicitud.cantidad_entregada && solicitud.cantidad_entregada > 0) || 
+            (solicitud.tiene_entregas_parciales)) && (
+            <div className={`bg-gradient-to-r ${
+              (solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad 
+                ? 'from-green-50 to-emerald-50 border-2 border-green-300' 
+                : 'from-orange-50 to-amber-50 border-2 border-orange-300'
+            } p-5 rounded-lg shadow-sm`}>
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-1">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    (solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad 
+                      ? 'bg-green-500' 
+                      : 'bg-orange-500'
+                  }`}>
+                    <Package className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-900 mb-3 flex items-center text-lg">
+                    {(solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad 
+                      ? '✅ Entrega Completa' 
+                      : '⚠️ Entrega Parcial en Proceso'}
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="bg-white p-3 rounded-lg border border-orange-200">
+                      <p className="text-xs text-gray-600 uppercase tracking-wider mb-1">Solicitado</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {solicitud.cantidad} {solicitud.unidades?.simbolo ?? 'unidades'}
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-orange-200">
+                      <p className="text-xs text-gray-600 uppercase tracking-wider mb-1">Entregado</p>
+                      <p className={`text-xl font-bold ${
+                        (solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad ? 'text-green-600' : 'text-orange-600'
+                      }`}>
+                        {solicitud.cantidad_entregada ?? 0} {solicitud.unidades?.simbolo ?? 'unidades'}
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-orange-200">
+                      <p className="text-xs text-gray-600 uppercase tracking-wider mb-1">
+                        {(solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad ? 'Estado' : 'Pendiente'}
+                      </p>
+                      {(solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad ? (
+                        <p className="text-xl font-bold text-green-600">Completo</p>
+                      ) : (
+                        <p className="text-xl font-bold text-orange-600">
+                          {solicitud.cantidad - (solicitud.cantidad_entregada ?? 0)} {solicitud.unidades?.simbolo ?? 'unidades'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Barra de progreso */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">Progreso de Entrega</span>
+                      <span className={`text-sm font-bold ${
+                        (solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad ? 'text-green-600' : 'text-orange-600'
+                      }`}>
+                        {Math.round(((solicitud.cantidad_entregada ?? 0) / solicitud.cantidad) * 100)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                      <div 
+                        className={`h-3 rounded-full transition-all duration-500 ${
+                          (solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad 
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                            : 'bg-gradient-to-r from-orange-500 to-amber-500'
+                        }`}
+                        style={{ width: `${Math.min(((solicitud.cantidad_entregada ?? 0) / solicitud.cantidad) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {solicitud.comentario_admin && (
+                    <div className="bg-white p-3 rounded-lg border border-orange-200">
+                      <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
+                        Comentario del Operador
+                      </p>
+                      <p className="text-sm text-gray-800 italic">
+                        "{solicitud.comentario_admin}"
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+                    <Clock className="w-4 h-4" />
+                    <span>
+                      Última actualización: {formatDate(solicitud.fecha_respuesta || solicitud.created_at)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -273,46 +440,230 @@ const SolicitudDetailModal = ({
             </div>
           )}
 
-          {solicitud.estado === 'pendiente' && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-3">Gestionar Solicitud</h4>
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="comentario-admin" className="block text-sm font-medium text-gray-700 mb-2">
-                    Comentario administrativo (opcional)
-                  </label>
-                  <textarea
-                    id="comentario-admin"
-                    value={comentarioAdmin}
-                    onChange={(event) => onComentarioChange(event.target.value)}
-                    placeholder="Agregar comentarios sobre la decisión..."
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    rows={3}
-                    disabled={isProcessing}
-                  />
+          {/* Historial de Donaciones */}
+          {(historial.length > 0 || cargandoHistorial) && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 p-6 rounded-lg">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center text-lg">
+                <History className="w-6 h-6 mr-2 text-blue-600" />
+                Historial de Entregas
+              </h3>
+
+              {cargandoHistorial ? (
+                <div className="text-center py-4">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                  <p className="mt-2 text-sm text-gray-600">Cargando historial...</p>
                 </div>
-                <div className="flex space-x-3">
-                  <button
-                    type="button"
-                    onClick={onAprobar}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={isProcessing || inventarioLoading || totalDisponible < solicitud.cantidad}
-                    title={totalDisponible < solicitud.cantidad ? 'Stock insuficiente para aprobar esta solicitud' : ''}
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    <span>Aprobar Solicitud</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onRechazar}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={isProcessing}
-                  >
-                    <XCircle className="w-4 h-4" />
-                    <span>Rechazar Solicitud</span>
-                  </button>
+              ) : (
+                <div className="space-y-3">
+                  {/* Resumen total */}
+                  <div className="bg-white p-4 rounded-lg border-2 border-blue-300">
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-xs text-gray-600 uppercase">Total Solicitado</p>
+                        <p className="text-lg font-bold text-gray-900">{solicitud.cantidad} {solicitud.unidades?.simbolo ?? 'unidades'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 uppercase">Total Entregado</p>
+                        <p className="text-lg font-bold text-green-600">{solicitud.cantidad_entregada || 0} {solicitud.unidades?.simbolo ?? 'unidades'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 uppercase">% Completado</p>
+                        <p className="text-lg font-bold text-blue-600">
+                          {Math.round(((solicitud.cantidad_entregada || 0) / solicitud.cantidad) * 100)}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Lista de entregas */}
+                  <div className="space-y-2">
+                    {historial.map((entrega, index) => (
+                      <div key={entrega.id} className="bg-white p-4 rounded-lg border">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
+                                {historial.length - index}
+                              </span>
+                              <span className="font-semibold text-gray-900">
+                                {entrega.cantidad_entregada} {solicitud.unidades?.simbolo ?? 'unidades'}
+                              </span>
+                              <span className="text-sm text-gray-600">
+                                ({entrega.porcentaje_entregado}% del total)
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-600 space-y-1">
+                              <p>
+                                <strong>Fecha:</strong> {formatDate(entrega.created_at)}
+                              </p>
+                              {entrega.operador && (
+                                <p>
+                                  <strong>Por:</strong> {entrega.operador.nombre} ({entrega.operador.rol})
+                                </p>
+                              )}
+                              {entrega.comentario && (
+                                <p className="mt-2 text-gray-700">
+                                  <strong>Comentario:</strong> {entrega.comentario}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="ml-4">
+                            <div className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              entrega.porcentaje_entregado === 100 ? 'bg-green-100 text-green-700' :
+                              entrega.porcentaje_entregado >= 75 ? 'bg-blue-100 text-blue-700' :
+                              entrega.porcentaje_entregado >= 50 ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-orange-100 text-orange-700'
+                            }`}>
+                              {entrega.porcentaje_entregado}%
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+            </div>
+          )}
+
+          {/* Sección de Donación */}
+          {solicitud.estado === 'pendiente' && onDonar && abrirEnModoDonacion && (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 p-6 rounded-lg">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center text-lg">
+                <Package className="w-6 h-6 mr-2 text-green-600" />
+                Gestionar Donación
+              </h3>
+
+              {/* Alerta de sin stock */}
+              {!inventarioLoading && totalDisponible === 0 && (
+                <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <XCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-red-900 mb-2">Sin Stock Disponible</h4>
+                      <p className="text-sm text-red-800 mb-3">
+                        No hay inventario disponible de "{solicitud.tipo_alimento}". No se puede procesar ninguna donación para esta solicitud.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={onRechazar}
+                        className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2"
+                      >
+                        <XCircle className="w-5 h-5" />
+                        Rechazar Solicitud por Falta de Stock
+                      </button>
+                      <p className="text-xs text-red-700 italic mt-2">
+                        Al rechazar, se notificará automáticamente al solicitante con el motivo "Sin stock disponible"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!modoDonacion ? (
+                <button
+                  type="button"
+                  onClick={() => setModoDonacion(true)}
+                  className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  disabled={totalDisponible === 0}
+                >
+                  {totalDisponible === 0 ? 'Sin Stock Disponible - No se puede procesar' : 'Procesar Donación'}
+                </button>
+              ) : (
+                <div className="space-y-4">
+                  {/* Resumen de la solicitud */}
+                  <div className="bg-white p-4 rounded-lg border-2 border-green-300">
+                    <h4 className="font-semibold text-gray-900 mb-3 text-sm">Resumen de la Solicitud</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-600">Cantidad solicitada:</span>
+                        <p className="font-semibold text-lg">{solicitud.cantidad} {solicitud.unidades?.simbolo ?? 'unidades'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Disponible en stock:</span>
+                        <p className={`font-semibold text-lg ${totalDisponible >= solicitud.cantidad ? 'text-green-600' : 'text-orange-600'}`}>
+                          {Math.floor(totalDisponible)} {solicitud.unidades?.simbolo ?? 'unidades'}
+                        </p>
+                      </div>
+                      {(solicitud.cantidad_entregada && solicitud.cantidad_entregada > 0) && (
+                        <>
+                          <div>
+                            <span className="text-gray-600">Ya entregado:</span>
+                            <p className="font-semibold text-lg text-blue-600">{solicitud.cantidad_entregada ?? 0} {solicitud.unidades?.simbolo ?? 'unidades'}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Pendiente de entregar:</span>
+                            <p className="font-semibold text-lg text-orange-600">
+                              {solicitud.cantidad - (solicitud.cantidad_entregada ?? 0)} {solicitud.unidades?.simbolo ?? 'unidades'}
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Cantidad a donar */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Cantidad a donar (unidades enteras)
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="number"
+                        min="1"
+                        max={Math.floor(Math.min(solicitud.cantidad, totalDisponible))}
+                        step="1"
+                        value={cantidadDonar}
+                        onChange={(e) => handleCantidadChange(e.target.value)}
+                        className="flex-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-lg font-semibold"
+                        disabled={isProcessing}
+                        placeholder="Ingrese cantidad"
+                      />
+                      <span className="text-gray-600 font-medium">{solicitud.unidades?.simbolo ?? 'unidades'}</span>
+                    </div>
+                  </div>
+
+                  {/* Comentario de donación */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Comentarios (opcional)
+                    </label>
+                    <textarea
+                      value={comentarioDonacion}
+                      onChange={(e) => setComentarioDonacion(e.target.value)}
+                      rows={3}
+                      placeholder="Ej: Entrega parcial por disponibilidad de stock..."
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                      disabled={isProcessing}
+                    />
+                  </div>
+
+                  {/* Botones de acción */}
+                  <div className="flex space-x-3">
+                    <button
+                      type="button"
+                      onClick={handleDonacionSubmit}
+                      disabled={isProcessing || cantidadDonar <= 0 || cantidadDonar > Math.min(solicitud.cantidad, totalDisponible)}
+                      className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
+                    >
+                      {isProcessing ? 'Procesando...' : `Confirmar Donación de ${cantidadDonar} ${solicitud.unidades?.simbolo ?? 'unidades'}`}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModoDonacion(false);
+                        setCantidadDonar(solicitud.cantidad);
+                        setComentarioDonacion('');
+                      }}
+                      disabled={isProcessing}
+                      className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

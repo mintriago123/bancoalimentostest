@@ -48,6 +48,10 @@ export default function OperadorSolicitudesPage() {
   const [solicitudSeleccionada, setSolicitudSeleccionada] = useState<Solicitud | null>(null);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [comentarioAdmin, setComentarioAdmin] = useState('');
+  const [motivoRechazo, setMotivoRechazo] = useState('');
+  const [mostrarDialogoRechazo, setMostrarDialogoRechazo] = useState(false);
+  const [solicitudParaRechazar, setSolicitudParaRechazar] = useState<Solicitud | null>(null);
+  const [abrirEnModoDonacion, setAbrirEnModoDonacion] = useState(false);
 
   const {
     solicitudes,
@@ -65,7 +69,7 @@ export default function OperadorSolicitudesPage() {
     refetch
   } = useSolicitudesData(supabase);
 
-  const { processingId, updateEstado } = useSolicitudActions(supabase);
+  const { processingId, updateEstado, procesarDonacion } = useSolicitudActions(supabase);
 
   const {
     inventario,
@@ -88,10 +92,21 @@ export default function OperadorSolicitudesPage() {
     setMostrarModal(false);
     setSolicitudSeleccionada(null);
     setComentarioAdmin('');
+    setMotivoRechazo('');
+    setAbrirEnModoDonacion(false);
     resetInventario();
   }, [resetInventario]);
 
-  const handleEstadoChange = useCallback(async (solicitud: Solicitud, estado: 'aprobada' | 'rechazada', comentario?: string) => {
+  const handleEstadoChange = useCallback(async (solicitud: Solicitud, estado: 'aprobada' | 'rechazada', comentario?: string, motivo?: string) => {
+    // Si es rechazo y no tiene motivo, abrir el diálogo de rechazo
+    if (estado === 'rechazada' && !motivo) {
+      setSolicitudParaRechazar(solicitud);
+      setComentarioAdmin('');
+      setMotivoRechazo('');
+      setMostrarDialogoRechazo(true);
+      return false;
+    }
+
     // Si se va a aprobar, verificar stock disponible primero
     if (estado === 'aprobada') {
       await loadInventario(solicitud.tipo_alimento);
@@ -113,7 +128,7 @@ export default function OperadorSolicitudesPage() {
       },
       rechazada: {
         title: `Rechazar solicitud de ${solicitud.usuarios?.nombre ?? 'solicitante'}`,
-        description: 'El solicitante será notificado del rechazo.',
+        description: 'El solicitante será notificado del rechazo con el motivo, fecha, hora y detalles.',
         confirmLabel: 'Rechazar',
         variant: 'danger'
       }
@@ -134,7 +149,19 @@ export default function OperadorSolicitudesPage() {
       return false;
     }
 
-    const result = await updateEstado(solicitud, estado, comentario);
+    // Obtener el ID del usuario actual para registrar quién rechazó
+    const { data: { user } } = await supabase.auth.getUser();
+    const operadorId = user?.id;
+
+    console.log('🔍 COMPONENTE - Llamando updateEstado con:', {
+      estado,
+      comentario,
+      motivo,
+      operadorId,
+      solicitudId: solicitud.id
+    });
+
+    const result = await updateEstado(solicitud, estado, comentario, motivo, operadorId);
 
     if (!result.success) {
       showError(result.message);
@@ -151,7 +178,7 @@ export default function OperadorSolicitudesPage() {
     resetInventario();
     await refetch();
     return true;
-  }, [updateEstado, refetch, showError, showSuccess, showWarning, confirm, loadInventario, resetInventario]);
+  }, [updateEstado, refetch, showError, showSuccess, showWarning, confirm, loadInventario, resetInventario, supabase]);
 
   const handleMarcarEntregada = useCallback(async (solicitud: Solicitud) => {
     const confirmed = await confirm({
@@ -177,11 +204,21 @@ export default function OperadorSolicitudesPage() {
     await refetch();
   }, [updateEstado, refetch, showError, showSuccess, confirm]);
 
-  const handleOpenModal = useCallback((solicitud: Solicitud) => {
+  const handleOpenModal = useCallback(async (solicitud: Solicitud, abrirModoDonacion = false) => {
     setSolicitudSeleccionada(solicitud);
     setComentarioAdmin(solicitud.comentario_admin ?? '');
+    setMotivoRechazo('');
+    setAbrirEnModoDonacion(abrirModoDonacion);
     setMostrarModal(true);
-    void loadInventario(solicitud.tipo_alimento);
+    
+    // Cargar inventario
+    await loadInventario(solicitud.tipo_alimento);
+    
+    // Si se abre en modo donación y es una solicitud pendiente, validar stock
+    if (abrirModoDonacion && solicitud.estado === 'pendiente') {
+      // Esperar un momento para que se cargue el inventario
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
   }, [loadInventario]);
 
   const handleModalAprobar = useCallback(async () => {
@@ -192,9 +229,43 @@ export default function OperadorSolicitudesPage() {
 
   const handleModalRechazar = useCallback(async () => {
     if (!solicitudSeleccionada) return;
-    const success = await handleEstadoChange(solicitudSeleccionada, 'rechazada', comentarioAdmin);
+    const success = await handleEstadoChange(solicitudSeleccionada, 'rechazada', comentarioAdmin, motivoRechazo);
     if (success) closeModal();
-  }, [solicitudSeleccionada, comentarioAdmin, handleEstadoChange, closeModal]);
+  }, [solicitudSeleccionada, comentarioAdmin, motivoRechazo, handleEstadoChange, closeModal]);
+
+  const handleDonacion = useCallback(async (cantidad: number, porcentaje: number, comentario: string) => {
+    if (!solicitudSeleccionada) return;
+
+    // Obtener el ID del usuario actual
+    const { data: { user } } = await supabase.auth.getUser();
+    const operadorId = user?.id;
+
+    const confirmed = await confirm({
+      title: 'Confirmar Donación',
+      description: `Se entregará ${cantidad} ${solicitudSeleccionada.unidades?.simbolo ?? 'unidades'} (${porcentaje}% de lo solicitado). Esta acción descuenta del inventario.`,
+      confirmLabel: 'Confirmar Donación',
+      cancelLabel: 'Cancelar',
+      variant: 'warning'
+    });
+
+    if (!confirmed) return;
+
+    const result = await procesarDonacion(solicitudSeleccionada, cantidad, porcentaje, comentario, operadorId);
+
+    if (!result.success) {
+      showError(result.message);
+      return;
+    }
+
+    if (result.warning) {
+      showWarning(result.message);
+    } else {
+      showSuccess(result.message);
+    }
+
+    closeModal();
+    await refetch();
+  }, [solicitudSeleccionada, procesarDonacion, showError, showSuccess, showWarning, closeModal, refetch, confirm, supabase]);
 
   const handleToggleEstado = useCallback((estado: keyof typeof filters.estados) => {
     toggleEstadoFilter(estado);
@@ -302,7 +373,124 @@ export default function OperadorSolicitudesPage() {
             onAprobar={handleModalAprobar}
             onRechazar={handleModalRechazar}
             isProcessing={processingId === solicitudSeleccionada.id}
+            motivoRechazo={motivoRechazo}
+            onMotivoRechazoChange={setMotivoRechazo}
+            onDonar={handleDonacion}
+            abrirEnModoDonacion={abrirEnModoDonacion}
           />
+        )}
+
+        {/* Diálogo de Rechazo */}
+        {mostrarDialogoRechazo && solicitudParaRechazar && (
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-2xl w-full p-6 shadow-2xl">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                Rechazar Solicitud
+              </h3>
+              
+              <div className="mb-4 p-3 bg-gray-50 rounded">
+                <p className="text-sm text-gray-700">
+                  <strong>Solicitante:</strong> {solicitudParaRechazar.usuarios?.nombre ?? 'N/A'}
+                </p>
+                <p className="text-sm text-gray-700">
+                  <strong>Alimento:</strong> {solicitudParaRechazar.tipo_alimento}
+                </p>
+                <p className="text-sm text-gray-700">
+                  <strong>Cantidad:</strong> {solicitudParaRechazar.cantidad} {solicitudParaRechazar.unidades?.simbolo ?? 'unidades'}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Motivo de Rechazo */}
+                <div>
+                  <label htmlFor="motivo-rechazo-dialog" className="block text-sm font-medium text-gray-700 mb-2">
+                    Motivo del Rechazo <span className="text-red-600">*</span>
+                  </label>
+                  <select
+                    id="motivo-rechazo-dialog"
+                    value={motivoRechazo}
+                    onChange={(e) => setMotivoRechazo(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  >
+                    <option value="">-- Selecciona un motivo --</option>
+                    <option value="stock_insuficiente">Stock insuficiente</option>
+                    <option value="producto_no_disponible">Producto no disponible</option>
+                    <option value="datos_incompletos">Datos incompletos</option>
+                    <option value="solicitante_ineligible">Solicitante ineligible</option>
+                    <option value="duplicada">Solicitud duplicada</option>
+                    <option value="vencimiento_proximo">Próximos a vencer</option>
+                    <option value="otro">Otro motivo</option>
+                  </select>
+                  {!motivoRechazo && (
+                    <p className="text-xs text-red-600 mt-1">Este campo es obligatorio</p>
+                  )}
+                </div>
+
+                {/* Comentario */}
+                <div>
+                  <label htmlFor="comentario-rechazo-dialog" className="block text-sm font-medium text-gray-700 mb-2">
+                    Comentario Detallado <span className="text-red-600">*</span>
+                  </label>
+                  <textarea
+                    id="comentario-rechazo-dialog"
+                    value={comentarioAdmin}
+                    onChange={(e) => setComentarioAdmin(e.target.value)}
+                    placeholder="Explica en detalle el motivo del rechazo. El solicitante recibirá este mensaje..."
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    rows={4}
+                    minLength={10}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Mínimo 10 caracteres. El solicitante recibirá este comentario.
+                  </p>
+                  {comentarioAdmin.length < 10 && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Debes escribir al menos 10 caracteres
+                    </p>
+                  )}
+                </div>
+
+                {/* Información */}
+                <div className="bg-orange-50 border border-orange-200 rounded p-3">
+                  <p className="text-xs text-orange-800">
+                    <strong>Nota:</strong> El solicitante recibirá una notificación con el motivo, fecha, hora y tu comentario.
+                  </p>
+                </div>
+
+                {/* Botones */}
+                <div className="flex space-x-3">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!motivoRechazo || comentarioAdmin.length < 10) {
+                        showError('Debes completar el motivo y el comentario (mínimo 10 caracteres)');
+                        return;
+                      }
+                      setMostrarDialogoRechazo(false);
+                      await handleEstadoChange(solicitudParaRechazar, 'rechazada', comentarioAdmin, motivoRechazo);
+                      setSolicitudParaRechazar(null);
+                    }}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    disabled={!motivoRechazo || comentarioAdmin.length < 10}
+                  >
+                    Confirmar Rechazo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMostrarDialogoRechazo(false);
+                      setSolicitudParaRechazar(null);
+                      setComentarioAdmin('');
+                      setMotivoRechazo('');
+                    }}
+                    className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Nota informativa para operadores */}

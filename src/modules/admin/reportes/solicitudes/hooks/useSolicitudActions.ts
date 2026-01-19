@@ -11,8 +11,9 @@ import { SYSTEM_MESSAGES } from '../constants';
 interface UseSolicitudActionsResult {
   processingId?: string;
   lastError?: string;
-  updateEstado: (solicitud: Solicitud, nuevoEstado: 'aprobada' | 'rechazada' | 'entregada', comentario?: string) => Promise<SolicitudActionResponse>;
+  updateEstado: (solicitud: Solicitud, nuevoEstado: 'aprobada' | 'rechazada' | 'entregada', comentario?: string, motivoRechazo?: string, operadorId?: string) => Promise<SolicitudActionResponse>;
   revertir: (solicitudId: string) => Promise<SolicitudActionResponse>;
+  procesarDonacion: (solicitud: Solicitud, cantidad: number, porcentaje: number, comentario?: string, operadorId?: string) => Promise<SolicitudActionResponse>;
 }
 
 export const useSolicitudActions = (supabaseClient: SupabaseClient): UseSolicitudActionsResult => {
@@ -24,12 +25,12 @@ export const useSolicitudActions = (supabaseClient: SupabaseClient): UseSolicitu
     [supabaseClient]
   );
 
-  const updateEstado = useCallback(async (solicitud: Solicitud, nuevoEstado: 'aprobada' | 'rechazada' | 'entregada', comentario?: string) => {
+  const updateEstado = useCallback(async (solicitud: Solicitud, nuevoEstado: 'aprobada' | 'rechazada' | 'entregada', comentario?: string, motivoRechazo?: string, operadorId?: string) => {
     setProcessingId(solicitud.id);
     setLastError(undefined);
 
     try {
-      const result = await service.updateSolicitudEstado(solicitud, nuevoEstado, comentario);
+      const result = await service.updateSolicitudEstado(solicitud, nuevoEstado, comentario, motivoRechazo, operadorId);
 
       if (result.success && result.data) {
         return result.data;
@@ -69,10 +70,40 @@ export const useSolicitudActions = (supabaseClient: SupabaseClient): UseSolicitu
     }
   }, [service]);
 
+  const procesarDonacion = useCallback(async (
+    solicitud: Solicitud,
+    cantidad: number,
+    porcentaje: number,
+    comentario?: string,
+    operadorId?: string
+  ) => {
+    setProcessingId(solicitud.id);
+    setLastError(undefined);
+
+    try {
+      const result = await service.procesarDonacion(solicitud, cantidad, porcentaje, comentario, operadorId);
+
+      if (result.success && result.data) {
+        return result.data;
+      }
+
+      const message = result.error ?? SYSTEM_MESSAGES.actionError;
+      setLastError(message);
+      return {
+        success: false,
+        message,
+        warning: false
+      };
+    } finally {
+      setProcessingId(undefined);
+    }
+  }, [service]);
+
   return {
     processingId,
     lastError,
     updateEstado,
-    revertir
+    revertir,
+    procesarDonacion
   };
 };

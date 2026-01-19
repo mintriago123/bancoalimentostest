@@ -11,14 +11,15 @@ import {
   MapPin,
   Package,
   User,
-  XCircle
+  XCircle,
+  Percent
 } from 'lucide-react';
 import type { Solicitud, SolicitudEstado } from '../types';
 
 interface SolicitudesTableProps {
   solicitudes: Solicitud[];
   totalSolicitudes: number;
-  onVerDetalle: (solicitud: Solicitud) => void;
+  onVerDetalle: (solicitud: Solicitud, abrirModoDonacion?: boolean) => void;
   onActualizarEstado: (solicitud: Solicitud, nuevoEstado: 'aprobada' | 'rechazada') => void;
   onMarcarEntregada?: (solicitud: Solicitud) => void;
   estadoIcons: Record<SolicitudEstado, JSX.Element>;
@@ -66,6 +67,15 @@ const SolicitudesTable = ({
           </button>
           <button
             type="button"
+            onClick={() => onVerDetalle(solicitud, true)}
+            className={`bg-green-700 hover:bg-green-800 ${baseButtonClasses}`}
+            title="Gestionar donación (parcial o total)"
+            disabled={isProcessing}
+          >
+            <Percent className="w-3 h-3 sm:w-4 sm:h-4" />
+          </button>
+          <button
+            type="button"
             onClick={() => onActualizarEstado(solicitud, 'aprobada')}
             className={`bg-green-600 hover:bg-green-700 ${baseButtonClasses}`}
             title="Aprobar (se descontará del inventario)"
@@ -77,7 +87,7 @@ const SolicitudesTable = ({
             type="button"
             onClick={() => onActualizarEstado(solicitud, 'rechazada')}
             className={`bg-red-600 hover:bg-red-700 ${baseButtonClasses}`}
-            title="Rechazar"
+            title="Rechazar (requiere motivo y comentario)"
             disabled={isProcessing}
           >
             <XCircle className="w-3 h-3 sm:w-4 sm:h-4" />
