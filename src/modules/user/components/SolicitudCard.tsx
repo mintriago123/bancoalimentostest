@@ -29,7 +29,7 @@ import { SolicitudDetalleModal } from './SolicitudDetalleModal';
 interface SolicitudCardProps {
   solicitud: Solicitud;
   onDelete: (solicitud: Solicitud) => void;
-  onEdit: (id: number, data: SolicitudEditData) => Promise<boolean>;
+  onEdit: (id: string, data: SolicitudEditData) => Promise<boolean>;
   canEdit?: boolean;
   canDelete?: boolean;
 }
@@ -42,7 +42,7 @@ export function SolicitudCard({
   canDelete = true,
 }: SolicitudCardProps) {
   const { formatDateTime } = useDateFormatter();
-  const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [showDetalle, setShowDetalle] = useState(false);
   const [formEdit, setFormEdit] = useState<SolicitudEditData>({
     comentarios: solicitud.comentarios || '',
@@ -109,6 +109,19 @@ export function SolicitudCard({
   const esRechazada = solicitud.estado.toUpperCase() === 'RECHAZADA';
   const esAprobada = solicitud.estado.toUpperCase() === 'APROBADA' || solicitud.estado.toUpperCase() === 'ENTREGADA';
 
+  // Log de depuración para solicitudes rechazadas
+  useEffect(() => {
+    if (esRechazada) {
+      console.log('🔍 Datos de solicitud rechazada:', {
+        id: solicitud.id,
+        motivo_rechazo: solicitud.motivo_rechazo,
+        fecha_rechazo: solicitud.fecha_rechazo,
+        operador_rechazo_id: solicitud.operador_rechazo_id,
+        comentario_admin: solicitud.comentario_admin,
+      });
+    }
+  }, [esRechazada, solicitud]);
+
   // Cargar datos del operador/admin que rechazó
   useEffect(() => {
     if (mostrarDetallesRechazo && solicitud.operador_rechazo_id && !datosRechazo) {
@@ -116,7 +129,6 @@ export function SolicitudCard({
         setCargandoRechazo(true);
         try {
           const supabase = createClient();
-          console.log('🔍 Cargando datos del operador que rechazó. ID:', solicitud.operador_rechazo_id);
           
           const { data, error } = await supabase
             .from('usuarios')
@@ -124,33 +136,29 @@ export function SolicitudCard({
             .eq('id', solicitud.operador_rechazo_id)
             .single();
 
-          console.log('📊 Respuesta de Supabase:', { data, error });
-
           if (error) {
-            console.error('❌ Error al cargar datos del operador:', error);
+            // Si hay error (probablemente permisos RLS), mostrar info genérica
+            console.warn('⚠️ No se pudieron cargar datos del operador (permisos):', error.message || 'Sin acceso');
             setDatosRechazo({
-              nombreOperador: 'Sistema',
-              rolOperador: 'OPERADOR',
+              nombreOperador: 'Personal Administrativo',
+              rolOperador: 'STAFF',
             });
           } else if (data) {
-            console.log('✅ Datos cargados correctamente:', data);
-            console.log('🏷️ Rol recibido:', data.rol);
             setDatosRechazo({
               nombreOperador: data.nombre || 'Sistema',
               rolOperador: data.rol || 'OPERADOR',
             });
           } else {
-            console.warn('⚠️ No se recibieron datos de Supabase');
             setDatosRechazo({
-              nombreOperador: 'Sistema',
-              rolOperador: 'OPERADOR',
+              nombreOperador: 'Personal Administrativo',
+              rolOperador: 'STAFF',
             });
           }
         } catch (error) {
-          console.error('💥 Excepción al cargar datos del operador:', error);
+          console.warn('⚠️ Excepción al cargar datos del operador');
           setDatosRechazo({
-            nombreOperador: 'Sistema',
-            rolOperador: 'OPERADOR',
+            nombreOperador: 'Personal Administrativo',
+            rolOperador: 'STAFF',
           });
         } finally {
           setCargandoRechazo(false);
@@ -168,7 +176,6 @@ export function SolicitudCard({
         setCargandoAprobacion(true);
         try {
           const supabase = createClient();
-          console.log('🔍 Cargando datos del operador que aprobó. ID:', solicitud.operador_aprobacion_id);
           
           const { data, error } = await supabase
             .from('usuarios')
@@ -176,33 +183,28 @@ export function SolicitudCard({
             .eq('id', solicitud.operador_aprobacion_id)
             .single();
 
-          console.log('📊 Respuesta de Supabase (aprobación):', { data, error });
-
           if (error) {
-            console.error('❌ Error al cargar datos del aprobador:', error);
+            console.warn('⚠️ No se pudieron cargar datos del aprobador (permisos):', error.message || 'Sin acceso');
             setDatosAprobacion({
-              nombreOperador: 'Sistema',
-              rolOperador: 'OPERADOR',
+              nombreOperador: 'Personal Administrativo',
+              rolOperador: 'STAFF',
             });
           } else if (data) {
-            console.log('✅ Datos de aprobación cargados correctamente:', data);
-            console.log('🏷️ Rol recibido:', data.rol);
             setDatosAprobacion({
               nombreOperador: data.nombre || 'Sistema',
               rolOperador: data.rol || 'OPERADOR',
             });
           } else {
-            console.warn('⚠️ No se recibieron datos de Supabase para aprobación');
             setDatosAprobacion({
-              nombreOperador: 'Sistema',
-              rolOperador: 'OPERADOR',
+              nombreOperador: 'Personal Administrativo',
+              rolOperador: 'STAFF',
             });
           }
         } catch (error) {
-          console.error('💥 Excepción al cargar datos del aprobador:', error);
+          console.warn('⚠️ Excepción al cargar datos del aprobador');
           setDatosAprobacion({
-            nombreOperador: 'Sistema',
-            rolOperador: 'OPERADOR',
+            nombreOperador: 'Personal Administrativo',
+            rolOperador: 'STAFF',
           });
         } finally {
           setCargandoAprobacion(false);
@@ -441,12 +443,12 @@ export function SolicitudCard({
               )}
 
               {/* Fecha y Hora del Rechazo */}
-              {solicitud.fecha_rechazo && (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <p className="text-sm font-semibold text-gray-800 mb-1">Fecha y Hora del Rechazo</p>
-                  <p className="text-sm text-gray-700">{formatDateTime(solicitud.fecha_rechazo)}</p>
-                </div>
-              )}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <p className="text-sm font-semibold text-gray-800 mb-1">Fecha y Hora del Rechazo</p>
+                <p className="text-sm text-gray-700">
+                  {solicitud.fecha_rechazo ? formatDateTime(solicitud.fecha_rechazo) : 'No registrada'}
+                </p>
+              </div>
 
               {/* Quién rechazó */}
               {solicitud.operador_rechazo_id && (
@@ -458,23 +460,21 @@ export function SolicitudCard({
                     <div className="text-sm text-gray-700">
                       <span
                         className={`inline-block px-3 py-1.5 rounded text-sm font-semibold ${
-                          datosRechazo.rolOperador === 'ADMIN'
+                          datosRechazo.rolOperador === 'ADMINISTRADOR' || datosRechazo.rolOperador === 'ADMIN'
                             ? 'bg-purple-100 text-purple-800'
                             : datosRechazo.rolOperador === 'OPERADOR'
                             ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-800'
+                            : 'bg-green-100 text-green-800'
                         }`}
                       >
-                        {datosRechazo.rolOperador === 'ADMIN' 
+                        {datosRechazo.rolOperador === 'ADMINISTRADOR' || datosRechazo.rolOperador === 'ADMIN'
                           ? 'Administrador' 
                           : datosRechazo.rolOperador === 'OPERADOR' 
-                          ? 'Operador' 
+                          ? 'Operador'
+                          : datosRechazo.rolOperador === 'STAFF'
+                          ? 'Personal Administrativo'
                           : datosRechazo.rolOperador}
                       </span>
-                      {/* Debug info - remover después */}
-                      <p className="text-xs text-gray-500 mt-1">
-                        (Rol: {datosRechazo.rolOperador})
-                      </p>
                     </div>
                   ) : (
                     <p className="text-sm text-gray-600">No disponible</p>
@@ -540,23 +540,21 @@ export function SolicitudCard({
                     <div className="text-sm text-gray-700">
                       <span
                         className={`inline-block px-3 py-1.5 rounded text-sm font-semibold ${
-                          datosAprobacion.rolOperador === 'ADMIN'
+                          datosAprobacion.rolOperador === 'ADMINISTRADOR' || datosAprobacion.rolOperador === 'ADMIN'
                             ? 'bg-purple-100 text-purple-800'
                             : datosAprobacion.rolOperador === 'OPERADOR'
                             ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-800'
+                            : 'bg-green-100 text-green-800'
                         }`}
                       >
-                        {datosAprobacion.rolOperador === 'ADMIN' 
+                        {datosAprobacion.rolOperador === 'ADMINISTRADOR' || datosAprobacion.rolOperador === 'ADMIN'
                           ? 'Administrador' 
                           : datosAprobacion.rolOperador === 'OPERADOR' 
-                          ? 'Operador' 
+                          ? 'Operador'
+                          : datosAprobacion.rolOperador === 'STAFF'
+                          ? 'Personal Administrativo'
                           : datosAprobacion.rolOperador}
                       </span>
-                      {/* Debug info - remover después */}
-                      <p className="text-xs text-gray-500 mt-1">
-                        (Rol: {datosAprobacion.rolOperador})
-                      </p>
                     </div>
                   ) : (
                     <p className="text-sm text-gray-600">No disponible</p>

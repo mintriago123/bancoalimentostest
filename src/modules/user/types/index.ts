@@ -4,7 +4,7 @@
 
 // ---------- Solicitudes ----------
 export interface Solicitud {
-  id: number;
+  id: string; // UUID en la base de datos
   usuario_id: string;
   tipo_alimento: string;
   cantidad: number;

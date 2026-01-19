@@ -44,6 +44,16 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
   ): Promise<ServiceResult<SolicitudActionResponse>> => {
     try {
       logger.info(`Actualizando estado de solicitud ${solicitud.id} a ${nuevoEstado}`);
+      
+      // Log de depuración para rechazos
+      if (nuevoEstado === 'rechazada') {
+        console.log('🔍 SERVICIO - Datos recibidos para rechazo:', {
+          comentarioAdmin,
+          motivoRechazo,
+          operadorId,
+          solicitudId: solicitud.id
+        });
+      }
 
       // Validar stock disponible antes de aprobar
       if (nuevoEstado === 'aprobada' && solicitud.estado === 'pendiente') {
@@ -70,6 +80,13 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         updateData.motivo_rechazo = motivoRechazo || null;
         updateData.operador_rechazo_id = operadorId || null;
         updateData.fecha_rechazo = new Date().toISOString();
+        
+        console.log('📝 SERVICIO - Datos que se guardarán en BD para rechazo:', {
+          motivo_rechazo: updateData.motivo_rechazo,
+          operador_rechazo_id: updateData.operador_rechazo_id,
+          fecha_rechazo: updateData.fecha_rechazo,
+          comentario_admin: updateData.comentario_admin
+        });
       }
 
       // Si es una aprobación, registrar quién aprobó
@@ -82,6 +99,12 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         .from('solicitudes')
         .update(updateData)
         .eq('id', solicitud.id);
+
+      console.log('💾 SERVICIO - Resultado del UPDATE:', {
+        updateData,
+        error: updateError,
+        solicitudId: solicitud.id
+      });
 
       if (updateError) {
         logger.error('Error actualizando estado de solicitud', updateError);

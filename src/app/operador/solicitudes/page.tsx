@@ -151,6 +151,14 @@ export default function OperadorSolicitudesPage() {
     const { data: { user } } = await supabase.auth.getUser();
     const operadorId = user?.id;
 
+    console.log('🔍 COMPONENTE - Llamando updateEstado con:', {
+      estado,
+      comentario,
+      motivo,
+      operadorId,
+      solicitudId: solicitud.id
+    });
+
     const result = await updateEstado(solicitud, estado, comentario, motivo, operadorId);
 
     if (!result.success) {

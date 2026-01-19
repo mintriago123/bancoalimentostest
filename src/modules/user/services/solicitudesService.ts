@@ -38,6 +38,21 @@ export class SolicitudesService {
       }
 
       const { data, error } = await query;
+      
+      // Log de depuración para ver datos de solicitudes rechazadas
+      if (data) {
+        const rechazadas = data.filter((s: any) => s.estado === 'rechazada');
+        if (rechazadas.length > 0) {
+          console.log('📋 Solicitudes rechazadas obtenidas desde BD:', rechazadas.map((s: any) => ({
+            id: s.id,
+            motivo_rechazo: s.motivo_rechazo,
+            fecha_rechazo: s.fecha_rechazo,
+            operador_rechazo_id: s.operador_rechazo_id,
+            comentario_admin: s.comentario_admin
+          })));
+        }
+      }
+      
       return { data, error };
     } catch (error) {
       return { data: null, error };
@@ -112,7 +127,7 @@ export class SolicitudesService {
   /**
    * Eliminar una solicitud
    */
-  async deleteSolicitud(solicitudId: number): Promise<{ error: any }> {
+  async deleteSolicitud(id: string): Promise<{ error: any }> {
     try {
       const { error } = await this.supabase
         .from('solicitudes')
