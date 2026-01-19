@@ -204,13 +204,21 @@ export default function OperadorSolicitudesPage() {
     await refetch();
   }, [updateEstado, refetch, showError, showSuccess, confirm]);
 
-  const handleOpenModal = useCallback((solicitud: Solicitud, abrirModoDonacion = false) => {
+  const handleOpenModal = useCallback(async (solicitud: Solicitud, abrirModoDonacion = false) => {
     setSolicitudSeleccionada(solicitud);
     setComentarioAdmin(solicitud.comentario_admin ?? '');
     setMotivoRechazo('');
     setAbrirEnModoDonacion(abrirModoDonacion);
     setMostrarModal(true);
-    void loadInventario(solicitud.tipo_alimento);
+    
+    // Cargar inventario
+    await loadInventario(solicitud.tipo_alimento);
+    
+    // Si se abre en modo donación y es una solicitud pendiente, validar stock
+    if (abrirModoDonacion && solicitud.estado === 'pendiente') {
+      // Esperar un momento para que se cargue el inventario
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
   }, [loadInventario]);
 
   const handleModalAprobar = useCallback(async () => {

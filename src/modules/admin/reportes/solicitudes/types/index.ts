@@ -41,6 +41,8 @@ export interface Solicitud {
   fecha_rechazo?: string | null;
   operador_aprobacion_id?: string | null;
   fecha_aprobacion?: string | null;
+  cantidad_entregada?: number;
+  tiene_entregas_parciales?: boolean;
   unidades?: SolicitudUnidad | null;
   usuarios: SolicitudUsuario | null;
   codigo_comprobante?: string;

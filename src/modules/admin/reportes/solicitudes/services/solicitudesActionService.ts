@@ -738,7 +738,10 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
     mensajeInventario?: string,
     comentarioAdmin?: string,
     motivoRechazo?: string | null,
-    codigoComprobanteGuardado?: string | null
+    codigoComprobanteGuardado?: string | null,
+    esParcial?: boolean,
+    cantidadParcial?: number,
+    cantidadTotal?: number
   ) => {
     try {
       const baseUrl = getBaseUrl();
@@ -794,11 +797,24 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
           baseUrl,
         });
 
+        // Determinar el mensaje según si es entrega parcial o completa
+        let tituloNotificacion: string;
+        let mensajeNotificacion: string;
+
+        if (esParcial && cantidadParcial && cantidadTotal) {
+          const porcentajeEntregado = Math.round((cantidadParcial / cantidadTotal) * 100);
+          tituloNotificacion = `⚠️ Solicitud Aprobada Parcialmente - Código: ${comprobante.codigoComprobante}`;
+          mensajeNotificacion = `Estimado/a ${datosUsuario.nombre}, su solicitud ha sido aprobada PARCIALMENTE. Se le entregará ${cantidadParcial} ${datosPedido.unidad} de los ${cantidadTotal} ${datosPedido.unidad} solicitados de ${solicitud.tipo_alimento} (${porcentajeEntregado}% del total). ${comentarioAdmin ? `Comentario del operador: ${comentarioAdmin}.` : ''} Presente el código QR adjunto al momento de retirar los alimentos. Válido hasta: ${new Date(comprobante.fechaVencimiento).toLocaleDateString('es-ES')}.`;
+        } else {
+          tituloNotificacion = `✅ Solicitud Aprobada - Código: ${comprobante.codigoComprobante}`;
+          mensajeNotificacion = `Estimado/a ${datosUsuario.nombre}, su solicitud de ${solicitud.cantidad} ${datosPedido.unidad} de ${solicitud.tipo_alimento} ha sido aprobada. Presente el código QR adjunto al momento de retirar los alimentos. Válido hasta: ${new Date(comprobante.fechaVencimiento).toLocaleDateString('es-ES')}.`;
+        }
+
         await sendNotification({
-          titulo: `✅ Solicitud Aprobada - Código: ${comprobante.codigoComprobante}`,
-          mensaje: `Estimado/a ${datosUsuario.nombre}, su solicitud de ${solicitud.cantidad} ${datosPedido.unidad} de ${solicitud.tipo_alimento} ha sido aprobada. Presente el código QR adjunto al momento de retirar los alimentos. Válido hasta: ${new Date(comprobante.fechaVencimiento).toLocaleDateString('es-ES')}.`,
+          titulo: tituloNotificacion,
+          mensaje: mensajeNotificacion,
           categoria: 'solicitud',
-          tipo: 'success',
+          tipo: esParcial ? 'warning' : 'success',
           destinatarioId: solicitud.usuario_id,
           urlAccion: '/user/solicitudes',
           metadatos: {
@@ -806,6 +822,9 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
             nuevoEstado,
             codigoComprobante: comprobante.codigoComprobante,
             fechaVencimiento: comprobante.fechaVencimiento,
+            esParcial: esParcial ?? false,
+            cantidadEntregada: cantidadParcial,
+            cantidadSolicitada: cantidadTotal
           },
           email: {
             subject: emailTemplate.subject,
@@ -1143,20 +1162,61 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
     try {
       logger.info(`Procesando donación para solicitud ${solicitud.id}`, { cantidadDonar, porcentaje });
 
-      // Validar que la cantidad sea válida
-      if (cantidadDonar <= 0 || cantidadDonar > solicitud.cantidad) {
+      // Validar stock disponible PRIMERO
+      const validacionStock = await validarStockDisponible(solicitud);
+      
+      // Si NO hay stock disponible (0 unidades), rechazar automáticamente la solicitud
+      if (validacionStock.disponible === 0) {
+        logger.warn(`Rechazando automáticamente solicitud ${solicitud.id} por falta de stock`);
+        
+        // Obtener el ID del operador actual
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        const operadorIdActual = user?.id;
+        
+        // Rechazar la solicitud automáticamente
+        const { error: rechazoError } = await supabaseClient
+          .from('solicitudes')
+          .update({
+            estado: 'rechazada',
+            fecha_respuesta: new Date().toISOString(),
+            comentario_admin: 'Solicitud rechazada automáticamente por falta de inventario disponible',
+            motivo_rechazo: 'Sin stock disponible',
+            operador_rechazo_id: operadorIdActual,
+            fecha_rechazo: new Date().toISOString()
+          })
+          .eq('id', solicitud.id);
+
+        if (!rechazoError) {
+          // Notificar al usuario del rechazo
+          await notificarCambioEstado(
+            solicitud, 
+            'rechazada', 
+            undefined, 
+            'Solicitud rechazada automáticamente por falta de inventario disponible',
+            'Sin stock disponible',
+            null
+          );
+        }
+
         return {
           success: false,
-          error: `La cantidad a donar debe ser mayor a 0 y menor o igual a ${solicitud.cantidad}`
+          error: `No hay stock disponible de "${solicitud.tipo_alimento}". La solicitud ha sido rechazada automáticamente.`
         };
       }
 
-      // Validar stock disponible
-      const validacionStock = await validarStockDisponible(solicitud);
-      if (!validacionStock.suficiente || validacionStock.disponible < cantidadDonar) {
+      // Validar que la cantidad sea válida (mínimo 1 unidad)
+      if (cantidadDonar < 1 || cantidadDonar > solicitud.cantidad) {
         return {
           success: false,
-          error: `Stock insuficiente. Disponible: ${validacionStock.disponible} ${solicitud.unidades?.simbolo ?? 'unidades'}`
+          error: `La cantidad a donar debe ser al menos 1 unidad y máximo ${solicitud.cantidad} ${solicitud.unidades?.simbolo ?? 'unidades'}`
+        };
+      }
+
+      // Validar que haya suficiente stock para la cantidad a donar
+      if (validacionStock.disponible < cantidadDonar) {
+        return {
+          success: false,
+          error: `Stock insuficiente para donar ${cantidadDonar} unidades. Disponible: ${validacionStock.disponible} ${solicitud.unidades?.simbolo ?? 'unidades'}`
         };
       }
 
@@ -1168,23 +1228,17 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
       const nuevaCantidadTotal = cantidadAnterior + cantidadDonar;
       const esEntregaCompleta = nuevaCantidadTotal >= solicitud.cantidad;
 
-      // Determinar el nuevo estado
-      const nuevoEstado = esEntregaCompleta ? 'aprobada' : solicitud.estado;
-
-      // Actualizar la solicitud
+      // Actualizar la solicitud (SIEMPRE cambia a 'aprobada' cuando se procesa una donación)
       const updateData: Record<string, unknown> = {
+        estado: 'aprobada',
         cantidad_entregada: nuevaCantidadTotal,
         tiene_entregas_parciales: !esEntregaCompleta || cantidadAnterior > 0,
         codigo_comprobante: codigoComprobante,
-        comentario_admin: comentario?.trim() || null
+        comentario_admin: comentario?.trim() || null,
+        fecha_respuesta: new Date().toISOString(),
+        operador_aprobacion_id: operadorId || null,
+        fecha_aprobacion: new Date().toISOString()
       };
-
-      if (esEntregaCompleta) {
-        updateData.estado = 'aprobada';
-        updateData.fecha_respuesta = new Date().toISOString();
-        updateData.operador_aprobacion_id = operadorId || null;
-        updateData.fecha_aprobacion = new Date().toISOString();
-      }
 
       const { error: updateError } = await supabaseClient
         .from('solicitudes')
@@ -1221,13 +1275,34 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
       const resultadoInventario = await descontarDelInventario(solicitudTemporal);
       await registrarMovimientoSolicitud(solicitudTemporal, resultadoInventario);
 
-      // Notificar al usuario
+      // Notificar al usuario SIEMPRE (tanto para entregas completas como parciales)
       let mensaje = '';
       if (esEntregaCompleta) {
         mensaje = `Donación completada: ${nuevaCantidadTotal} ${solicitud.unidades?.simbolo ?? 'unidades'} de ${solicitud.tipo_alimento}`;
-        await notificarCambioEstado(solicitud, 'aprobada', mensaje, comentario, null, codigoComprobante);
+        await notificarCambioEstado(
+          solicitud, 
+          'aprobada', 
+          mensaje, 
+          comentario, 
+          null, 
+          codigoComprobante,
+          false, // No es parcial
+          nuevaCantidadTotal,
+          solicitud.cantidad
+        );
       } else {
         mensaje = `Entrega parcial registrada: ${cantidadDonar} ${solicitud.unidades?.simbolo ?? 'unidades'} (${porcentaje}% del total). Total entregado: ${nuevaCantidadTotal}/${solicitud.cantidad}`;
+        await notificarCambioEstado(
+          solicitud, 
+          'aprobada', 
+          mensaje, 
+          comentario, 
+          null, 
+          codigoComprobante,
+          true, // Es parcial
+          cantidadDonar,
+          solicitud.cantidad
+        );
       }
 
       return {

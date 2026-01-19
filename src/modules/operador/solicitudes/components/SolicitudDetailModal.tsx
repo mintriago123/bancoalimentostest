@@ -4,6 +4,7 @@
 
 import {
   CheckCircle,
+  Clock,
   FileText,
   Mail,
   MapPin,
@@ -80,7 +81,7 @@ const SolicitudDetailModal = ({
   abrirEnModoDonacion = false
 }: SolicitudDetailModalProps) => {
   const { supabase } = useSupabase();
-  const [cantidadDonar, setCantidadDonar] = useState<number>(solicitud.cantidad);
+  const [cantidadDonar, setCantidadDonar] = useState<number>(0);
   const [comentarioDonacion, setComentarioDonacion] = useState<string>('');
   const [modoDonacion, setModoDonacion] = useState(abrirEnModoDonacion);
   const [historial, setHistorial] = useState<HistorialDonacion[]>([]);
@@ -104,26 +105,36 @@ const SolicitudDetailModal = ({
     0
   );
 
-  const porcentajeDonacion = solicitud.cantidad > 0 
-    ? Math.round((cantidadDonar / solicitud.cantidad) * 100) 
-    : 0;
+  // Actualizar cantidad a donar cuando cambie el inventario disponible
+  useEffect(() => {
+    // Calcular la cantidad máxima que se puede donar
+    const maxDisponible = Math.min(solicitud.cantidad, totalDisponible);
+    const cantidadInicial = Math.floor(maxDisponible);
+    
+    // Solo actualizar si es diferente de 0 o si el inventario ha sido cargado
+    if (!inventarioLoading && cantidadInicial >= 0) {
+      setCantidadDonar(cantidadInicial);
+    }
+  }, [totalDisponible, solicitud.cantidad, inventarioLoading]);
 
   const handleDonacionSubmit = () => {
     if (onDonar && cantidadDonar > 0 && cantidadDonar <= solicitud.cantidad) {
-      onDonar(cantidadDonar, porcentajeDonacion, comentarioDonacion);
+      // Calcular porcentaje automáticamente para el backend
+      const porcentaje = Math.round((cantidadDonar / solicitud.cantidad) * 100);
+      onDonar(cantidadDonar, porcentaje, comentarioDonacion);
     }
   };
 
   const handleCantidadChange = (value: string) => {
-    const cantidad = parseFloat(value) || 0;
+    // Solo aceptar números enteros
+    const cantidad = parseInt(value) || 0;
     const maxDisponible = Math.min(solicitud.cantidad, totalDisponible);
     setCantidadDonar(Math.min(Math.max(0, cantidad), maxDisponible));
   };
 
-  const setearPorcentaje = (porcentaje: number) => {
-    const cantidad = (solicitud.cantidad * porcentaje) / 100;
+  const setearMaximo = () => {
     const maxDisponible = Math.min(solicitud.cantidad, totalDisponible);
-    setCantidadDonar(Math.min(cantidad, maxDisponible));
+    setCantidadDonar(Math.floor(maxDisponible)); // Redondear hacia abajo para asegurar entero
   };
 
   return (
@@ -208,6 +219,104 @@ const SolicitudDetailModal = ({
                   <ExternalLink className="w-4 h-4" />
                   Ver Comprobante
                 </a>
+              </div>
+            </div>
+          )}
+
+          {/* Información de Donación (Parcial o Completa) */}
+          {((solicitud.estado === 'aprobada' && solicitud.cantidad_entregada && solicitud.cantidad_entregada > 0) || 
+            (solicitud.tiene_entregas_parciales)) && (
+            <div className={`bg-gradient-to-r ${
+              (solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad 
+                ? 'from-green-50 to-emerald-50 border-2 border-green-300' 
+                : 'from-orange-50 to-amber-50 border-2 border-orange-300'
+            } p-5 rounded-lg shadow-sm`}>
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-1">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    (solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad 
+                      ? 'bg-green-500' 
+                      : 'bg-orange-500'
+                  }`}>
+                    <Package className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-900 mb-3 flex items-center text-lg">
+                    {(solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad 
+                      ? '✅ Entrega Completa' 
+                      : '⚠️ Entrega Parcial en Proceso'}
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="bg-white p-3 rounded-lg border border-orange-200">
+                      <p className="text-xs text-gray-600 uppercase tracking-wider mb-1">Solicitado</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {solicitud.cantidad} {solicitud.unidades?.simbolo ?? 'unidades'}
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-orange-200">
+                      <p className="text-xs text-gray-600 uppercase tracking-wider mb-1">Entregado</p>
+                      <p className={`text-xl font-bold ${
+                        (solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad ? 'text-green-600' : 'text-orange-600'
+                      }`}>
+                        {solicitud.cantidad_entregada ?? 0} {solicitud.unidades?.simbolo ?? 'unidades'}
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-orange-200">
+                      <p className="text-xs text-gray-600 uppercase tracking-wider mb-1">
+                        {(solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad ? 'Estado' : 'Pendiente'}
+                      </p>
+                      {(solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad ? (
+                        <p className="text-xl font-bold text-green-600">Completo</p>
+                      ) : (
+                        <p className="text-xl font-bold text-orange-600">
+                          {solicitud.cantidad - (solicitud.cantidad_entregada ?? 0)} {solicitud.unidades?.simbolo ?? 'unidades'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Barra de progreso */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">Progreso de Entrega</span>
+                      <span className={`text-sm font-bold ${
+                        (solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad ? 'text-green-600' : 'text-orange-600'
+                      }`}>
+                        {Math.round(((solicitud.cantidad_entregada ?? 0) / solicitud.cantidad) * 100)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                      <div 
+                        className={`h-3 rounded-full transition-all duration-500 ${
+                          (solicitud.cantidad_entregada ?? 0) >= solicitud.cantidad 
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                            : 'bg-gradient-to-r from-orange-500 to-amber-500'
+                        }`}
+                        style={{ width: `${Math.min(((solicitud.cantidad_entregada ?? 0) / solicitud.cantidad) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {solicitud.comentario_admin && (
+                    <div className="bg-white p-3 rounded-lg border border-orange-200">
+                      <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
+                        Comentario del Operador
+                      </p>
+                      <p className="text-sm text-gray-800 italic">
+                        "{solicitud.comentario_admin}"
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+                    <Clock className="w-4 h-4" />
+                    <span>
+                      Última actualización: {formatDate(solicitud.fecha_respuesta || solicitud.created_at)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -426,18 +535,46 @@ const SolicitudDetailModal = ({
                 Gestionar Donación
               </h3>
 
+              {/* Alerta de sin stock */}
+              {!inventarioLoading && totalDisponible === 0 && (
+                <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <XCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-red-900 mb-2">Sin Stock Disponible</h4>
+                      <p className="text-sm text-red-800 mb-3">
+                        No hay inventario disponible de "{solicitud.tipo_alimento}". No se puede procesar ninguna donación para esta solicitud.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={onRechazar}
+                        className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2"
+                      >
+                        <XCircle className="w-5 h-5" />
+                        Rechazar Solicitud por Falta de Stock
+                      </button>
+                      <p className="text-xs text-red-700 italic mt-2">
+                        Al rechazar, se notificará automáticamente al solicitante con el motivo "Sin stock disponible"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {!modoDonacion ? (
                 <button
                   type="button"
                   onClick={() => setModoDonacion(true)}
                   className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  disabled={totalDisponible === 0}
                 >
-                  Procesar Donación
+                  {totalDisponible === 0 ? 'Sin Stock Disponible - No se puede procesar' : 'Procesar Donación'}
                 </button>
               ) : (
                 <div className="space-y-4">
                   {/* Resumen de la solicitud */}
-                  <div className="bg-white p-4 rounded-lg border">
+                  <div className="bg-white p-4 rounded-lg border-2 border-green-300">
+                    <h4 className="font-semibold text-gray-900 mb-3 text-sm">Resumen de la Solicitud</h4>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="text-gray-600">Cantidad solicitada:</span>
@@ -446,135 +583,44 @@ const SolicitudDetailModal = ({
                       <div>
                         <span className="text-gray-600">Disponible en stock:</span>
                         <p className={`font-semibold text-lg ${totalDisponible >= solicitud.cantidad ? 'text-green-600' : 'text-orange-600'}`}>
-                          {formatQuantity(totalDisponible)} {solicitud.unidades?.simbolo ?? 'unidades'}
+                          {Math.floor(totalDisponible)} {solicitud.unidades?.simbolo ?? 'unidades'}
                         </p>
                       </div>
+                      {(solicitud.cantidad_entregada && solicitud.cantidad_entregada > 0) && (
+                        <>
+                          <div>
+                            <span className="text-gray-600">Ya entregado:</span>
+                            <p className="font-semibold text-lg text-blue-600">{solicitud.cantidad_entregada ?? 0} {solicitud.unidades?.simbolo ?? 'unidades'}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Pendiente de entregar:</span>
+                            <p className="font-semibold text-lg text-orange-600">
+                              {solicitud.cantidad - (solicitud.cantidad_entregada ?? 0)} {solicitud.unidades?.simbolo ?? 'unidades'}
+                            </p>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 
                   {/* Cantidad a donar */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cantidad a donar
+                      Cantidad a donar (unidades enteras)
                     </label>
                     <div className="flex items-center space-x-2">
                       <input
                         type="number"
-                        min="0"
-                        max={Math.min(solicitud.cantidad, totalDisponible)}
-                        step="0.01"
+                        min="1"
+                        max={Math.floor(Math.min(solicitud.cantidad, totalDisponible))}
+                        step="1"
                         value={cantidadDonar}
                         onChange={(e) => handleCantidadChange(e.target.value)}
-                        className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                        className="flex-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-lg font-semibold"
                         disabled={isProcessing}
+                        placeholder="Ingrese cantidad"
                       />
-                      <span className="text-gray-600">{solicitud.unidades?.simbolo ?? 'unidades'}</span>
-                    </div>
-                  </div>
-
-                  {/* Botones de porcentaje rápido */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Porcentajes rápidos
-                    </label>
-                    <div className="grid grid-cols-5 gap-2">
-                      {[25, 50, 75, 100].map((porcentaje) => {
-                        const cantidadCalculada = (solicitud.cantidad * porcentaje) / 100;
-                        const puedeDonar = cantidadCalculada <= totalDisponible;
-                        return (
-                          <button
-                            key={porcentaje}
-                            type="button"
-                            onClick={() => setearPorcentaje(porcentaje)}
-                            disabled={!puedeDonar || isProcessing}
-                            className={`px-3 py-2 rounded-lg font-medium transition-colors ${
-                              puedeDonar
-                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            } ${Math.abs(porcentajeDonacion - porcentaje) < 1 ? 'ring-2 ring-green-500' : ''}`}
-                          >
-                            {porcentaje}%
-                          </button>
-                        );
-                      })}
-                      <button
-                        type="button"
-                        onClick={() => setCantidadDonar(Math.min(solicitud.cantidad, totalDisponible))}
-                        disabled={isProcessing}
-                        className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
-                      >
-                        Máximo
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Control deslizante de porcentaje */}
-                  <div className="bg-white p-4 rounded-lg border">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-medium text-gray-700">Porcentaje de entrega</span>
-                      <div className="flex items-center">
-                        <TrendingUp className="w-4 h-4 mr-1 text-green-600" />
-                        <span className="text-2xl font-bold text-green-600">{porcentajeDonacion}%</span>
-                      </div>
-                    </div>
-
-                    {/* Barra deslizante con indicador visual */}
-                    <div className="relative mb-2">
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        step="1"
-                        value={porcentajeDonacion}
-                        onChange={(e) => {
-                          const porcentaje = parseInt(e.target.value);
-                          const cantidadCalculada = (solicitud.cantidad * porcentaje) / 100;
-                          const maxDisponible = Math.min(solicitud.cantidad, totalDisponible);
-                          setCantidadDonar(Math.min(cantidadCalculada, maxDisponible));
-                        }}
-                        disabled={isProcessing}
-                        className="w-full h-5 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-thumb"
-                        style={{
-                          background: `linear-gradient(to right, ${
-                            porcentajeDonacion === 100 ? '#16a34a' : 
-                            porcentajeDonacion >= 75 ? '#22c55e' : 
-                            porcentajeDonacion >= 50 ? '#eab308' : 
-                            '#f97316'
-                          } 0%, ${
-                            porcentajeDonacion === 100 ? '#16a34a' : 
-                            porcentajeDonacion >= 75 ? '#22c55e' : 
-                            porcentajeDonacion >= 50 ? '#eab308' : 
-                            '#f97316'
-                          } ${porcentajeDonacion}%, #e5e7eb ${porcentajeDonacion}%, #e5e7eb 100%)`
-                        }}
-                      />
-                      {/* Marcadores de porcentaje */}
-                      <div className="flex justify-between text-xs text-gray-500 mt-2 px-1">
-                        <span>0%</span>
-                        <span>25%</span>
-                        <span>50%</span>
-                        <span>75%</span>
-                        <span>100%</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-center text-xs font-medium">
-                      {porcentajeDonacion === 100 && (
-                        <span className="flex items-center text-green-600">
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Entrega completa
-                        </span>
-                      )}
-                      {porcentajeDonacion < 100 && porcentajeDonacion > 0 && (
-                        <span className="flex items-center text-orange-600">
-                          ⚠️ Entrega parcial
-                        </span>
-                      )}
-                      {porcentajeDonacion === 0 && (
-                        <span className="flex items-center text-red-600">
-                          ⚠️ No se donará ninguna cantidad
-                        </span>
-                      )}
+                      <span className="text-gray-600 font-medium">{solicitud.unidades?.simbolo ?? 'unidades'}</span>
                     </div>
                   </div>
 
@@ -601,7 +647,7 @@ const SolicitudDetailModal = ({
                       disabled={isProcessing || cantidadDonar <= 0 || cantidadDonar > Math.min(solicitud.cantidad, totalDisponible)}
                       className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
                     >
-                      {isProcessing ? 'Procesando...' : `Confirmar Donación (${formatQuantity(cantidadDonar)} ${solicitud.unidades?.simbolo ?? 'unidades'})`}
+                      {isProcessing ? 'Procesando...' : `Confirmar Donación de ${cantidadDonar} ${solicitud.unidades?.simbolo ?? 'unidades'}`}
                     </button>
                     <button
                       type="button"
