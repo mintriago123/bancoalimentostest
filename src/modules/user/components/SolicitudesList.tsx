@@ -13,7 +13,7 @@ interface SolicitudesListProps {
   filtroEstado: FiltroEstadoSolicitud;
   onFiltroChange: (filtro: FiltroEstadoSolicitud) => void;
   onDelete: (solicitud: Solicitud) => void;
-  onEdit: (id: number, data: SolicitudEditData) => Promise<boolean>;
+  onEdit: (id: string, data: SolicitudEditData) => Promise<boolean>;
   mensaje?: string;
 }
 
