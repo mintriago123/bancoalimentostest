@@ -189,8 +189,8 @@ export default function ComprobantePage({ params }: { params: Promise<{ codigo: 
       </div>
 
       {/* Comprobante imprimible */}
-      <div className="max-w-4xl mx-auto p-6 print:p-0 print:max-w-none">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden print:shadow-none print:border-0">
+      <div className="comprobante-container max-w-4xl mx-auto p-6 print:p-0 print:max-w-none">
+        <div id="comprobante-contenido" className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden print:shadow-none print:border-0">
           {/* Header con logo y datos del banco */}
           <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-6 print:bg-red-600">
             <div className="flex items-center justify-between">
@@ -392,19 +392,72 @@ export default function ComprobantePage({ params }: { params: Promise<{ codigo: 
       {/* Estilos de impresión */}
       <style jsx global>{`
         @media print {
-          body {
+          @page {
+            size: A4;
+            margin: 8mm;
+          }
+          
+          html, body {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-          }
-          .print\\:hidden {
-            display: none !important;
-          }
-          nav, aside, header, footer {
-            display: none !important;
-          }
-          main {
-            padding: 0 !important;
             margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            overflow: visible !important;
+          }
+          
+          /* Ocultar sidebar, header, botones de navegación y accesibilidad */
+          aside,
+          nav,
+          header,
+          footer,
+          .print\\:hidden,
+          [class*="Sidebar"],
+          [class*="sidebar"],
+          [class*="Accesibilidad"],
+          [class*="accesibilidad"],
+          button[aria-label],
+          .fixed {
+            display: none !important;
+            visibility: hidden !important;
+          }
+          
+          /* Reset del layout principal */
+          body > div,
+          #__next,
+          main {
+            margin: 0 !important;
+            padding: 0 !important;
+            margin-left: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+          
+          /* Forzar que el contenedor del dashboard no tenga margen */
+          [class*="ml-"] {
+            margin-left: 0 !important;
+          }
+          
+          /* Escalar y centrar el comprobante */
+          .comprobante-container {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            transform: scale(0.72) !important;
+            transform-origin: top center !important;
+            background: white !important;
+            z-index: 999999 !important;
+          }
+          
+          #comprobante-contenido {
+            box-shadow: none !important;
+            border: none !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
         }
       `}</style>
