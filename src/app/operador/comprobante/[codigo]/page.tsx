@@ -208,9 +208,9 @@ export default function ComprobantePage({ params }: { params: Promise<{ codigo: 
             </div>
           </div>
 
-          <div className="p-6">
+          <div className="p-5">
             {/* Estado y tipo */}
-            <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
               <div className="flex items-center gap-3">
                 {data.tipo === 'solicitud' ? (
                   <Package className="h-8 w-8 text-red-600" />
@@ -239,151 +239,148 @@ export default function ComprobantePage({ params }: { params: Promise<{ codigo: 
               </span>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
-              {/* Columna izquierda - Datos del usuario */}
-              <div className="md:col-span-2 space-y-6">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    {data.tipo === 'solicitud' ? 'Datos del Beneficiario' : 'Datos del Donante'}
-                  </h3>
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+            {/* Datos del usuario con QR al lado */}
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <User className="h-4 w-4" />
+                {data.tipo === 'solicitud' ? 'Datos del Beneficiario' : 'Datos del Donante'}
+              </h3>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex gap-6">
+                  {/* Datos personales */}
+                  <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-3">
                     <div className="flex items-start gap-3">
-                      <User className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <User className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
                       <div>
                         <p className="text-sm text-gray-500">Nombre completo</p>
                         <p className="font-medium text-gray-900">{data.usuario.nombre}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <FileText className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <FileText className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
                       <div>
                         <p className="text-sm text-gray-500">Documento de identidad</p>
                         <p className="font-medium text-gray-900">{data.usuario.cedula}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Phone className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <Phone className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
                       <div>
                         <p className="text-sm text-gray-500">Teléfono</p>
                         <p className="font-medium text-gray-900">{data.usuario.telefono}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Mail className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <Mail className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
                       <div>
                         <p className="text-sm text-gray-500">Correo electrónico</p>
                         <p className="font-medium text-gray-900">{data.usuario.email}</p>
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <div className="flex items-start gap-3 col-span-2">
+                      <MapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
                       <div>
                         <p className="text-sm text-gray-500">Dirección</p>
                         <p className="font-medium text-gray-900">{data.usuario.direccion}</p>
                       </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Detalle del producto */}
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Package className="h-4 w-4" />
-                    Detalle del Producto
-                  </h3>
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-gray-100">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Descripción</th>
-                          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Cantidad</th>
-                          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Unidad</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="border-t border-gray-200">
-                          <td className="px-4 py-4 font-medium text-gray-900">{data.producto}</td>
-                          <td className="px-4 py-4 text-center text-2xl font-bold text-red-600">{data.cantidad}</td>
-                          <td className="px-4 py-4 text-center text-gray-600">{data.unidad}</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                  {/* QR Code */}
+                  <div className="flex-shrink-0 text-center border-l border-gray-200 pl-6">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Verificación QR</p>
+                    {qrImage && (
+                      <img src={qrImage} alt="QR Code" className="w-28 h-28 mx-auto" />
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">Escanee para verificar</p>
                   </div>
-                </div>
-
-                {/* Fechas */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                      <Calendar className="h-4 w-4" />
-                      Fecha de registro
-                    </div>
-                    <p className="font-medium text-gray-900">{formatDate(data.fechaCreacion)}</p>
-                  </div>
-                  {data.fechaRespuesta && (
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                        <Calendar className="h-4 w-4" />
-                        Fecha de procesamiento
-                      </div>
-                      <p className="font-medium text-gray-900">{formatDate(data.fechaRespuesta)}</p>
-                    </div>
-                  )}
-                </div>
-
-                {data.comentario && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="font-medium text-blue-800 mb-2">Observaciones:</h4>
-                    <p className="text-blue-700">{data.comentario}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Columna derecha - QR */}
-              <div className="flex flex-col items-center justify-start">
-                <div className="bg-gray-50 rounded-xl p-4 text-center">
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                    Código QR de verificación
-                  </h3>
-                  {qrImage && (
-                    <img src={qrImage} alt="QR Code" className="w-48 h-48 mx-auto" />
-                  )}
-                  <p className="text-xs text-gray-500 mt-2">
-                    Escanee para verificar
-                  </p>
                 </div>
               </div>
             </div>
 
+            {/* Detalle del producto y fechas en fila */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              {/* Detalle del producto */}
+              <div className="col-span-2">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Detalle del Producto
+                </h3>
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Descripción</th>
+                        <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">Cantidad</th>
+                        <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">Unidad</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-t border-gray-200">
+                        <td className="px-4 py-3 font-medium text-gray-900">{data.producto}</td>
+                        <td className="px-4 py-3 text-center text-xl font-bold text-red-600">{data.cantidad}</td>
+                        <td className="px-4 py-3 text-center text-gray-600">{data.unidad}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Fechas */}
+              <div className="space-y-3">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
+                    <Calendar className="h-3 w-3" />
+                    Fecha de registro
+                  </div>
+                  <p className="font-medium text-gray-900 text-sm">{formatDate(data.fechaCreacion)}</p>
+                </div>
+                {data.fechaRespuesta && (
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
+                      <Calendar className="h-3 w-3" />
+                      Fecha de procesamiento
+                    </div>
+                    <p className="font-medium text-gray-900 text-sm">{formatDate(data.fechaRespuesta)}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {data.comentario && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+                <h4 className="font-medium text-blue-800 mb-1 text-sm">Observaciones:</h4>
+                <p className="text-blue-700 text-sm">{data.comentario}</p>
+              </div>
+            )}
+
             {/* Firmas */}
-            <div className="mt-8 pt-8 border-t-2 border-dashed border-gray-300">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-6 text-center">
+            <div className="pt-4 border-t-2 border-dashed border-gray-300">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 text-center">
                 Firmas de Conformidad
               </h3>
               <div className="grid grid-cols-2 gap-8">
                 <div className="text-center">
-                  <div className="h-24 border-b-2 border-gray-400 mb-2"></div>
-                  <p className="font-medium text-gray-700">
+                  <div className="h-16 border-b-2 border-gray-400 mb-2"></div>
+                  <p className="font-medium text-gray-700 text-sm">
                     {data.tipo === 'solicitud' ? 'Firma del Beneficiario' : 'Firma del Donante'}
                   </p>
-                  <p className="text-sm text-gray-500">Nombre: {data.usuario.nombre}</p>
-                  <p className="text-sm text-gray-500">C.I.: {data.usuario.cedula}</p>
+                  <p className="text-xs text-gray-500">Nombre: {data.usuario.nombre}</p>
+                  <p className="text-xs text-gray-500">C.I.: {data.usuario.cedula}</p>
                 </div>
                 <div className="text-center">
-                  <div className="h-24 border-b-2 border-gray-400 mb-2"></div>
-                  <p className="font-medium text-gray-700">Firma del Operador</p>
-                  <p className="text-sm text-gray-500">Banco de Alimentos</p>
-                  <p className="text-sm text-gray-500">Fecha: _______________</p>
+                  <div className="h-16 border-b-2 border-gray-400 mb-2"></div>
+                  <p className="font-medium text-gray-700 text-sm">Firma del Operador</p>
+                  <p className="text-xs text-gray-500">Banco de Alimentos</p>
+                  <p className="text-xs text-gray-500">Fecha: _______________</p>
                 </div>
               </div>
             </div>
 
             {/* Pie de página */}
-            <div className="mt-8 pt-4 border-t border-gray-200 text-center text-sm text-gray-500">
+            <div className="mt-4 pt-3 border-t border-gray-200 text-center text-xs text-gray-500">
               <p>Este documento es un comprobante electrónico válido emitido por el Banco de Alimentos.</p>
               <p>Para verificar su autenticidad, escanee el código QR o visite nuestro sitio web.</p>
-              <p className="font-mono text-xs mt-2">{data.codigo}</p>
+              <p className="font-mono text-xs mt-1">{data.codigo}</p>
             </div>
           </div>
         </div>
@@ -447,7 +444,7 @@ export default function ComprobantePage({ params }: { params: Promise<{ codigo: 
             max-width: none !important;
             margin: 0 !important;
             padding: 0 !important;
-            transform: scale(0.72) !important;
+            transform: scale(0.85) !important;
             transform-origin: top center !important;
             background: white !important;
             z-index: 999999 !important;
