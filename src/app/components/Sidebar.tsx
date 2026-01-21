@@ -85,7 +85,12 @@ const menuItems: MenuItem[] = [
         href: '/admin/reportes/movimientos',
         description: 'Historial de entradas y salidas'
       },
-           {
+      {
+        name: 'Bajas',
+        href: '/admin/reportes/bajas',
+        description: 'Registro de productos dados de baja'
+      },
+      {
         name: 'Solicitudes',
         href: '/admin/reportes/solicitudes',
         description: 'Análisis de solicitudes recibidas'

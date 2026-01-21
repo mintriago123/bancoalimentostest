@@ -49,6 +49,22 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
     
     const processPromise = (async () => {
     try {
+      // Verificar fecha de vencimiento antes de aceptar
+      let warningMessage: string | undefined;
+      if ((nuevoEstado === 'Pendiente' || nuevoEstado === 'Recogida' || nuevoEstado === 'Entregada') && donation.fecha_vencimiento) {
+        const fechaVencimiento = new Date(donation.fecha_vencimiento);
+        const hoy = new Date();
+        const diasRestantes = Math.ceil((fechaVencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (diasRestantes < 0) {
+          warningMessage = `⚠️ ALERTA: Este producto YA VENCIÓ hace ${Math.abs(diasRestantes)} días (${donation.fecha_vencimiento}). Considera rechazarlo o darlo de baja inmediatamente.`;
+        } else if (diasRestantes <= 3) {
+          warningMessage = `⚠️ ADVERTENCIA: Este producto vence en ${diasRestantes} días (${donation.fecha_vencimiento}). Prioriza su distribución urgente.`;
+        } else if (diasRestantes <= 7) {
+          warningMessage = `⚠️ ATENCIÓN: Este producto vence en ${diasRestantes} días (${donation.fecha_vencimiento}). Planifica su distribución pronto.`;
+        }
+      }
+
       const { error } = await supabaseClient
         .from('donaciones')
         .update({
@@ -83,7 +99,8 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
       return {
         success: true,
         data: {
-          message: SYSTEM_MESSAGES.stateUpdateSuccess(nuevoEstado)
+          message: warningMessage || SYSTEM_MESSAGES.stateUpdateSuccess(nuevoEstado),
+          warning: !!warningMessage
         }
       };
     } catch (error) {

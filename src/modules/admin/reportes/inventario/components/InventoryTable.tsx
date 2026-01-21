@@ -11,6 +11,7 @@ import {
   Plus,
   TrendingDown,
   TrendingUp,
+  Trash2,
   Warehouse
 } from 'lucide-react';
 import type { InventarioItem } from '../types';
@@ -28,6 +29,7 @@ interface InventoryTableProps {
   onDecrease: (item: InventarioItem) => void;
   onIncrease: (item: InventarioItem) => void;
   onViewDetails?: (item: InventarioItem) => void;
+  onDarDeBaja?: (item: InventarioItem) => void;
   processingId?: string;
 }
 
@@ -51,6 +53,7 @@ const InventoryTable = ({
   onResetFilters,
   onDecrease,
   onIncrease,
+  onDarDeBaja,
   onViewDetails,
   processingId
 }: InventoryTableProps) => {
@@ -179,6 +182,17 @@ const InventoryTable = ({
                       >
                         <Plus className="w-4 h-4" />
                       </button>
+                      {onDarDeBaja && (
+                        <button
+                          type="button"
+                          onClick={() => onDarDeBaja(item)}
+                          disabled={item.cantidad_disponible <= 0 || isProcessing}
+                          className="text-orange-600 hover:text-orange-500 px-2 py-1 rounded border border-orange-200 hover:bg-orange-50 text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Dar de baja"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={onViewDetails ? () => onViewDetails(item) : undefined}
