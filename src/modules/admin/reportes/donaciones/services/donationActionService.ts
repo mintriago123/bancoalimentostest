@@ -62,11 +62,9 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
     
     const processPromise = (async () => {
     try {
-      // Generar código de comprobante si se procesa (Recogida o Entregada)
-      const codigoComprobante = (nuevoEstado === 'Recogida' || nuevoEstado === 'Entregada')
-        ? generarCodigoComprobante('donacion', String(donation.id))
-        : null;
-
+      // Generar código de comprobante si no existe
+      const codigoComprobante = donation.codigo_comprobante ?? generarCodigoComprobante('donacion', String(donation.id));
+      
       const { error } = await supabaseClient
         .from('donaciones')
         .update({
@@ -102,7 +100,8 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
       return {
         success: true,
         data: {
-          message: SYSTEM_MESSAGES.stateUpdateSuccess(nuevoEstado)
+          message: SYSTEM_MESSAGES.stateUpdateSuccess(nuevoEstado),
+          warning: false
         }
       };
     } catch (error) {
