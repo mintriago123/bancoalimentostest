@@ -144,7 +144,7 @@ export class SolicitudesService {
    * Obtener una solicitud por ID
    */
   async getSolicitudById(
-    solicitudId: number
+    solicitudId: string
   ): Promise<{ data: Solicitud | null; error: any }> {
     try {
       const { data, error } = await this.supabase
