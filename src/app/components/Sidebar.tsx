@@ -101,6 +101,11 @@ const menuItems: MenuItem[] = [
         href: '/admin/reportes/donaciones',
         description: 'Análisis de donaciones recibidas'
       }, 
+      {
+        name: 'Cancelaciones',
+        href: '/admin/reportes/cancelaciones-donaciones',
+        description: 'Historial de donaciones canceladas'
+      }, 
       // {
       //   name: 'Historial de Reportes',
       //   href: '/admin/reportes/historial',

@@ -4,7 +4,7 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Donation, DonationEstado } from '../types';
+import type { Donation, DonationEstado, MotivoCancelacion } from '../types';
 import { createDonationActionService } from '../services/donationActionService';
 
 interface UpdateResult {
@@ -16,7 +16,11 @@ interface UpdateResult {
 interface UseDonationActionsResult {
   processingId?: number;
   lastError?: string;
-  updateEstado: (donation: Donation, estado: DonationEstado) => Promise<UpdateResult>;
+  updateEstado: (
+    donation: Donation, 
+    estado: DonationEstado,
+    cancelacionData?: { motivo: MotivoCancelacion; observaciones?: string }
+  ) => Promise<UpdateResult>;
 }
 
 export const useDonationActions = (supabaseClient: SupabaseClient): UseDonationActionsResult => {
@@ -29,7 +33,11 @@ export const useDonationActions = (supabaseClient: SupabaseClient): UseDonationA
     [supabaseClient]
   );
 
-  const updateEstado = useCallback(async (donation: Donation, nuevoEstado: DonationEstado) => {
+  const updateEstado = useCallback(async (
+    donation: Donation, 
+    nuevoEstado: DonationEstado,
+    cancelacionData?: { motivo: MotivoCancelacion; observaciones?: string }
+  ) => {
     // Prevenir ejecuciones simultáneas en el lado del cliente
     if (processingRef.current.has(donation.id)) {
       console.warn('⚠️ Intento de actualización duplicada bloqueado en el cliente', { 
@@ -47,7 +55,7 @@ export const useDonationActions = (supabaseClient: SupabaseClient): UseDonationA
     setLastError(undefined);
 
     try {
-      const result = await service.updateDonationEstado(donation, nuevoEstado);
+      const result = await service.updateDonationEstado(donation, nuevoEstado, cancelacionData);
 
       if (result.success && result.data) {
         return {
