@@ -107,7 +107,7 @@ export class SolicitudesService {
    * Actualizar una solicitud existente
    */
   async updateSolicitud(
-    solicitudId: number,
+    solicitudId: string,
     updateData: SolicitudEditData
   ): Promise<{ data: Solicitud | null; error: any }> {
     try {
@@ -132,7 +132,7 @@ export class SolicitudesService {
       const { error } = await this.supabase
         .from('solicitudes')
         .delete()
-        .eq('id', solicitudId);
+        .eq('id', id);
 
       return { error };
     } catch (error) {

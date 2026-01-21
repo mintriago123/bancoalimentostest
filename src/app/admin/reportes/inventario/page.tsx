@@ -5,6 +5,7 @@ import DashboardLayout from '@/app/components/DashboardLayout';
 import { useSupabase } from '@/app/components/SupabaseProvider';
 import Toast from '@/app/components/ui/Toast';
 import { useToast } from '@/modules/shared';
+import { Package2, TrendingDown } from 'lucide-react';
 import InventoryHeader from '@/modules/admin/reportes/inventario/components/InventoryHeader';
 import InventoryFilters from '@/modules/admin/reportes/inventario/components/InventoryFilters';
 import InventoryTable from '@/modules/admin/reportes/inventario/components/InventoryTable';
@@ -14,6 +15,8 @@ import InventoryDetailModal from '@/modules/admin/reportes/inventario/components
 import { useInventoryData } from '@/modules/admin/reportes/inventario/hooks/useInventoryData';
 import { useInventoryActions } from '@/modules/admin/reportes/inventario/hooks/useInventoryActions';
 import type { InventarioItem } from '@/modules/admin/reportes/inventario/types';
+import BajaProductoModal from '@/modules/operador/bajas/components/BajaProductoModal';
+import AlertasVencimiento from '@/modules/operador/bajas/components/AlertasVencimiento';
 
 const LoadingState = () => (
   <div className="text-center py-12">
@@ -27,6 +30,9 @@ export default function InventoryReportPage() {
   const { toasts, showSuccess, showError, hideToast } = useToast();
   const [selectedItem, setSelectedItem] = useState<InventarioItem | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'inventario' | 'vencimientos'>('inventario');
+  const [isBajaModalOpen, setIsBajaModalOpen] = useState(false);
+  const [itemParaBaja, setItemParaBaja] = useState<InventarioItem | null>(null);
 
   const {
     inventario,
@@ -85,6 +91,18 @@ export default function InventoryReportPage() {
     setSelectedItem(null);
   }, []);
 
+  const handleDarDeBaja = useCallback((item: InventarioItem) => {
+    setItemParaBaja(item);
+    setIsBajaModalOpen(true);
+  }, []);
+
+  const handleBajaSuccess = useCallback(() => {
+    setIsBajaModalOpen(false);
+    setItemParaBaja(null);
+    showSuccess('Producto dado de baja correctamente');
+    refetch();
+  }, [refetch, showSuccess]);
+
   const tableContent = useMemo(() => {
     if (isLoading) {
       return <LoadingState />;
@@ -103,6 +121,7 @@ export default function InventoryReportPage() {
         onDecrease={handleDecrease}
         onIncrease={handleIncrease}
         onViewDetails={handleViewDetails}
+        onDarDeBaja={handleDarDeBaja}
         processingId={processingId}
       />
     );
@@ -116,6 +135,8 @@ export default function InventoryReportPage() {
     resetFilters,
     handleDecrease,
     handleIncrease,
+    handleViewDetails,
+    handleDarDeBaja,
     processingId
   ]);
 
@@ -128,30 +149,74 @@ export default function InventoryReportPage() {
       <div className="p-6 space-y-6">
         <InventoryHeader stats={stats} />
 
-        {hasError && (
-          <InventoryErrorState
-            message={errorMessage ?? messages.loadError}
-            onRetry={refetch}
-          />
+        {/* Tabs */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8 px-6" aria-label="Tabs">
+              <button
+                onClick={() => setActiveTab('inventario')}
+                className={`
+                  flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                  ${activeTab === 'inventario'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }
+                `}
+              >
+                <Package2 className="w-5 h-5" />
+                <span>Inventario Actual</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('vencimientos')}
+                className={`
+                  flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                  ${activeTab === 'vencimientos'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }
+                `}
+              >
+                <TrendingDown className="w-5 h-5" />
+                <span>Vencimientos</span>
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        {activeTab === 'inventario' && (
+          <>
+            {hasError && (
+              <InventoryErrorState
+                message={errorMessage ?? messages.loadError}
+                onRetry={refetch}
+              />
+            )}
+
+            <InventoryFilters
+              filters={filters}
+              depositos={depositos}
+              onSearchChange={setSearch}
+              onDepositoChange={setDeposito}
+              onStockChange={setStockLevel}
+              onRefresh={refetch}
+              filteredCount={filteredInventario.length}
+              totalCount={inventario.length}
+            />
+
+            {tableContent}
+
+            <InventoryDepositSummary
+              depositos={depositos}
+              inventario={inventario}
+            />
+          </>
         )}
 
-        <InventoryFilters
-          filters={filters}
-          depositos={depositos}
-          onSearchChange={setSearch}
-          onDepositoChange={setDeposito}
-          onStockChange={setStockLevel}
-          onRefresh={refetch}
-          filteredCount={filteredInventario.length}
-          totalCount={inventario.length}
-        />
-
-        {tableContent}
-
-        <InventoryDepositSummary
-          depositos={depositos}
-          inventario={inventario}
-        />
+        {activeTab === 'vencimientos' && (
+          <AlertasVencimiento
+            diasUmbral={7}
+          />
+        )}
       </div>
 
       <div className="fixed top-4 right-4 z-50 space-y-2">
@@ -171,6 +236,18 @@ export default function InventoryReportPage() {
         isOpen={isDetailModalOpen}
         onClose={handleCloseModal}
       />
+
+      {itemParaBaja && (
+        <BajaProductoModal
+          isOpen={isBajaModalOpen}
+          onClose={() => {
+            setIsBajaModalOpen(false);
+            setItemParaBaja(null);
+          }}
+          item={itemParaBaja}
+          onSuccess={handleBajaSuccess}
+        />
+      )}
     </DashboardLayout>
   );
 }

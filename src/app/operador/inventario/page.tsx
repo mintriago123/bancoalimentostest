@@ -11,8 +11,11 @@ import OperadorInventoryFilters from '@/modules/operador/inventario/components/O
 import OperadorInventoryStats from '@/modules/operador/inventario/components/OperadorInventoryStats';
 import OperadorInventoryAlerts from '@/modules/operador/inventario/components/OperadorInventoryAlerts';
 import OperadorInventoryDetailModal from '@/modules/operador/inventario/components/OperadorInventoryDetailModal';
+import BajaProductoModal from '@/modules/operador/bajas/components/BajaProductoModal';
+import AlertasVencimiento from '@/modules/operador/bajas/components/AlertasVencimiento';
 import type { InventarioItem, AlertaInventario } from '@/modules/operador/inventario/types';
-import { Package2, AlertTriangle, BarChart3 } from 'lucide-react';
+import type { AlertaVencimiento } from '@/modules/operador/bajas/types';
+import { Package2, AlertTriangle, BarChart3, XCircle } from 'lucide-react';
 
 const LoadingState = () => (
   <div className="text-center py-12">
@@ -24,10 +27,12 @@ const LoadingState = () => (
 export default function OperadorInventarioPage() {
   const { supabase } = useSupabase();
   const { toasts, showSuccess, showError, hideToast } = useToast();
-  const [currentView, setCurrentView] = useState<'inventario' | 'alertas' | 'estadisticas'>('inventario');
+  const [currentView, setCurrentView] = useState<'inventario' | 'alertas' | 'estadisticas' | 'vencimientos'>('inventario');
   const [selectedAlerta, setSelectedAlerta] = useState<AlertaInventario | null>(null);
   const [selectedItem, setSelectedItem] = useState<InventarioItem | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isBajaModalOpen, setIsBajaModalOpen] = useState(false);
+  const [itemParaBaja, setItemParaBaja] = useState<InventarioItem | null>(null);
 
   const {
     inventario,
@@ -99,6 +104,31 @@ export default function OperadorInventarioPage() {
     showSuccess(`Alerta seleccionada: ${alerta.producto.nombre_producto}`);
   }, [showSuccess]);
 
+  const handleDarDeBaja = useCallback((item: InventarioItem) => {
+    setItemParaBaja(item);
+    setIsBajaModalOpen(true);
+  }, []);
+
+  const handleBajaSuccess = useCallback(() => {
+    showSuccess('Producto dado de baja exitosamente');
+    refetch();
+    setIsBajaModalOpen(false);
+    setItemParaBaja(null);
+  }, [showSuccess, refetch]);
+
+  const handleCloseBajaModal = useCallback(() => {
+    setIsBajaModalOpen(false);
+    setItemParaBaja(null);
+  }, []);
+
+  const handleAlertaVencimientoClick = useCallback((alerta: AlertaVencimiento) => {
+    // Buscar el item de inventario correspondiente
+    const item = inventario.find(i => i.id_inventario === alerta.id_inventario);
+    if (item) {
+      handleDarDeBaja(item);
+    }
+  }, [inventario, handleDarDeBaja]);
+
   const renderMainContent = () => {
     if (isLoading) {
       return <LoadingState />;
@@ -121,6 +151,16 @@ export default function OperadorInventarioPage() {
     }
 
     switch (currentView) {
+      case 'vencimientos':
+        return (
+          <AlertasVencimiento 
+            diasUmbral={7}
+            onProductoSeleccionado={handleAlertaVencimientoClick}
+            autoRefresh={true}
+            refreshInterval={30}
+          />
+        );
+      
       case 'alertas':
         return (
           <OperadorInventoryAlerts
@@ -156,8 +196,10 @@ export default function OperadorInventarioPage() {
               onDecrease={handleDecrease}
               onIncrease={handleIncrease}
               onViewDetails={handleViewDetails}
+              onDarDeBaja={handleDarDeBaja}
               processingId={processingId}
             />
+              
           </div>
         );
     }
@@ -216,6 +258,18 @@ export default function OperadorInventarioPage() {
                   {alertas.length}
                 </span>
               )}
+            </button>
+            
+            <button
+              onClick={() => setCurrentView('vencimientos')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                currentView === 'vencimientos'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <XCircle className="w-4 h-4" />
+              <span>Vencimientos</span>
             </button>
             
             <button
@@ -300,6 +354,16 @@ export default function OperadorInventarioPage() {
         isOpen={isDetailModalOpen}
         onClose={handleCloseModal}
       />
+
+      {/* Modal de Baja de Producto */}
+      {itemParaBaja && (
+        <BajaProductoModal
+          isOpen={isBajaModalOpen}
+          onClose={handleCloseBajaModal}
+          item={itemParaBaja}
+          onSuccess={handleBajaSuccess}
+        />
+      )}
     </DashboardLayout>
   );
 }
