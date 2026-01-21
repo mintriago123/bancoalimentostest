@@ -9,31 +9,31 @@ export default function ImpactEquivalenceTable() {
       </h4>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
         <div>
-          <h5 className="font-semibold text-blue-700 mb-2">Por Kilogramo (kg):</h5>
+          <h5 className="font-semibold text-blue-700 mb-2">Kilogramo (kg):</h5>
           <ul className="text-blue-600 space-y-1">
-            <li>• 1 kg = ~2 personas alimentadas</li>
+            <li>• 1 kg = ~2 personas</li>
             <li>• 1 kg = ~3 porciones</li>
           </ul>
         </div>
         <div>
-          <h5 className="font-semibold text-blue-700 mb-2">Por Litro (l):</h5>
+          <h5 className="font-semibold text-blue-700 mb-2">Gramo (g):</h5>
           <ul className="text-blue-600 space-y-1">
-            <li>• 1 l = ~1.5 personas</li>
-            <li>• Bebidas y líquidos</li>
+            <li>• 1000 g = ~2 personas</li>
+            <li>• 1000 g = ~3 porciones</li>
           </ul>
         </div>
         <div>
-          <h5 className="font-semibold text-blue-700 mb-2">Por Caja:</h5>
+          <h5 className="font-semibold text-blue-700 mb-2">Litro (L):</h5>
           <ul className="text-blue-600 space-y-1">
-            <li>• 1 caja = ~4 personas</li>
-            <li>• Alimentos empaquetados</li>
+            <li>• 1 L = ~1.5 personas</li>
+            <li>• Líquidos (aceites, bebidas, etc.)</li>
           </ul>
         </div>
         <div>
-          <h5 className="font-semibold text-blue-700 mb-2">Por Unidad:</h5>
+          <h5 className="font-semibold text-blue-700 mb-2">Mililitro (ml):</h5>
           <ul className="text-blue-600 space-y-1">
-            <li>• 1 unidad = ~0.5 personas</li>
-            <li>• Productos individuales</li>
+            <li>• 1000 ml = ~1.5 personas</li>
+            <li>• Líquidos (aceites, bebidas, etc.)</li>
           </ul>
         </div>
       </div>

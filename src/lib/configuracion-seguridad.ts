@@ -13,7 +13,7 @@ export const CONFIGURACION_SEGURIDAD = {
    * - 15 minutos: 15 * 60 * 1000
    * - 30 minutos: 30 * 60 * 1000
    */
-  TIEMPO_INACTIVIDAD_MS: 5 * 60 * 1000,
+  TIEMPO_INACTIVIDAD_MS: 10 * 60 * 1000,
 
   /**
    * Eventos que detectan actividad del usuario

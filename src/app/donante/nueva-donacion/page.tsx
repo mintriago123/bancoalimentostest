@@ -156,10 +156,11 @@ export default function NuevaDonacionPage() {
   // Cálculo de impacto estimado usando la utilidad
   const calcularImpactoEstimado = () => {
     const unidadSeleccionada = getUnidadSeleccionada();
+    const productoInfo = getProductoSeleccionado();
     if (!unidadSeleccionada) {
       return { personasAlimentadas: 0, comidaEquivalente: '' };
     }
-    return calcularImpacto(formulario.cantidad, unidadSeleccionada.simbolo);
+    return calcularImpacto(formulario.cantidad, unidadSeleccionada.simbolo, productoInfo?.categoria, productoInfo?.nombre);
   };
 
   const manejarCambio = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {

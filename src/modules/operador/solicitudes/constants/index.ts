@@ -44,3 +44,41 @@ export const SYSTEM_MESSAGES = {
   loadError: 'Error al cargar las solicitudes, intenta de nuevo.',
   actionError: 'Error al procesar la solicitud, intenta nuevamente.'
 };
+
+export const MOTIVOS_RECHAZO = [
+  {
+    id: 'stock_insuficiente',
+    label: 'Stock insuficiente',
+    descripcion: 'No hay cantidad suficiente disponible'
+  },
+  {
+    id: 'producto_no_disponible',
+    label: 'Producto no disponible',
+    descripcion: 'El producto solicitado no está en inventario'
+  },
+  {
+    id: 'datos_incompletos',
+    label: 'Datos incompletos',
+    descripcion: 'La solicitud carece de información requerida'
+  },
+  {
+    id: 'solicitante_ineligible',
+    label: 'Solicitante ineligible',
+    descripcion: 'El solicitante no cumple con los requisitos'
+  },
+  {
+    id: 'duplicada',
+    label: 'Solicitud duplicada',
+    descripcion: 'Ya existe una solicitud similar en proceso'
+  },
+  {
+    id: 'vencimiento_proximo',
+    label: 'Próximos a vencer',
+    descripcion: 'Los productos disponibles están próximos a vencer'
+  },
+  {
+    id: 'otro',
+    label: 'Otro motivo',
+    descripcion: 'Especificar en los comentarios'
+  }
+];

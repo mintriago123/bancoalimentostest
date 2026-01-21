@@ -14,6 +14,17 @@ import type {
 } from '../types';
 import { createSolicitudesDataService } from './solicitudesDataService';
 import { sendNotification } from '@/modules/shared/services/notificationClient';
+import {
+  generarCodigoComprobante,
+  generarURLComprobante,
+  generarQRBase64,
+  generarDatosComprobante,
+} from '@/lib/comprobante';
+import {
+  buildSolicitudAprobadaEmailTemplate,
+  buildSolicitudRechazadaEmailTemplate,
+} from '@/lib/email/templates/solicitudEmail';
+import { getBaseUrl } from '@/lib/getBaseUrl';
 
 const logger = {
   info: (message: string, details?: unknown) => console.info(`[SolicitudesActionService] ${message}`, details),
@@ -27,10 +38,22 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
   const updateSolicitudEstado = async (
     solicitud: Solicitud,
     nuevoEstado: 'aprobada' | 'rechazada' | 'entregada',
-    comentarioAdmin?: string
+    comentarioAdmin?: string,
+    motivoRechazo?: string,
+    operadorId?: string
   ): Promise<ServiceResult<SolicitudActionResponse>> => {
     try {
       logger.info(`Actualizando estado de solicitud ${solicitud.id} a ${nuevoEstado}`);
+      
+      // Log de depuración para rechazos
+      if (nuevoEstado === 'rechazada') {
+        console.log('🔍 SERVICIO - Datos recibidos para rechazo:', {
+          comentarioAdmin,
+          motivoRechazo,
+          operadorId,
+          solicitudId: solicitud.id
+        });
+      }
 
       // Validar stock disponible antes de aprobar
       if (nuevoEstado === 'aprobada' && solicitud.estado === 'pendiente') {
@@ -45,14 +68,43 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         }
       }
 
+      // Preparar objeto de actualización
+      const updateData: Record<string, unknown> = {
+        estado: nuevoEstado,
+        fecha_respuesta: new Date().toISOString(),
+        comentario_admin: comentarioAdmin?.trim() ? comentarioAdmin.trim() : null
+      };
+
+      // Si es un rechazo, registrar detalles del rechazo
+      if (nuevoEstado === 'rechazada') {
+        updateData.motivo_rechazo = motivoRechazo || null;
+        updateData.operador_rechazo_id = operadorId || null;
+        updateData.fecha_rechazo = new Date().toISOString();
+        
+        console.log('📝 SERVICIO - Datos que se guardarán en BD para rechazo:', {
+          motivo_rechazo: updateData.motivo_rechazo,
+          operador_rechazo_id: updateData.operador_rechazo_id,
+          fecha_rechazo: updateData.fecha_rechazo,
+          comentario_admin: updateData.comentario_admin
+        });
+      }
+
+      // Si es una aprobación, registrar quién aprobó
+      if (nuevoEstado === 'aprobada') {
+        updateData.operador_aprobacion_id = operadorId || null;
+        updateData.fecha_aprobacion = new Date().toISOString();
+      }
+
       const { error: updateError } = await supabaseClient
         .from('solicitudes')
-        .update({
-          estado: nuevoEstado,
-          fecha_respuesta: new Date().toISOString(),
-          comentario_admin: comentarioAdmin?.trim() ? comentarioAdmin.trim() : null
-        })
+        .update(updateData)
         .eq('id', solicitud.id);
+
+      console.log('💾 SERVICIO - Resultado del UPDATE:', {
+        updateData,
+        error: updateError,
+        solicitudId: solicitud.id
+      });
 
       if (updateError) {
         logger.error('Error actualizando estado de solicitud', updateError);
@@ -64,11 +116,24 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
       }
 
       if (nuevoEstado === 'aprobada' && solicitud.estado === 'pendiente') {
+        // Generar código de comprobante
+        const codigoComprobante = generarCodigoComprobante('solicitud', solicitud.id);
+        
+        // Actualizar con el código de comprobante
+        const { error: updateCodigoError } = await supabaseClient
+          .from('solicitudes')
+          .update({ codigo_comprobante: codigoComprobante })
+          .eq('id', solicitud.id);
+
+        if (updateCodigoError) {
+          logger.error('Error actualizando código de comprobante', updateCodigoError);
+        }
+
         const resultadoInventario = await descontarDelInventario(solicitud);
         await registrarMovimientoSolicitud(solicitud, resultadoInventario);
 
         const mensaje = buildResultadoMensaje(solicitud, resultadoInventario);
-        await notificarCambioEstado(solicitud, nuevoEstado, mensaje, comentarioAdmin);
+        await notificarCambioEstado(solicitud, nuevoEstado, mensaje, comentarioAdmin, motivoRechazo, codigoComprobante);
         return {
           success: true,
           data: {
@@ -80,7 +145,7 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
       }
 
       if (nuevoEstado === 'entregada') {
-        await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin);
+        await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin, null, null);
         return {
           success: true,
           data: {
@@ -91,7 +156,20 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
         };
       }
 
-      await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin);
+      // Para rechazos, incluir información adicional
+      if (nuevoEstado === 'rechazada') {
+        await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin, motivoRechazo, null);
+        return {
+          success: true,
+          data: {
+            success: true,
+            message: `Solicitud rechazada exitosamente. El solicitante ha sido notificado con la fecha, hora y motivo del rechazo.`,
+            warning: false
+          }
+        };
+      }
+
+      await notificarCambioEstado(solicitud, nuevoEstado, undefined, comentarioAdmin, null, null);
 
       return {
         success: true,
@@ -658,43 +736,146 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
     solicitud: Solicitud,
     nuevoEstado: 'aprobada' | 'rechazada' | 'entregada',
     mensajeInventario?: string,
-    comentarioAdmin?: string
+    comentarioAdmin?: string,
+    motivoRechazo?: string | null,
+    codigoComprobanteGuardado?: string | null,
+    esParcial?: boolean,
+    cantidadParcial?: number,
+    cantidadTotal?: number
   ) => {
-    const titulo = (() => {
-      if (nuevoEstado === 'aprobada') return 'Tu solicitud ha sido aprobada';
-      if (nuevoEstado === 'entregada') return 'Tu solicitud ha sido entregada';
-      return 'Tu solicitud ha sido rechazada';
-    })();
+    try {
+      const baseUrl = getBaseUrl();
+      
+      // Usar el código guardado en BD o generar uno nuevo para el comprobante visual
+      const codigoComprobante = codigoComprobanteGuardado ?? generarCodigoComprobante('solicitud', solicitud.id);
+      
+      // Datos del usuario
+      const datosUsuario = {
+        id: solicitud.usuario_id,
+        nombre: solicitud.usuarios?.nombre ?? 'Usuario',
+        email: solicitud.usuarios?.email ?? '',
+        telefono: solicitud.usuarios?.telefono,
+        direccion: solicitud.usuarios?.direccion,
+        documento: solicitud.usuarios?.cedula,
+      };
 
-    const mensaje = (() => {
+      // Datos del pedido
+      const datosPedido = {
+        id: solicitud.id,
+        tipo: 'solicitud' as const,
+        tipoAlimento: solicitud.tipo_alimento,
+        cantidad: solicitud.cantidad,
+        unidad: solicitud.unidades?.simbolo ?? 'unidades',
+        estado: nuevoEstado,
+        fechaCreacion: solicitud.created_at,
+        fechaAprobacion: new Date().toISOString(),
+        comentarioAdmin,
+      };
+
+      // Generar comprobante con el código correcto
+      const comprobante = {
+        ...generarDatosComprobante('solicitud', datosUsuario, datosPedido, comentarioAdmin),
+        codigoComprobante, // Usar el código guardado en BD
+      };
+
+      // Configurar notificación y email según el estado
       if (nuevoEstado === 'aprobada') {
-        if (mensajeInventario) return mensajeInventario;
-        return `Tu solicitud de ${solicitud.cantidad} ${solicitud.unidades?.simbolo ?? ''} de ${solicitud.tipo_alimento} ha sido aprobada.`;
+        // Generar QR para solicitud aprobada
+        const urlComprobante = generarURLComprobante(
+          baseUrl,
+          comprobante.codigoComprobante,
+          'solicitud',
+          solicitud.usuario_id,
+          solicitud.id
+        );
+        const qrImageBase64 = await generarQRBase64(urlComprobante);
+
+        // Construir email con template mejorado
+        const emailTemplate = buildSolicitudAprobadaEmailTemplate({
+          comprobante,
+          qrImageBase64,
+          baseUrl,
+        });
+
+        // Determinar el mensaje según si es entrega parcial o completa
+        let tituloNotificacion: string;
+        let mensajeNotificacion: string;
+
+        if (esParcial && cantidadParcial && cantidadTotal) {
+          const porcentajeEntregado = Math.round((cantidadParcial / cantidadTotal) * 100);
+          tituloNotificacion = `⚠️ Solicitud Aprobada Parcialmente - Código: ${comprobante.codigoComprobante}`;
+          mensajeNotificacion = `Estimado/a ${datosUsuario.nombre}, su solicitud ha sido aprobada PARCIALMENTE. Se le entregará ${cantidadParcial} ${datosPedido.unidad} de los ${cantidadTotal} ${datosPedido.unidad} solicitados de ${solicitud.tipo_alimento} (${porcentajeEntregado}% del total). ${comentarioAdmin ? `Comentario del operador: ${comentarioAdmin}.` : ''} Presente el código QR adjunto al momento de retirar los alimentos. Válido hasta: ${new Date(comprobante.fechaVencimiento).toLocaleDateString('es-ES')}.`;
+        } else {
+          tituloNotificacion = `✅ Solicitud Aprobada - Código: ${comprobante.codigoComprobante}`;
+          mensajeNotificacion = `Estimado/a ${datosUsuario.nombre}, su solicitud de ${solicitud.cantidad} ${datosPedido.unidad} de ${solicitud.tipo_alimento} ha sido aprobada. Presente el código QR adjunto al momento de retirar los alimentos. Válido hasta: ${new Date(comprobante.fechaVencimiento).toLocaleDateString('es-ES')}.`;
+        }
+
+        await sendNotification({
+          titulo: tituloNotificacion,
+          mensaje: mensajeNotificacion,
+          categoria: 'solicitud',
+          tipo: esParcial ? 'warning' : 'success',
+          destinatarioId: solicitud.usuario_id,
+          urlAccion: '/user/solicitudes',
+          metadatos: {
+            solicitudId: solicitud.id,
+            nuevoEstado,
+            codigoComprobante: comprobante.codigoComprobante,
+            fechaVencimiento: comprobante.fechaVencimiento,
+            esParcial: esParcial ?? false,
+            cantidadEntregada: cantidadParcial,
+            cantidadSolicitada: cantidadTotal
+          },
+          email: {
+            subject: emailTemplate.subject,
+            html: emailTemplate.html,
+            text: emailTemplate.text,
+          },
+        });
+      } else if (nuevoEstado === 'rechazada') {
+        // Email para solicitud rechazada
+        const emailTemplate = buildSolicitudRechazadaEmailTemplate({
+          comprobante,
+          baseUrl,
+        });
+
+        await sendNotification({
+          titulo: '❌ Solicitud No Aprobada',
+          mensaje: comentarioAdmin 
+            ? `Estimado/a ${datosUsuario.nombre}, lamentamos informarle que su solicitud de ${solicitud.tipo_alimento} no ha sido aprobada. Motivo: ${comentarioAdmin}. Puede realizar una nueva solicitud en cualquier momento.`
+            : `Estimado/a ${datosUsuario.nombre}, lamentamos informarle que su solicitud de ${solicitud.tipo_alimento} no ha sido aprobada en esta ocasión. Puede realizar una nueva solicitud en cualquier momento.`,
+          categoria: 'solicitud',
+          tipo: 'warning',
+          destinatarioId: solicitud.usuario_id,
+          urlAccion: '/user/formulario',
+          metadatos: {
+            solicitudId: solicitud.id,
+            nuevoEstado,
+          },
+          email: {
+            subject: emailTemplate.subject,
+            html: emailTemplate.html,
+            text: emailTemplate.text,
+          },
+        });
+      } else if (nuevoEstado === 'entregada') {
+        // Notificación simple para entrega
+        await sendNotification({
+          titulo: '📦 Solicitud Entregada',
+          mensaje: `Estimado/a ${datosUsuario.nombre}, confirmamos que su solicitud de ${solicitud.cantidad} ${datosPedido.unidad} de ${solicitud.tipo_alimento} ha sido entregada exitosamente. ¡Gracias por confiar en el Banco de Alimentos!`,
+          categoria: 'solicitud',
+          tipo: 'success',
+          destinatarioId: solicitud.usuario_id,
+          urlAccion: '/user/solicitudes',
+          metadatos: {
+            solicitudId: solicitud.id,
+            nuevoEstado,
+          },
+        });
       }
-
-      if (nuevoEstado === 'entregada') {
-        return `Tu solicitud de ${solicitud.cantidad} ${solicitud.unidades?.simbolo ?? ''} de ${solicitud.tipo_alimento} ha sido entregada. ¡Gracias!`;
-      }
-
-      if (comentarioAdmin && comentarioAdmin.trim().length > 0) {
-        return `Tu solicitud fue rechazada. Comentario del administrador: ${comentarioAdmin.trim()}`;
-      }
-
-      return `Tu solicitud de ${solicitud.tipo_alimento} fue rechazada.`;
-    })();
-
-    await sendNotification({
-      titulo,
-      mensaje,
-      categoria: 'solicitud',
-      tipo: nuevoEstado === 'aprobada' || nuevoEstado === 'entregada' ? 'success' : 'warning',
-      destinatarioId: solicitud.usuario_id,
-      urlAccion: '/user/solicitudes',
-      metadatos: {
-        solicitudId: solicitud.id,
-        nuevoEstado,
-      },
-    });
+    } catch (error) {
+      logger.error('Error enviando notificación de solicitud', error);
+    }
   };
 
   const buscarProductosCoincidentes = async (tipoAlimento: string): Promise<ProductoInventario[]> => {
@@ -967,9 +1148,184 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
     return 'Solicitud aprobada y descontada del inventario exitosamente.';
   };
 
+  /**
+   * Registra una donación con la cantidad especificada y guarda el historial.
+   * Permite entregas parciales y registra el porcentaje entregado.
+   */
+  const procesarDonacion = async (
+    solicitud: Solicitud,
+    cantidadDonar: number,
+    porcentaje: number,
+    comentario?: string,
+    operadorId?: string
+  ): Promise<ServiceResult<SolicitudActionResponse>> => {
+    try {
+      logger.info(`Procesando donación para solicitud ${solicitud.id}`, { cantidadDonar, porcentaje });
+
+      // Validar stock disponible PRIMERO
+      const validacionStock = await validarStockDisponible(solicitud);
+      
+      // Si NO hay stock disponible (0 unidades), rechazar automáticamente la solicitud
+      if (validacionStock.disponible === 0) {
+        logger.warn(`Rechazando automáticamente solicitud ${solicitud.id} por falta de stock`);
+        
+        // Obtener el ID del operador actual
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        const operadorIdActual = user?.id;
+        
+        // Rechazar la solicitud automáticamente
+        const { error: rechazoError } = await supabaseClient
+          .from('solicitudes')
+          .update({
+            estado: 'rechazada',
+            fecha_respuesta: new Date().toISOString(),
+            comentario_admin: 'Solicitud rechazada automáticamente por falta de inventario disponible',
+            motivo_rechazo: 'Sin stock disponible',
+            operador_rechazo_id: operadorIdActual,
+            fecha_rechazo: new Date().toISOString()
+          })
+          .eq('id', solicitud.id);
+
+        if (!rechazoError) {
+          // Notificar al usuario del rechazo
+          await notificarCambioEstado(
+            solicitud, 
+            'rechazada', 
+            undefined, 
+            'Solicitud rechazada automáticamente por falta de inventario disponible',
+            'Sin stock disponible',
+            null
+          );
+        }
+
+        return {
+          success: false,
+          error: `No hay stock disponible de "${solicitud.tipo_alimento}". La solicitud ha sido rechazada automáticamente.`
+        };
+      }
+
+      // Validar que la cantidad sea válida (mínimo 1 unidad)
+      if (cantidadDonar < 1 || cantidadDonar > solicitud.cantidad) {
+        return {
+          success: false,
+          error: `La cantidad a donar debe ser al menos 1 unidad y máximo ${solicitud.cantidad} ${solicitud.unidades?.simbolo ?? 'unidades'}`
+        };
+      }
+
+      // Validar que haya suficiente stock para la cantidad a donar
+      if (validacionStock.disponible < cantidadDonar) {
+        return {
+          success: false,
+          error: `Stock insuficiente para donar ${cantidadDonar} unidades. Disponible: ${validacionStock.disponible} ${solicitud.unidades?.simbolo ?? 'unidades'}`
+        };
+      }
+
+      // Generar código de comprobante
+      const codigoComprobante = generarCodigoComprobante('solicitud', solicitud.id);
+
+      // Calcular cantidad entregada acumulada
+      const cantidadAnterior = solicitud.cantidad_entregada || 0;
+      const nuevaCantidadTotal = cantidadAnterior + cantidadDonar;
+      const esEntregaCompleta = nuevaCantidadTotal >= solicitud.cantidad;
+
+      // Actualizar la solicitud (SIEMPRE cambia a 'aprobada' cuando se procesa una donación)
+      const updateData: Record<string, unknown> = {
+        estado: 'aprobada',
+        cantidad_entregada: nuevaCantidadTotal,
+        tiene_entregas_parciales: !esEntregaCompleta || cantidadAnterior > 0,
+        codigo_comprobante: codigoComprobante,
+        comentario_admin: comentario?.trim() || null,
+        fecha_respuesta: new Date().toISOString(),
+        operador_aprobacion_id: operadorId || null,
+        fecha_aprobacion: new Date().toISOString()
+      };
+
+      const { error: updateError } = await supabaseClient
+        .from('solicitudes')
+        .update(updateData)
+        .eq('id', solicitud.id);
+
+      if (updateError) {
+        logger.error('Error actualizando solicitud con donación', updateError);
+        return {
+          success: false,
+          error: 'No fue posible registrar la donación'
+        };
+      }
+
+      // Registrar en el historial de donaciones
+      const { error: historialError } = await supabaseClient
+        .from('historial_donaciones')
+        .insert({
+          solicitud_id: solicitud.id,
+          cantidad_entregada: cantidadDonar,
+          porcentaje_entregado: porcentaje,
+          cantidad_solicitada: solicitud.cantidad,
+          operador_id: operadorId,
+          comentario: comentario?.trim() || null
+        });
+
+      if (historialError) {
+        logger.error('Error registrando historial de donación', historialError);
+        // No fallar la operación por esto
+      }
+
+      // Descontar del inventario solo la cantidad donada
+      const solicitudTemporal = { ...solicitud, cantidad: cantidadDonar };
+      const resultadoInventario = await descontarDelInventario(solicitudTemporal);
+      await registrarMovimientoSolicitud(solicitudTemporal, resultadoInventario);
+
+      // Notificar al usuario SIEMPRE (tanto para entregas completas como parciales)
+      let mensaje = '';
+      if (esEntregaCompleta) {
+        mensaje = `Donación completada: ${nuevaCantidadTotal} ${solicitud.unidades?.simbolo ?? 'unidades'} de ${solicitud.tipo_alimento}`;
+        await notificarCambioEstado(
+          solicitud, 
+          'aprobada', 
+          mensaje, 
+          comentario, 
+          null, 
+          codigoComprobante,
+          false, // No es parcial
+          nuevaCantidadTotal,
+          solicitud.cantidad
+        );
+      } else {
+        mensaje = `Entrega parcial registrada: ${cantidadDonar} ${solicitud.unidades?.simbolo ?? 'unidades'} (${porcentaje}% del total). Total entregado: ${nuevaCantidadTotal}/${solicitud.cantidad}`;
+        await notificarCambioEstado(
+          solicitud, 
+          'aprobada', 
+          mensaje, 
+          comentario, 
+          null, 
+          codigoComprobante,
+          true, // Es parcial
+          cantidadDonar,
+          solicitud.cantidad
+        );
+      }
+
+      return {
+        success: true,
+        data: {
+          success: true,
+          message: mensaje,
+          warning: resultadoInventario.error || resultadoInventario.noStock
+        }
+      };
+    } catch (err) {
+      logger.error('Excepción al procesar donación', err);
+      return {
+        success: false,
+        error: 'Error inesperado al procesar la donación'
+      };
+    }
+  };
+
   return {
     ...dataService,
     updateSolicitudEstado,
-    revertirSolicitud
+    revertirSolicitud,
+    procesarDonacion
   };
 };

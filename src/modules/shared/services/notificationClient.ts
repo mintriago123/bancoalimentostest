@@ -9,6 +9,16 @@ type NotificationPayload = {
   metadatos?: Record<string, unknown>;
   expiraEn?: string;
   enviarEmail?: boolean;
+  email?: {
+    to?: string | string[];
+    subject?: string;
+    html?: string;
+    text?: string;
+    from?: string;
+    cc?: string | string[];
+    bcc?: string | string[];
+    replyTo?: string;
+  };
 };
 
 export async function sendNotification(payload: NotificationPayload) {

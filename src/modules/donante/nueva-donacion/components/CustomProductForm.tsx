@@ -40,7 +40,6 @@ export default function CustomProductForm({
                 {cat}
               </option>
             ))}
-            <option value="Otros">Otros</option>
           </select>
         </div>
       </div>

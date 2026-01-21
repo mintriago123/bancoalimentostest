@@ -99,5 +99,6 @@ const mapDonationRowToDomain = (row: SupabaseDonationWithAlimento): Donation => 
         nombre: row.alimento.nombre ?? 'Producto',
         categoria: row.alimento.categoria ?? 'Sin categoría'
       }
-    : null
+    : null,
+  codigo_comprobante: row.codigo_comprobante ?? undefined
 });

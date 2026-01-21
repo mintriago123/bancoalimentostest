@@ -47,7 +47,7 @@ export default function MisSolicitudesPage() {
     setTimeout(() => setMensaje(''), 3000);
   };
 
-  const handleEditar = async (id: number, data: SolicitudEditData): Promise<boolean> => {
+  const handleEditar = async (id: string, data: SolicitudEditData): Promise<boolean> => {
     const success = await updateSolicitud(id, data);
     
     if (success) {
