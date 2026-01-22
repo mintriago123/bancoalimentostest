@@ -219,7 +219,7 @@ test: agregar/actualizar tests
 | Control de inventario | ✅ Completo |
 | Trazabilidad de movimientos | ✅ Completo |
 | Reportes y análisis | ✅ Completo |
-| Notificaciones en tiempo real | 🔄 En desarrollo |
+| Sistema de Notificaciones | ✅ Completo |
 
 ---
 
