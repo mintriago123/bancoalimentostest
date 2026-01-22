@@ -34,7 +34,6 @@ El frontend del Banco de Alimentos ULEAM está construido con **React** y **Next
 - ✅ **Server Components**: Por defecto, para mejor performance
 - ✅ **Composición**: Componentes pequeños que se combinan
 - ✅ **Accesibilidad**: Semántica HTML y ARIA labels
-- ✅ **Responsividad**: Mobile-first design
 - ✅ **Type Safety**: TypeScript en todos los componentes
 
 ---
@@ -386,10 +385,9 @@ export function DashboardLayout({
 ```
 
 **Características**:
-- Sidebar fijo en desktop
-- Sidebar deslizable en móvil
+- Sidebar fijo con navegación lateral
 - Header sticky con notificaciones
-- Responsive padding según tamaño de pantalla
+- Sistema de notificaciones integrado
 
 ---
 
@@ -1156,7 +1154,6 @@ El frontend del Banco de Alimentos ULEAM está construido con:
 - ✅ **Server Components por defecto para mejor performance**
 - ✅ **Hooks personalizados para lógica compartida**
 - ✅ **Tipado estricto con TypeScript**
-- ✅ **Responsive design mobile-first**
 - ✅ **Accesibilidad con semántica HTML**
 
 Esta arquitectura permite:

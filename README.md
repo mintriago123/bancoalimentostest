@@ -47,7 +47,7 @@ Asegúrate de tener instalado:
 1. **Clonar el repositorio:**
 
 ```bash
-git clone https://github.com/tu-usuario/banco-alimentos.git
+git clone https://github.com/mintriago123/bancoalimentostest.git
 cd banco-alimentos
 ```
 
@@ -175,7 +175,7 @@ banco-alimentos/
 - 📈 **Trazabilidad completa** de todos los movimientos de inventario
 - 📧 **Sistema de notificaciones** por email y en tiempo real
 - 🌍 **Geolocalización** con Mapbox para puntos de entrega
-- 🎨 **Interfaz responsiva** mobile-first con sistema de diseño consistente
+- 🎨 **Interfaz consistente** con sistema de diseño estructurado
 
 ---
 
@@ -237,8 +237,7 @@ Este proyecto está bajo la Licencia MIT. Ver [LICENSE](./LICENSE) para más det
 
 ## 📞 Soporte
 
-- 📧 Email: soporte@bancoalimentos-uleam.edu.ec
-- 📝 Issues: [GitHub Issues](https://github.com/tu-usuario/banco-alimentos/issues)
+- 📝 Issues: [GitHub Issues](https://github.com/mintriago123/bancoalimentostest/issues)
 - 📖 Documentación: [`/docs`](./docs/)
 
 ---
