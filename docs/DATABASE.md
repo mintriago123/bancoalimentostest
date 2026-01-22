@@ -268,7 +268,7 @@ erDiagram
 | impacto_estimado_personas | integer | Personas alimentadas | |
 | impacto_equivalente | text | Equivalente en comidas | |
 | estado | text | Estado de la donación | CHECK: Pendiente, Recogida, Entregada, Cancelada |
-| codigo_comprobante | text | Código único del comprobante | |
+| codigo_comprobante | text | Código único del comprobante (generado por la capa de aplicación) | |
 | motivo_cancelacion | text | Razón de cancelación | CHECK: error_donante, no_disponible, etc. |
 | observaciones_cancelacion | text | Detalles de cancelación | |
 | usuario_cancelacion_id | uuid | Quien canceló | FK a auth.users |
@@ -304,7 +304,7 @@ erDiagram
 | latitud | double precision | Coordenada de entrega | |
 | longitud | double precision | Coordenada de entrega | |
 | estado | text | Estado de la solicitud | CHECK: pendiente, aprobada, rechazada, entregada |
-| codigo_comprobante | text | Código del comprobante | |
+| codigo_comprobante | text | Código del comprobante (generado por la capa de aplicación) | |
 | cantidad_entregada | numeric(10,2) | Cantidad ya entregada | DEFAULT 0 |
 | tiene_entregas_parciales | boolean | Si tiene entregas parciales | DEFAULT false |
 | fecha_respuesta | timestamp | Cuándo se respondió | |
@@ -693,7 +693,37 @@ $$;
 
 #### 3. `dar_baja_producto()`
 
-**Propósito**: Dar de baja productos y actualizar inventario
+**Propósito**: Dar de baja productos y actualizar inventario (transacción atómica)
+
+**Diagrama de Flujo Transaccional**:
+
+```mermaid
+sequenceDiagram
+    participant App as App/API
+    participant Func as FN dar_baja_producto()
+    participant Inv as Tabla Inventario
+    participant Bajas as Tabla Bajas
+    participant Movs as Tablas Movimientos
+    
+    App->>Func: Ejecutar (ID, Cantidad, Motivo)
+    
+    rect rgb(30, 30, 30)
+    Note right of Func: Transacción Atómica
+    Func->>Inv: Verificar Stock actual
+    
+    alt Stock Insuficiente
+        Func-->>App: Error (False)
+    else Stock Suficiente
+        Func->>Bajas: Insertar Registro Baja
+        Func->>Inv: UPDATE cantidad - baja
+        Func->>Movs: INSERT Cabecera Movimiento
+        Func->>Movs: INSERT Detalle Movimiento
+        Func-->>App: Éxito (True, ID_Baja)
+    end
+    end
+```
+
+**Código SQL**:
 
 ```sql
 CREATE FUNCTION dar_baja_producto(
@@ -795,6 +825,57 @@ BEGIN
 END;
 $$;
 ```
+
+---
+
+#### 5. Funciones Auxiliares (Placeholder / WIP)
+
+Las siguientes funciones están implementadas como **placeholders** y requieren lógica de negocio completa:
+
+##### `cancelar_eliminacion_categoria()`
+
+**Estado**: ⚠️ **Implementación Placeholder / WIP**
+
+```sql
+CREATE FUNCTION cancelar_eliminacion_categoria(p_categoria_id BIGINT)
+RETURNS BOOLEAN
+AS $$
+BEGIN
+  -- TODO: Implementar lógica de cancelación
+  RETURN true;  -- Actualmente solo retorna true
+END;
+$$;
+```
+
+**Pendiente de implementar**:
+- Validación de permisos del usuario
+- Verificación del estado de la categoría
+- Actualización de registros relacionados
+- Registro en auditoría
+
+##### `procesar_eliminaciones_categorias_pendientes()`
+
+**Estado**: ⚠️ **Implementación Placeholder / WIP**
+
+```sql
+CREATE FUNCTION procesar_eliminaciones_categorias_pendientes()
+RETURNS VOID
+AS $$
+BEGIN
+  -- TODO: Implementar lógica de procesamiento batch
+  -- Actualmente sin implementación
+  RETURN;
+END;
+$$;
+```
+
+**Pendiente de implementar**:
+- Lógica de procesamiento por lotes
+- Eliminación segura de categorías marcadas
+- Reasignación de productos huérfanos
+- Registro de eliminaciones ejecutadas
+
+> 💡 **Nota**: Estas funciones fueron creadas para funcionalidad futura y actualmente no contienen lógica de negocio. Se recomienda implementarlas completamente antes de usarlas en producción.
 
 ---
 
