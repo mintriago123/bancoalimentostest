@@ -85,7 +85,9 @@ NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=tu_token_mapbox
 4. **Configurar base de datos:**
 
 - Crea un proyecto en Supabase
-- Ejecuta los scripts SQL de `database/01.Create_BD_Structure.sql`
+- Ejecuta los scripts SQL en orden:
+  1. `database/01.Create_BD_Structure.sql` (estructura de tablas y funciones)
+  2. `database/02.Insert Aliments to BD.sql` (catálogo inicial de alimentos)
 - Habilita autenticación por email en Supabase Auth
 
 5. **Ejecutar en desarrollo:**
