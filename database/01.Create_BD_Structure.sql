@@ -243,6 +243,153 @@ $$;
 ALTER FUNCTION "public"."crear_producto_desde_donacion"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."dar_baja_producto"("p_id_inventario" "uuid", "p_cantidad" numeric, "p_motivo" "text", "p_usuario_id" "uuid", "p_observaciones" "text" DEFAULT NULL::"text") RETURNS TABLE("success" boolean, "message" "text", "id_baja" "uuid", "cantidad_restante" numeric)
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  v_id_producto uuid;
+  v_id_deposito uuid;
+  v_cantidad_actual numeric;
+  v_nombre_producto text;
+  v_nueva_cantidad numeric;
+  v_id_baja uuid;
+  v_rol_usuario text;
+BEGIN
+  -- Validar que el motivo sea válido
+  IF p_motivo NOT IN ('vencido', 'dañado', 'contaminado', 'rechazado', 'otro') THEN
+    RETURN QUERY SELECT false, 'Motivo de baja inválido', NULL::uuid, NULL::numeric;
+    RETURN;
+  END IF;
+
+  -- Obtener el rol del usuario ejecutor
+  SELECT rol INTO v_rol_usuario
+  FROM usuarios
+  WHERE id = p_usuario_id;
+
+  -- Mapear rol de sistema a rol de movimiento
+  -- ADMINISTRADOR y OPERADOR actúan como distribuidores en el sistema de movimientos
+  IF v_rol_usuario IN ('ADMINISTRADOR', 'OPERADOR') THEN
+    v_rol_usuario := 'distribuidor';
+  ELSIF v_rol_usuario = 'DONANTE' THEN
+    v_rol_usuario := 'donante';
+  ELSIF v_rol_usuario IN ('USER', 'BENEFICIARIO') THEN
+    v_rol_usuario := 'beneficiario';
+  ELSE
+    v_rol_usuario := 'distribuidor'; -- Por defecto
+  END IF;
+
+  -- Obtener información del inventario
+  SELECT 
+    i.id_producto, 
+    i.id_deposito, 
+    i.cantidad_disponible,
+    p.nombre_producto
+  INTO 
+    v_id_producto, 
+    v_id_deposito, 
+    v_cantidad_actual,
+    v_nombre_producto
+  FROM inventario i
+  LEFT JOIN productos_donados p ON p.id_producto = i.id_producto
+  WHERE i.id_inventario = p_id_inventario;
+
+  -- Verificar que existe el registro de inventario
+  IF v_id_producto IS NULL THEN
+    RETURN QUERY SELECT false, 'Registro de inventario no encontrado', NULL::uuid, NULL::numeric;
+    RETURN;
+  END IF;
+
+  -- Verificar que hay suficiente cantidad
+  IF v_cantidad_actual < p_cantidad THEN
+    RETURN QUERY SELECT 
+      false, 
+      'Cantidad insuficiente en inventario. Disponible: ' || v_cantidad_actual, 
+      NULL::uuid, 
+      v_cantidad_actual;
+    RETURN;
+  END IF;
+
+  -- Calcular nueva cantidad
+  v_nueva_cantidad := v_cantidad_actual - p_cantidad;
+
+  -- Registrar la baja
+  INSERT INTO bajas_productos (
+    id_producto,
+    id_inventario,
+    cantidad_baja,
+    motivo_baja,
+    usuario_responsable_id,
+    observaciones,
+    nombre_producto,
+    cantidad_disponible_antes,
+    id_deposito,
+    estado_baja
+  ) VALUES (
+    v_id_producto,
+    p_id_inventario,
+    p_cantidad,
+    p_motivo,
+    p_usuario_id,
+    p_observaciones,
+    v_nombre_producto,
+    v_cantidad_actual,
+    v_id_deposito,
+    'confirmada'
+  ) RETURNING bajas_productos.id_baja INTO v_id_baja;
+
+  -- Actualizar inventario
+  UPDATE inventario 
+  SET 
+    cantidad_disponible = v_nueva_cantidad,
+    fecha_actualizacion = NOW()
+  WHERE id_inventario = p_id_inventario;
+
+  -- Registrar movimiento en historial
+  INSERT INTO movimiento_inventario_cabecera (
+    id_donante,
+    id_solicitante,
+    estado_movimiento,
+    observaciones
+  ) VALUES (
+    p_usuario_id,
+    p_usuario_id,
+    'completado',
+    'Baja de producto - Motivo: ' || p_motivo
+  );
+
+  INSERT INTO movimiento_inventario_detalle (
+    id_movimiento,
+    id_producto,
+    cantidad,
+    tipo_transaccion,
+    rol_usuario,
+    observacion_detalle
+  ) VALUES (
+    (SELECT id_movimiento FROM movimiento_inventario_cabecera ORDER BY fecha_movimiento DESC LIMIT 1),
+    v_id_producto,
+    p_cantidad,
+    'baja',
+    v_rol_usuario,
+    p_observaciones
+  );
+
+  -- Retornar éxito
+  RETURN QUERY SELECT 
+    true, 
+    'Producto dado de baja exitosamente', 
+    v_id_baja,
+    v_nueva_cantidad;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."dar_baja_producto"("p_id_inventario" "uuid", "p_cantidad" numeric, "p_motivo" "text", "p_usuario_id" "uuid", "p_observaciones" "text") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."dar_baja_producto"("p_id_inventario" "uuid", "p_cantidad" numeric, "p_motivo" "text", "p_usuario_id" "uuid", "p_observaciones" "text") IS 'Función para dar de baja un producto y actualizar inventario automáticamente';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."get_user_estado"() RETURNS "text"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -371,6 +518,37 @@ $$;
 ALTER FUNCTION "public"."marcar_notificacion_leida"("p_notificacion_id" "uuid", "p_usuario_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."obtener_estadisticas_bajas"("p_fecha_inicio" timestamp with time zone DEFAULT ("now"() - '30 days'::interval), "p_fecha_fin" timestamp with time zone DEFAULT "now"()) RETURNS TABLE("total_bajas" bigint, "total_cantidad" numeric, "bajas_por_vencido" bigint, "bajas_por_danado" bigint, "bajas_por_contaminado" bigint, "bajas_por_rechazado" bigint, "bajas_por_otro" bigint, "cantidad_vencido" numeric, "cantidad_danado" numeric, "cantidad_contaminado" numeric, "cantidad_rechazado" numeric, "cantidad_otro" numeric)
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    COUNT(*)::bigint as total_bajas,
+    COALESCE(SUM(cantidad_baja), 0) as total_cantidad,
+    COUNT(*) FILTER (WHERE motivo_baja = 'vencido')::bigint as bajas_por_vencido,
+    COUNT(*) FILTER (WHERE motivo_baja = 'dañado')::bigint as bajas_por_danado,
+    COUNT(*) FILTER (WHERE motivo_baja = 'contaminado')::bigint as bajas_por_contaminado,
+    COUNT(*) FILTER (WHERE motivo_baja = 'rechazado')::bigint as bajas_por_rechazado,
+    COUNT(*) FILTER (WHERE motivo_baja = 'otro')::bigint as bajas_por_otro,
+    COALESCE(SUM(cantidad_baja) FILTER (WHERE motivo_baja = 'vencido'), 0) as cantidad_vencido,
+    COALESCE(SUM(cantidad_baja) FILTER (WHERE motivo_baja = 'dañado'), 0) as cantidad_danado,
+    COALESCE(SUM(cantidad_baja) FILTER (WHERE motivo_baja = 'contaminado'), 0) as cantidad_contaminado,
+    COALESCE(SUM(cantidad_baja) FILTER (WHERE motivo_baja = 'rechazado'), 0) as cantidad_rechazado,
+    COALESCE(SUM(cantidad_baja) FILTER (WHERE motivo_baja = 'otro'), 0) as cantidad_otro
+  FROM bajas_productos
+  WHERE fecha_baja BETWEEN p_fecha_inicio AND p_fecha_fin;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."obtener_estadisticas_bajas"("p_fecha_inicio" timestamp with time zone, "p_fecha_fin" timestamp with time zone) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."obtener_estadisticas_bajas"("p_fecha_inicio" timestamp with time zone, "p_fecha_fin" timestamp with time zone) IS 'Obtiene estadísticas de bajas por periodo y motivo';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."obtener_info_producto_inventario"("p_id_producto" "uuid") RETURNS TABLE("nombre_producto" "text", "alimento_nombre" "text", "categoria" "text", "unidad_nombre" "text", "unidad_simbolo" "text", "cantidad_total" numeric)
     LANGUAGE "plpgsql" STABLE
     SET "search_path" TO ''
@@ -425,6 +603,50 @@ $$;
 
 
 ALTER FUNCTION "public"."obtener_notificaciones_no_leidas"("p_usuario_id" "uuid", "p_rol_usuario" character varying) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."obtener_productos_proximos_vencer"("p_dias_umbral" integer DEFAULT 7) RETURNS TABLE("id_inventario" "uuid", "id_producto" "uuid", "nombre_producto" "text", "cantidad_disponible" numeric, "fecha_caducidad" timestamp with time zone, "dias_para_vencer" integer, "id_deposito" "uuid", "nombre_deposito" "text", "unidad_simbolo" "text", "prioridad" "text")
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    i.id_inventario,
+    i.id_producto,
+    p.nombre_producto,
+    i.cantidad_disponible,
+    p.fecha_caducidad,
+    EXTRACT(DAY FROM (p.fecha_caducidad - NOW()))::integer as dias_para_vencer,
+    i.id_deposito,
+    d.nombre as nombre_deposito,
+    u.simbolo as unidad_simbolo,
+    CASE 
+      WHEN p.fecha_caducidad < NOW() THEN 'vencido'
+      WHEN EXTRACT(DAY FROM (p.fecha_caducidad - NOW())) <= 3 THEN 'alta'
+      WHEN EXTRACT(DAY FROM (p.fecha_caducidad - NOW())) <= p_dias_umbral THEN 'media'
+      ELSE 'baja'
+    END as prioridad
+  FROM inventario i
+  INNER JOIN productos_donados p ON p.id_producto = i.id_producto
+  LEFT JOIN depositos d ON d.id_deposito = i.id_deposito
+  LEFT JOIN unidades u ON u.id = p.unidad_id
+  WHERE 
+    p.fecha_caducidad IS NOT NULL
+    AND i.cantidad_disponible > 0
+    AND (
+      p.fecha_caducidad < NOW() 
+      OR EXTRACT(DAY FROM (p.fecha_caducidad - NOW())) <= p_dias_umbral
+    )
+  ORDER BY p.fecha_caducidad ASC;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."obtener_productos_proximos_vencer"("p_dias_umbral" integer) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."obtener_productos_proximos_vencer"("p_dias_umbral" integer) IS 'Obtiene productos próximos a vencer o ya vencidos con su prioridad';
+
 
 
 CREATE OR REPLACE FUNCTION "public"."obtener_unidades_alimento"("p_alimento_id" bigint) RETURNS TABLE("unidad_id" bigint, "nombre" "text", "simbolo" "text", "es_principal" boolean)
@@ -697,6 +919,19 @@ $$;
 ALTER FUNCTION "public"."trigger_notificacion_usuario"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."update_bajas_productos_updated_at"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_bajas_productos_updated_at"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."update_updated_at_column"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -881,6 +1116,42 @@ ALTER SEQUENCE "public"."alimentos_unidades_id_seq" OWNED BY "public"."alimentos
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."bajas_productos" (
+    "id_baja" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "id_producto" "uuid" NOT NULL,
+    "id_inventario" "uuid" NOT NULL,
+    "cantidad_baja" numeric NOT NULL,
+    "motivo_baja" "text" NOT NULL,
+    "usuario_responsable_id" "uuid" NOT NULL,
+    "fecha_baja" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "observaciones" "text",
+    "estado_baja" "text" DEFAULT 'confirmada'::"text",
+    "nombre_producto" "text",
+    "cantidad_disponible_antes" numeric,
+    "id_deposito" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "bajas_productos_cantidad_baja_check" CHECK (("cantidad_baja" > (0)::numeric)),
+    CONSTRAINT "bajas_productos_estado_baja_check" CHECK (("estado_baja" = ANY (ARRAY['confirmada'::"text", 'pendiente_revision'::"text", 'revisada'::"text"]))),
+    CONSTRAINT "bajas_productos_motivo_baja_check" CHECK (("motivo_baja" = ANY (ARRAY['vencido'::"text", 'dañado'::"text", 'contaminado'::"text", 'rechazado'::"text", 'otro'::"text"])))
+);
+
+
+ALTER TABLE "public"."bajas_productos" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."bajas_productos" IS 'Registro de productos dados de baja del inventario';
+
+
+
+COMMENT ON COLUMN "public"."bajas_productos"."motivo_baja" IS 'Motivo de la baja: vencido, dañado, contaminado, rechazado, otro';
+
+
+
+COMMENT ON COLUMN "public"."bajas_productos"."estado_baja" IS 'Estado del registro: confirmada, pendiente_revision, revisada';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."configuracion_notificaciones" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "usuario_id" "uuid",
@@ -981,8 +1252,14 @@ CREATE TABLE IF NOT EXISTS "public"."donaciones" (
     "creado_en" timestamp with time zone DEFAULT "now"(),
     "actualizado_en" timestamp with time zone DEFAULT "now"(),
     "codigo_comprobante" "text",
+    "motivo_cancelacion" "text",
+    "observaciones_cancelacion" "text",
+    "usuario_cancelacion_id" "uuid",
+    "fecha_cancelacion" timestamp with time zone,
+    CONSTRAINT "check_observaciones_cancelacion" CHECK ((("motivo_cancelacion" IS NULL) OR ("motivo_cancelacion" <> 'otro'::"text") OR (("motivo_cancelacion" = 'otro'::"text") AND ("observaciones_cancelacion" IS NOT NULL) AND ("length"(TRIM(BOTH FROM "observaciones_cancelacion")) > 0)))),
     CONSTRAINT "donaciones_cantidad_check" CHECK (("cantidad" > (0)::numeric)),
-    CONSTRAINT "donaciones_estado_check" CHECK (("estado" = ANY (ARRAY['Pendiente'::"text", 'Recogida'::"text", 'Entregada'::"text", 'Cancelada'::"text"])))
+    CONSTRAINT "donaciones_estado_check" CHECK (("estado" = ANY (ARRAY['Pendiente'::"text", 'Recogida'::"text", 'Entregada'::"text", 'Cancelada'::"text"]))),
+    CONSTRAINT "donaciones_motivo_cancelacion_check" CHECK (("motivo_cancelacion" = ANY (ARRAY['error_donante'::"text", 'no_disponible'::"text", 'calidad_inadecuada'::"text", 'logistica_imposible'::"text", 'duplicado'::"text", 'solicitud_donante'::"text", 'otro'::"text"])))
 );
 
 
@@ -990,6 +1267,26 @@ ALTER TABLE "public"."donaciones" OWNER TO "postgres";
 
 
 COMMENT ON COLUMN "public"."donaciones"."codigo_comprobante" IS 'Código único del comprobante generado al procesar la donación';
+
+
+
+COMMENT ON COLUMN "public"."donaciones"."motivo_cancelacion" IS 'Motivo específico por el cual se canceló la donación';
+
+
+
+COMMENT ON COLUMN "public"."donaciones"."observaciones_cancelacion" IS 'Observaciones detalladas sobre la cancelación (obligatorio cuando motivo es "otro")';
+
+
+
+COMMENT ON COLUMN "public"."donaciones"."usuario_cancelacion_id" IS 'ID del usuario (administrador u operador) que canceló la donación';
+
+
+
+COMMENT ON COLUMN "public"."donaciones"."fecha_cancelacion" IS 'Fecha y hora exacta cuando se canceló la donación';
+
+
+
+COMMENT ON CONSTRAINT "check_observaciones_cancelacion" ON "public"."donaciones" IS 'Garantiza que cuando el motivo es "otro", se proporcionen observaciones detalladas';
 
 
 
@@ -1007,6 +1304,23 @@ ALTER SEQUENCE "public"."donaciones_id_seq" OWNER TO "postgres";
 
 ALTER SEQUENCE "public"."donaciones_id_seq" OWNED BY "public"."donaciones"."id";
 
+
+
+CREATE TABLE IF NOT EXISTS "public"."historial_donaciones" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "solicitud_id" "uuid" NOT NULL,
+    "cantidad_entregada" numeric(10,2) NOT NULL,
+    "porcentaje_entregado" integer NOT NULL,
+    "cantidad_solicitada" numeric(10,2) NOT NULL,
+    "operador_id" "uuid",
+    "comentario" "text",
+    "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "cantidad_positiva" CHECK (("cantidad_entregada" > (0)::numeric)),
+    CONSTRAINT "porcentaje_valido" CHECK ((("porcentaje_entregado" >= 0) AND ("porcentaje_entregado" <= 100)))
+);
+
+
+ALTER TABLE "public"."historial_donaciones" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."inventario" (
@@ -1129,6 +1443,8 @@ CREATE TABLE IF NOT EXISTS "public"."solicitudes" (
     "operador_aprobacion_id" "uuid",
     "fecha_aprobacion" timestamp with time zone,
     "codigo_comprobante" "text",
+    "cantidad_entregada" numeric(10,2) DEFAULT 0,
+    "tiene_entregas_parciales" boolean DEFAULT false,
     CONSTRAINT "solicitudes_estado_check" CHECK (("estado" = ANY (ARRAY['pendiente'::"text", 'aprobada'::"text", 'rechazada'::"text", 'entregada'::"text"])))
 );
 
@@ -1259,6 +1575,42 @@ COMMENT ON COLUMN "public"."usuarios"."latitud" IS 'Latitud de la ubicación del
 
 COMMENT ON COLUMN "public"."usuarios"."longitud" IS 'Longitud de la ubicación del usuario (coordenada geográfica)';
 
+
+
+CREATE OR REPLACE VIEW "public"."v_bajas_productos_detalle" AS
+ SELECT "bp"."id_baja",
+    "bp"."id_producto",
+    "bp"."id_inventario",
+    "bp"."cantidad_baja",
+    "bp"."motivo_baja",
+    "bp"."fecha_baja",
+    "bp"."observaciones",
+    "bp"."estado_baja",
+    "bp"."nombre_producto",
+    "bp"."cantidad_disponible_antes",
+    "bp"."created_at",
+    "bp"."updated_at",
+    "u"."id" AS "usuario_id",
+    "u"."nombre" AS "usuario_nombre",
+    "u"."email" AS "usuario_email",
+    "u"."rol" AS "usuario_rol",
+    "d"."id_deposito",
+    "d"."nombre" AS "deposito_nombre",
+    "d"."descripcion" AS "deposito_descripcion",
+    "p"."descripcion" AS "producto_descripcion",
+    "p"."unidad_medida",
+    "p"."fecha_caducidad",
+    "un"."nombre" AS "unidad_nombre",
+    "un"."simbolo" AS "unidad_simbolo"
+   FROM (((("public"."bajas_productos" "bp"
+     LEFT JOIN "public"."usuarios" "u" ON (("u"."id" = "bp"."usuario_responsable_id")))
+     LEFT JOIN "public"."depositos" "d" ON (("d"."id_deposito" = "bp"."id_deposito")))
+     LEFT JOIN "public"."productos_donados" "p" ON (("p"."id_producto" = "bp"."id_producto")))
+     LEFT JOIN "public"."unidades" "un" ON (("un"."id" = "p"."unidad_id")))
+  ORDER BY "bp"."fecha_baja" DESC;
+
+
+ALTER VIEW "public"."v_bajas_productos_detalle" OWNER TO "postgres";
 
 
 CREATE OR REPLACE VIEW "public"."v_inventario_con_conversiones" WITH ("security_invoker"='true') AS
@@ -1442,6 +1794,11 @@ ALTER TABLE ONLY "public"."alimentos_unidades"
 
 
 
+ALTER TABLE ONLY "public"."bajas_productos"
+    ADD CONSTRAINT "bajas_productos_pkey" PRIMARY KEY ("id_baja");
+
+
+
 ALTER TABLE ONLY "public"."configuracion_notificaciones"
     ADD CONSTRAINT "configuracion_notificaciones_pkey" PRIMARY KEY ("id");
 
@@ -1474,6 +1831,11 @@ ALTER TABLE ONLY "public"."detalles_solicitud"
 
 ALTER TABLE ONLY "public"."donaciones"
     ADD CONSTRAINT "donaciones_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."historial_donaciones"
+    ADD CONSTRAINT "historial_donaciones_pkey" PRIMARY KEY ("id");
 
 
 
@@ -1548,6 +1910,26 @@ CREATE INDEX "idx_alimentos_unidades_unidad" ON "public"."alimentos_unidades" US
 
 
 
+CREATE INDEX "idx_bajas_productos_estado" ON "public"."bajas_productos" USING "btree" ("estado_baja");
+
+
+
+CREATE INDEX "idx_bajas_productos_fecha" ON "public"."bajas_productos" USING "btree" ("fecha_baja" DESC);
+
+
+
+CREATE INDEX "idx_bajas_productos_motivo" ON "public"."bajas_productos" USING "btree" ("motivo_baja");
+
+
+
+CREATE INDEX "idx_bajas_productos_producto" ON "public"."bajas_productos" USING "btree" ("id_producto");
+
+
+
+CREATE INDEX "idx_bajas_productos_usuario" ON "public"."bajas_productos" USING "btree" ("usuario_responsable_id");
+
+
+
 CREATE INDEX "idx_conversiones_bidireccional" ON "public"."conversiones" USING "btree" ("unidad_origen_id", "unidad_destino_id");
 
 
@@ -1597,6 +1979,18 @@ CREATE INDEX "idx_donaciones_unidad_id" ON "public"."donaciones" USING "btree" (
 
 
 CREATE INDEX "idx_donaciones_user_id" ON "public"."donaciones" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "idx_historial_donaciones_fecha" ON "public"."historial_donaciones" USING "btree" ("created_at" DESC);
+
+
+
+CREATE INDEX "idx_historial_donaciones_operador" ON "public"."historial_donaciones" USING "btree" ("operador_id");
+
+
+
+CREATE INDEX "idx_historial_donaciones_solicitud" ON "public"."historial_donaciones" USING "btree" ("solicitud_id");
 
 
 
@@ -1736,6 +2130,10 @@ CREATE OR REPLACE TRIGGER "trigger_solicitud_notificacion" AFTER INSERT OR UPDAT
 
 
 
+CREATE OR REPLACE TRIGGER "trigger_update_bajas_productos_updated_at" BEFORE UPDATE ON "public"."bajas_productos" FOR EACH ROW EXECUTE FUNCTION "public"."update_bajas_productos_updated_at"();
+
+
+
 CREATE OR REPLACE TRIGGER "trigger_usuario_notificacion" AFTER UPDATE ON "public"."usuarios" FOR EACH ROW EXECUTE FUNCTION "public"."trigger_notificacion_usuario"();
 
 
@@ -1755,6 +2153,26 @@ ALTER TABLE ONLY "public"."alimentos_unidades"
 
 ALTER TABLE ONLY "public"."alimentos_unidades"
     ADD CONSTRAINT "alimentos_unidades_unidad_id_fkey" FOREIGN KEY ("unidad_id") REFERENCES "public"."unidades"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."bajas_productos"
+    ADD CONSTRAINT "bajas_productos_id_deposito_fkey" FOREIGN KEY ("id_deposito") REFERENCES "public"."depositos"("id_deposito") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."bajas_productos"
+    ADD CONSTRAINT "bajas_productos_id_inventario_fkey" FOREIGN KEY ("id_inventario") REFERENCES "public"."inventario"("id_inventario") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."bajas_productos"
+    ADD CONSTRAINT "bajas_productos_id_producto_fkey" FOREIGN KEY ("id_producto") REFERENCES "public"."productos_donados"("id_producto") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."bajas_productos"
+    ADD CONSTRAINT "bajas_productos_usuario_responsable_fkey" FOREIGN KEY ("usuario_responsable_id") REFERENCES "public"."usuarios"("id") ON DELETE RESTRICT;
 
 
 
@@ -1795,6 +2213,21 @@ ALTER TABLE ONLY "public"."donaciones"
 
 ALTER TABLE ONLY "public"."donaciones"
     ADD CONSTRAINT "donaciones_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."usuarios"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."donaciones"
+    ADD CONSTRAINT "donaciones_usuario_cancelacion_id_fkey" FOREIGN KEY ("usuario_cancelacion_id") REFERENCES "auth"."users"("id");
+
+
+
+ALTER TABLE ONLY "public"."historial_donaciones"
+    ADD CONSTRAINT "historial_donaciones_operador_id_fkey" FOREIGN KEY ("operador_id") REFERENCES "public"."usuarios"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."historial_donaciones"
+    ADD CONSTRAINT "historial_donaciones_solicitud_id_fkey" FOREIGN KEY ("solicitud_id") REFERENCES "public"."solicitudes"("id") ON DELETE CASCADE;
 
 
 
@@ -1905,6 +2338,18 @@ CREATE POLICY "Enable all operations for unidades" ON "public"."unidades" USING 
 
 
 
+CREATE POLICY "Operadores y admins pueden registrar donaciones" ON "public"."historial_donaciones" FOR INSERT TO "authenticated" WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."usuarios"
+  WHERE (("usuarios"."id" = "auth"."uid"()) AND ("usuarios"."rol" = ANY (ARRAY['OPERADOR'::"text", 'ADMINISTRADOR'::"text", 'ADMIN'::"text"]))))));
+
+
+
+CREATE POLICY "Operadores y admins pueden ver todo el historial" ON "public"."historial_donaciones" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."usuarios"
+  WHERE (("usuarios"."id" = "auth"."uid"()) AND ("usuarios"."rol" = ANY (ARRAY['OPERADOR'::"text", 'ADMINISTRADOR'::"text", 'ADMIN'::"text"]))))));
+
+
+
 CREATE POLICY "Permitir lectura de inventario a usuarios autenticados" ON "public"."inventario" FOR SELECT TO "authenticated" USING (true);
 
 
@@ -1938,6 +2383,12 @@ CREATE POLICY "Users can view their own notifications" ON "public"."notificacion
 
 
 CREATE POLICY "Usuarios autenticados pueden ver depósitos" ON "public"."depositos" FOR SELECT TO "authenticated" USING (true);
+
+
+
+CREATE POLICY "Usuarios pueden ver historial de sus solicitudes" ON "public"."historial_donaciones" FOR SELECT TO "authenticated" USING (("solicitud_id" IN ( SELECT "solicitudes"."id"
+   FROM "public"."solicitudes"
+  WHERE ("solicitudes"."usuario_id" = "auth"."uid"()))));
 
 
 
@@ -1988,6 +2439,33 @@ CREATE POLICY "alimentos_unidades_update_admin_operador" ON "public"."alimentos_
   WHERE (("usuarios"."id" = "auth"."uid"()) AND ("usuarios"."rol" = ANY (ARRAY['ADMINISTRADOR'::"text", 'OPERADOR'::"text"])) AND (("usuarios"."estado")::"text" = 'activo'::"text"))))) WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."usuarios"
   WHERE (("usuarios"."id" = "auth"."uid"()) AND ("usuarios"."rol" = ANY (ARRAY['ADMINISTRADOR'::"text", 'OPERADOR'::"text"])) AND (("usuarios"."estado")::"text" = 'activo'::"text")))));
+
+
+
+ALTER TABLE "public"."bajas_productos" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "bajas_productos_delete_admin" ON "public"."bajas_productos" FOR DELETE TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."usuarios"
+  WHERE (("usuarios"."id" = "auth"."uid"()) AND ("usuarios"."rol" = 'ADMINISTRADOR'::"text") AND (("usuarios"."estado")::"text" = 'activo'::"text")))));
+
+
+
+CREATE POLICY "bajas_productos_insert_admin_operador" ON "public"."bajas_productos" FOR INSERT TO "authenticated" WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."usuarios"
+  WHERE (("usuarios"."id" = "auth"."uid"()) AND ("usuarios"."rol" = ANY (ARRAY['ADMINISTRADOR'::"text", 'OPERADOR'::"text"])) AND (("usuarios"."estado")::"text" = 'activo'::"text")))));
+
+
+
+CREATE POLICY "bajas_productos_select_authenticated" ON "public"."bajas_productos" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."usuarios"
+  WHERE (("usuarios"."id" = "auth"."uid"()) AND (("usuarios"."estado")::"text" = 'activo'::"text")))));
+
+
+
+CREATE POLICY "bajas_productos_update_admin" ON "public"."bajas_productos" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."usuarios"
+  WHERE (("usuarios"."id" = "auth"."uid"()) AND ("usuarios"."rol" = 'ADMINISTRADOR'::"text") AND (("usuarios"."estado")::"text" = 'activo'::"text")))));
 
 
 
@@ -2066,6 +2544,9 @@ CREATE POLICY "donante_insert_donaciones" ON "public"."donaciones" FOR INSERT WI
 
 CREATE POLICY "donante_select_own_donaciones" ON "public"."donaciones" FOR SELECT USING (("auth"."uid"() = "user_id"));
 
+
+
+ALTER TABLE "public"."historial_donaciones" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."inventario" ENABLE ROW LEVEL SECURITY;
@@ -2158,6 +2639,30 @@ ALTER TABLE "public"."movimiento_inventario_detalle" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."notificaciones" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "notificaciones_delete_admin" ON "public"."notificaciones" FOR DELETE TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."usuarios"
+  WHERE (("usuarios"."id" = "auth"."uid"()) AND ("usuarios"."rol" = 'ADMINISTRADOR'::"text") AND (("usuarios"."estado")::"text" = 'activo'::"text")))));
+
+
+
+CREATE POLICY "notificaciones_insert_authenticated" ON "public"."notificaciones" FOR INSERT TO "authenticated" WITH CHECK (true);
+
+
+
+CREATE POLICY "notificaciones_select_own_or_role" ON "public"."notificaciones" FOR SELECT TO "authenticated" USING ((("destinatario_id" = "auth"."uid"()) OR (("rol_destinatario")::"text" IN ( SELECT "usuarios"."rol"
+   FROM "public"."usuarios"
+  WHERE ("usuarios"."id" = "auth"."uid"()))) OR ("destinatario_id" IS NULL)));
+
+
+
+CREATE POLICY "notificaciones_update_own" ON "public"."notificaciones" FOR UPDATE TO "authenticated" USING ((("destinatario_id" = "auth"."uid"()) OR (("rol_destinatario")::"text" IN ( SELECT "usuarios"."rol"
+   FROM "public"."usuarios"
+  WHERE ("usuarios"."id" = "auth"."uid"()))))) WITH CHECK ((("destinatario_id" = "auth"."uid"()) OR (("rol_destinatario")::"text" IN ( SELECT "usuarios"."rol"
+   FROM "public"."usuarios"
+  WHERE ("usuarios"."id" = "auth"."uid"())))));
+
 
 
 CREATE POLICY "operador_select_donaciones" ON "public"."donaciones" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
@@ -2507,6 +3012,12 @@ GRANT ALL ON FUNCTION "public"."crear_producto_desde_donacion"() TO "service_rol
 
 
 
+GRANT ALL ON FUNCTION "public"."dar_baja_producto"("p_id_inventario" "uuid", "p_cantidad" numeric, "p_motivo" "text", "p_usuario_id" "uuid", "p_observaciones" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."dar_baja_producto"("p_id_inventario" "uuid", "p_cantidad" numeric, "p_motivo" "text", "p_usuario_id" "uuid", "p_observaciones" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."dar_baja_producto"("p_id_inventario" "uuid", "p_cantidad" numeric, "p_motivo" "text", "p_usuario_id" "uuid", "p_observaciones" "text") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_user_estado"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_user_estado"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_user_estado"() TO "service_role";
@@ -2543,6 +3054,12 @@ GRANT ALL ON FUNCTION "public"."marcar_notificacion_leida"("p_notificacion_id" "
 
 
 
+GRANT ALL ON FUNCTION "public"."obtener_estadisticas_bajas"("p_fecha_inicio" timestamp with time zone, "p_fecha_fin" timestamp with time zone) TO "anon";
+GRANT ALL ON FUNCTION "public"."obtener_estadisticas_bajas"("p_fecha_inicio" timestamp with time zone, "p_fecha_fin" timestamp with time zone) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."obtener_estadisticas_bajas"("p_fecha_inicio" timestamp with time zone, "p_fecha_fin" timestamp with time zone) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."obtener_info_producto_inventario"("p_id_producto" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."obtener_info_producto_inventario"("p_id_producto" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."obtener_info_producto_inventario"("p_id_producto" "uuid") TO "service_role";
@@ -2552,6 +3069,12 @@ GRANT ALL ON FUNCTION "public"."obtener_info_producto_inventario"("p_id_producto
 GRANT ALL ON FUNCTION "public"."obtener_notificaciones_no_leidas"("p_usuario_id" "uuid", "p_rol_usuario" character varying) TO "anon";
 GRANT ALL ON FUNCTION "public"."obtener_notificaciones_no_leidas"("p_usuario_id" "uuid", "p_rol_usuario" character varying) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."obtener_notificaciones_no_leidas"("p_usuario_id" "uuid", "p_rol_usuario" character varying) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."obtener_productos_proximos_vencer"("p_dias_umbral" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."obtener_productos_proximos_vencer"("p_dias_umbral" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."obtener_productos_proximos_vencer"("p_dias_umbral" integer) TO "service_role";
 
 
 
@@ -2588,6 +3111,12 @@ GRANT ALL ON FUNCTION "public"."trigger_notificacion_solicitud"() TO "service_ro
 GRANT ALL ON FUNCTION "public"."trigger_notificacion_usuario"() TO "anon";
 GRANT ALL ON FUNCTION "public"."trigger_notificacion_usuario"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trigger_notificacion_usuario"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_bajas_productos_updated_at"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_bajas_productos_updated_at"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_bajas_productos_updated_at"() TO "service_role";
 
 
 
@@ -2654,6 +3183,12 @@ GRANT ALL ON SEQUENCE "public"."alimentos_unidades_id_seq" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."bajas_productos" TO "anon";
+GRANT ALL ON TABLE "public"."bajas_productos" TO "authenticated";
+GRANT ALL ON TABLE "public"."bajas_productos" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."configuracion_notificaciones" TO "anon";
 GRANT ALL ON TABLE "public"."configuracion_notificaciones" TO "authenticated";
 GRANT ALL ON TABLE "public"."configuracion_notificaciones" TO "service_role";
@@ -2693,6 +3228,12 @@ GRANT ALL ON TABLE "public"."donaciones" TO "service_role";
 GRANT ALL ON SEQUENCE "public"."donaciones_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."donaciones_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."donaciones_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."historial_donaciones" TO "anon";
+GRANT ALL ON TABLE "public"."historial_donaciones" TO "authenticated";
+GRANT ALL ON TABLE "public"."historial_donaciones" TO "service_role";
 
 
 
@@ -2762,6 +3303,12 @@ GRANT ALL ON TABLE "public"."usuarios" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."v_bajas_productos_detalle" TO "anon";
+GRANT ALL ON TABLE "public"."v_bajas_productos_detalle" TO "authenticated";
+GRANT ALL ON TABLE "public"."v_bajas_productos_detalle" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."v_inventario_con_conversiones" TO "anon";
 GRANT ALL ON TABLE "public"."v_inventario_con_conversiones" TO "authenticated";
 GRANT ALL ON TABLE "public"."v_inventario_con_conversiones" TO "service_role";
@@ -2822,7 +3369,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
 
 
 
