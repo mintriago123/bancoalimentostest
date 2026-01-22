@@ -17,6 +17,8 @@ import {
   type Donation,
   type DonationEstado
 } from '@/modules/shared/donaciones';
+import CancelarDonacionModal from '@/modules/admin/reportes/donaciones/components/CancelarDonacionModal';
+import type { MotivoCancelacion } from '@/modules/admin/reportes/donaciones/types';
 
 const LoadingState = () => (
   <div className="text-center py-12">
@@ -31,6 +33,8 @@ export default function DonationsReportPage() {
   const confirm = useConfirm();
   const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [donacionACancelar, setDonacionACancelar] = useState<Donation | null>(null);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
   const {
     donations,
@@ -54,7 +58,14 @@ export default function DonationsReportPage() {
   const hasError = loadingState === 'error';
 
   const handleChangeEstado = useCallback(async (donation: Donation, estado: DonationEstado) => {
-    const prompts: Record<DonationEstado, {
+    // Si es cancelación, abrir modal específico
+    if (estado === 'Cancelada') {
+      setDonacionACancelar(donation);
+      setIsCancelModalOpen(true);
+      return;
+    }
+
+    const prompts: Record<Exclude<DonationEstado, 'Cancelada'>, {
       title: string;
       description: string;
       confirmLabel: string;
@@ -77,16 +88,10 @@ export default function DonationsReportPage() {
         description: 'La donación se marcará como entregada y el impacto quedará registrado.',
         confirmLabel: 'Marcar como entregada',
         variant: 'default'
-      },
-      Cancelada: {
-        title: `Cancelar donación de ${donation.tipo_producto}`,
-        description: 'La donación se cancelará y no aparecerá como disponible en el inventario.',
-        confirmLabel: 'Cancelar donación',
-        variant: 'danger'
       }
     };
 
-    const prompt = prompts[estado];
+    const prompt = prompts[estado as Exclude<DonationEstado, 'Cancelada'>];
 
     const confirmed = await confirm({
       title: prompt.title,
@@ -124,6 +129,32 @@ export default function DonationsReportPage() {
   const handleCloseModal = useCallback(() => {
     setIsDetailModalOpen(false);
     setSelectedDonation(null);
+  }, []);
+
+  const handleConfirmCancelacion = useCallback(async (motivo: MotivoCancelacion, observaciones?: string) => {
+    if (!donacionACancelar) return;
+
+    const result = await updateEstado(donacionACancelar, 'Cancelada', { motivo, observaciones });
+
+    if (!result.success) {
+      showError(result.message);
+      throw new Error(result.message);
+    }
+
+    if (result.warning) {
+      showWarning(result.message);
+    } else {
+      showSuccess('Donación cancelada exitosamente');
+    }
+
+    setIsCancelModalOpen(false);
+    setDonacionACancelar(null);
+    await refetch();
+  }, [donacionACancelar, updateEstado, showError, showSuccess, showWarning, refetch]);
+
+  const handleCloseCancelModal = useCallback(() => {
+    setIsCancelModalOpen(false);
+    setDonacionACancelar(null);
   }, []);
 
   const tableContent = useMemo(() => {
@@ -193,6 +224,14 @@ export default function DonationsReportPage() {
         donation={selectedDonation}
         isOpen={isDetailModalOpen}
         onClose={handleCloseModal}
+      />
+
+      <CancelarDonacionModal
+        isOpen={isCancelModalOpen}
+        onClose={handleCloseCancelModal}
+        donacion={donacionACancelar}
+        onConfirm={handleConfirmCancelacion}
+        isProcessing={processingId === donacionACancelar?.id}
       />
     </DashboardLayout>
   );

@@ -7,7 +7,8 @@ import type {
   Donation,
   DonationEstado,
   DonationInventoryIntegrationResult,
-  ServiceResult
+  ServiceResult,
+  MotivoCancelacion
 } from '../types';
 import { SYSTEM_MESSAGES } from '../constants';
 import { sendNotification } from '@/modules/shared/services/notificationClient';
@@ -47,7 +48,8 @@ const processingCache = new Map<number, Promise<ServiceResult<{ message: string;
 export const createDonationActionService = (supabaseClient: SupabaseClient) => {
   const updateDonationEstado = async (
     donation: Donation,
-    nuevoEstado: DonationEstado
+    nuevoEstado: DonationEstado,
+    cancelacionData?: { motivo: MotivoCancelacion; observaciones?: string }
   ): Promise<ServiceResult<{ message: string; warning?: boolean }>> => {
     // Prevenir procesamiento duplicado de la misma donación
     const cacheKey = donation.id;
@@ -62,20 +64,53 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
     
     const processPromise = (async () => {
     try {
+      // Validación: Si es cancelación, se requieren los datos de cancelación
+      if (nuevoEstado === 'Cancelada' && !cancelacionData) {
+        logger.error('Intento de cancelar donación sin datos de cancelación', { donacionId: donation.id });
+        return {
+          success: false,
+          error: 'Se requiere motivo y observaciones para cancelar una donación'
+        };
+      }
+
       // Generar código de comprobante si no existe
       const codigoComprobante = donation.codigo_comprobante ?? generarCodigoComprobante('donacion', String(donation.id));
       
+      // Obtener usuario actual para registrar quién cancela
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      
+      // Preparar datos de actualización
+      const updateData: any = {
+        estado: nuevoEstado,
+        actualizado_en: new Date().toISOString(),
+        ...(codigoComprobante && { codigo_comprobante: codigoComprobante })
+      };
+
+      // Si es cancelación, agregar datos de cancelación
+      if (nuevoEstado === 'Cancelada' && cancelacionData) {
+        updateData.motivo_cancelacion = cancelacionData.motivo;
+        updateData.observaciones_cancelacion = cancelacionData.observaciones || null;
+        updateData.usuario_cancelacion_id = user?.id || null;
+        updateData.fecha_cancelacion = new Date().toISOString();
+      }
+      
       const { error } = await supabaseClient
         .from('donaciones')
-        .update({
-          estado: nuevoEstado,
-          actualizado_en: new Date().toISOString(),
-          ...(codigoComprobante && { codigo_comprobante: codigoComprobante })
-        })
+        .update(updateData)
         .eq('id', donation.id);
 
       if (error) {
         logger.error('Error actualizando estado de donación', error);
+        
+        // Si el error es por columnas que no existen
+        if (error.code === '42703' || error.message?.includes('column')) {
+          return {
+            success: false,
+            error: 'La base de datos no está actualizada. Por favor, ejecuta el script: database/agregar-campos-cancelacion-donaciones.sql',
+            errorDetails: error
+          };
+        }
+        
         return {
           success: false,
           error: 'No fue posible actualizar el estado de la donación',
@@ -95,7 +130,7 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
         });
       }
 
-      await notificarCambioEstadoDonacion(donation, nuevoEstado, codigoComprobante);
+      await notificarCambioEstadoDonacion(donation, nuevoEstado, codigoComprobante, cancelacionData);
 
       return {
         success: true,
@@ -124,7 +159,8 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
   const notificarCambioEstadoDonacion = async (
     donation: Donation, 
     nuevoEstado: DonationEstado,
-    codigoComprobanteGuardado?: string | null
+    codigoComprobanteGuardado?: string | null,
+    cancelacionData?: { motivo: MotivoCancelacion; observaciones?: string }
   ) => {
     try {
       const baseUrl = getBaseUrl();
@@ -229,14 +265,24 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
         }
 
         case 'Cancelada': {
+          // Construir mensaje con motivo si está disponible
+          const motivoTexto = cancelacionData?.motivo ? ` Motivo: ${cancelacionData.motivo.replace(/_/g, ' ')}` : '';
+          const observacionesTexto = cancelacionData?.observaciones ? ` Detalles: ${cancelacionData.observaciones}` : '';
+          
           const emailTemplate = buildDonacionCanceladaEmailTemplate({
-            comprobante,
+            comprobante: {
+              ...comprobante,
+              pedido: {
+                ...comprobante.pedido,
+                comentarioAdmin: cancelacionData?.observaciones || undefined
+              }
+            },
             baseUrl,
           });
 
           await sendNotification({
             titulo: '❌ Donación Cancelada',
-            mensaje: `Estimado/a ${datosUsuario.nombre}, le informamos que su donación de ${donation.tipo_producto} ha sido cancelada. Si fue un error o tiene alguna duda, no dude en contactarnos para coordinar nuevamente.`,
+            mensaje: `Estimado/a ${datosUsuario.nombre}, le informamos que su donación de ${donation.tipo_producto} ha sido cancelada.${motivoTexto}${observacionesTexto} Si tiene alguna duda, no dude en contactarnos.`,
             categoria: 'donacion',
             tipo: 'warning',
             destinatarioId: donation.user_id ?? undefined,
@@ -244,6 +290,8 @@ export const createDonationActionService = (supabaseClient: SupabaseClient) => {
             metadatos: {
               donacionId: donation.id,
               nuevoEstado,
+              motivoCancelacion: cancelacionData?.motivo,
+              observacionesCancelacion: cancelacionData?.observaciones
             },
             email: {
               subject: emailTemplate.subject,

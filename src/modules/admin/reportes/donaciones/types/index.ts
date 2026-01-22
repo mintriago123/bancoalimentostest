@@ -8,6 +8,15 @@ export type DonationPersonType = 'Natural' | 'Juridica';
 
 export type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 
+export type MotivoCancelacion = 
+  | 'error_donante'
+  | 'no_disponible'
+  | 'calidad_inadecuada'
+  | 'logistica_imposible'
+  | 'duplicado'
+  | 'solicitud_donante'
+  | 'otro';
+
 export interface DonationAlimento {
   nombre: string;
   categoria: string;
@@ -44,6 +53,10 @@ export interface Donation {
   actualizado_en: string;
   alimento?: DonationAlimento | null;
   codigo_comprobante?: string;
+  motivo_cancelacion?: MotivoCancelacion | null;
+  observaciones_cancelacion?: string | null;
+  usuario_cancelacion_id?: string | null;
+  fecha_cancelacion?: string | null;
 }
 
 export interface DonationEstadoFilter {
@@ -123,4 +136,10 @@ export interface SupabaseAlimentoRow {
   id: number;
   nombre?: string | null;
   categoria?: string | null;
+}
+
+export interface CancelarDonacionRequest {
+  donacionId: number;
+  motivo: MotivoCancelacion;
+  observaciones?: string;
 }

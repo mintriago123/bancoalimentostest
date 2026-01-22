@@ -17,6 +17,8 @@ import {
   type Donation,
   type DonationEstado
 } from '@/modules/shared/donaciones';
+import CancelarDonacionModal from '@/modules/admin/reportes/donaciones/components/CancelarDonacionModal';
+import type { MotivoCancelacion } from '@/modules/admin/reportes/donaciones/types';
 
 const LoadingState = () => (
   <div className="text-center py-12">
@@ -31,6 +33,8 @@ export default function OperadorDonationsPage() {
   const confirm = useConfirm();
   const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isCancelarModalOpen, setIsCancelarModalOpen] = useState(false);
+  const [donationToCancelar, setDonationToCancelar] = useState<Donation | null>(null);
 
   const {
     donations,
@@ -54,9 +58,10 @@ export default function OperadorDonationsPage() {
   const hasError = loadingState === 'error';
 
   const handleChangeEstado = useCallback(async (donation: Donation, estado: DonationEstado) => {
-    // OPERADORES NO PUEDEN CANCELAR DONACIONES
+    // Si es cancelar, abrir el modal de cancelación
     if (estado === 'Cancelada') {
-      showError('No tienes permisos para cancelar donaciones. Contacta a un administrador.');
+      setDonationToCancelar(donation);
+      setIsCancelarModalOpen(true);
       return;
     }
 
@@ -126,6 +131,33 @@ export default function OperadorDonationsPage() {
     setSelectedDonation(null);
   }, []);
 
+  const handleConfirmCancelacion = useCallback(async (
+    motivo: MotivoCancelacion,
+    observaciones?: string
+  ) => {
+    if (!donationToCancelar) return;
+
+    const result = await updateEstado(donationToCancelar, 'Cancelada', {
+      motivo,
+      observaciones
+    });
+
+    if (!result.success) {
+      showError(result.message);
+      return;
+    }
+
+    showSuccess(result.message);
+    setIsCancelarModalOpen(false);
+    setDonationToCancelar(null);
+    await refetch();
+  }, [donationToCancelar, updateEstado, showError, showSuccess, refetch]);
+
+  const handleCloseCancelarModal = useCallback(() => {
+    setIsCancelarModalOpen(false);
+    setDonationToCancelar(null);
+  }, []);
+
   const tableContent = useMemo(() => {
     if (isLoading) {
       return <LoadingState />;
@@ -177,25 +209,33 @@ export default function OperadorDonationsPage() {
         {tableContent}
 
         {/* Nota informativa para operadores */}
-        <div className="rounded-lg bg-orange-50 border border-orange-200 p-4">
+        <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-orange-800">
+              <h3 className="text-sm font-medium text-blue-800">
                 Nota para Operadores
               </h3>
-              <p className="mt-1 text-sm text-orange-700">
-                Como operador, puedes actualizar el estado de las donaciones (Pendiente → Recogida → Entregada), 
-                pero <strong>NO puedes cancelar donaciones</strong>. Para cancelar una donación, contacta a un administrador.
+              <p className="mt-1 text-sm text-blue-700">
+                Puedes actualizar el estado de las donaciones (Pendiente → Recogida → Entregada) y cancelarlas cuando sea necesario. 
+                El historial de cancelaciones solo es visible para administradores.
               </p>
             </div>
           </div>
         </div>
       </div>
+
+      <CancelarDonacionModal
+        isOpen={isCancelarModalOpen}
+        onClose={handleCloseCancelarModal}
+        onConfirm={handleConfirmCancelacion}
+        donacion={donationToCancelar}
+        isProcessing={processingId === donationToCancelar?.id}
+      />
 
       <div className="fixed top-4 right-4 z-50 space-y-2">
         {toasts.map(toast => (
