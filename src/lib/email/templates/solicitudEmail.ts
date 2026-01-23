@@ -394,7 +394,6 @@ SOLICITUD NO APROBADA - BANCO DE ALIMENTOS
 Estimado/a ${usuario.nombre},
 
 Lamentamos informarle que su solicitud de alimentos no ha podido ser aprobada en esta ocasión.
-
 DETALLES DE LA SOLICITUD:
 - Producto solicitado: ${pedido.tipoAlimento}
 - Cantidad: ${pedido.cantidad} ${pedido.unidad}
@@ -409,6 +408,96 @@ ${comentario ? `COMENTARIO DEL ADMINISTRADOR:\n"${comentario}"\n` : ''}
 3. Contactarnos: Si tiene dudas sobre el rechazo, comuníquese con nosotros.
 
 Para realizar una nueva solicitud, visite: ${baseUrl}/user/formulario
+
+---
+Este mensaje fue generado automáticamente por la plataforma Banco de Alimentos.
+© ${new Date().getFullYear()} Banco de Alimentos. Todos los derechos reservados.
+  `.trim();
+
+  return { subject, html, text };
+}
+
+// Plantilla de email para solicitud entregada
+export function buildSolicitudEntregadaEmailTemplate({
+  comprobante,
+  qrImageBase64,
+  baseUrl
+}: Omit<SolicitudEmailTemplateInput, 'estado'>): { subject: string; html: string; text: string } {
+  const { usuario, pedido, codigoComprobante, fechaEmision, descripcionProyecto } = comprobante;
+
+  const subject = `🎉 Solicitud Entregada`;
+  const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solicitud Entregada</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        <table role="presentation" style="max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 32px; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
+                Solicitud Entregada
+              </h1>
+              <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">
+                Banco de Alimentos - Sistema de Gestión
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 32px 16px;">
+              <p style="margin: 0; font-size: 16px; color: #374151;">
+                Estimado/a <strong style="color: #1f2937;">${escapeHtml(usuario.nombre)}</strong>,
+              </p>
+              <p style="margin: 16px 0 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+                Le confirmamos que su solicitud ha sido <strong style="color: #059669;">entregada exitosamente</strong> el día <strong>${formatearFecha(fechaEmision)}</strong>.
+              </p>
+              <p style="margin: 24px 0 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+                ¡Gracias por confiar en el Banco de Alimentos! Si tienes dudas o necesitas realizar una nueva solicitud, puedes hacerlo desde la plataforma.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 32px 32px; text-align: center;">
+              <a href="${baseUrl}/user/solicitudes" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 6px rgba(5, 150, 105, 0.3);">
+                Ver mis Solicitudes
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f9fafb; padding: 24px 32px; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0 0 8px; font-size: 12px; color: #6b7280; text-align: center;">
+                Este es un mensaje automático del sistema Banco de Alimentos. Por favor, no responda a este correo.
+              </p>
+              <p style="margin: 0; font-size: 12px; color: #9ca3af; text-align: center;">
+                © ${new Date().getFullYear()} Banco de Alimentos. Todos los derechos reservados.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  const text = `
+SOLICITUD ENTREGADA - BANCO DE ALIMENTOS
+========================================
+
+Estimado/a ${usuario.nombre},
+
+Te confirmamos que tu solicitud ha sido ENTREGADA exitosamente el día ${formatearFecha(fechaEmision)}.
+
+¡Gracias por confiar en el Banco de Alimentos!
+
+Para ver tus solicitudes, visita: ${baseUrl}/user/solicitudes
 
 ---
 Este mensaje fue generado automáticamente por la plataforma Banco de Alimentos.
