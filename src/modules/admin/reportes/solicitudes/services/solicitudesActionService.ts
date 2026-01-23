@@ -23,6 +23,7 @@ import {
 import {
   buildSolicitudAprobadaEmailTemplate,
   buildSolicitudRechazadaEmailTemplate,
+  buildSolicitudEntregadaEmailTemplate,
 } from '@/lib/email/templates/solicitudEmail';
 import { getBaseUrl } from '@/lib/getBaseUrl';
 
@@ -859,10 +860,25 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
           },
         });
       } else if (nuevoEstado === 'entregada') {
-        // Notificación simple para entrega
+        // Notificación y correo para entrega
+        const urlComprobante = generarURLComprobante(
+          baseUrl,
+          comprobante.codigoComprobante,
+          'solicitud',
+          solicitud.usuario_id,
+          solicitud.id
+        );
+        const qrImageBase64 = await generarQRBase64(urlComprobante);
+        const emailTemplate = buildSolicitudEntregadaEmailTemplate({
+          comprobante,
+          qrImageBase64,
+          baseUrl,
+        });
         await sendNotification({
-          titulo: '📦 Solicitud Entregada',
-          mensaje: `Estimado/a ${datosUsuario.nombre}, confirmamos que su solicitud de ${solicitud.cantidad} ${datosPedido.unidad} de ${solicitud.tipo_alimento} ha sido entregada exitosamente. ¡Gracias por confiar en el Banco de Alimentos!`,
+          titulo: `🎉 Solicitud Procesada y Entregada`,
+          mensaje:
+            `Estimado/a ${datosUsuario.nombre}, su solicitud de ${solicitud.cantidad} ${datosPedido.unidad} de ${solicitud.tipo_alimento} ha sido <strong style="color: #059669;">entregada exitosamente</strong> y procesada por nuestro equipo.\n\n` +
+            `¡Gracias por confiar en el Banco de Alimentos! Si tienes dudas o necesitas realizar una nueva solicitud, puedes hacerlo desde la sección de solicitudes.`,
           categoria: 'solicitud',
           tipo: 'success',
           destinatarioId: solicitud.usuario_id,
@@ -870,6 +886,11 @@ export const createSolicitudesActionService = (supabaseClient: SupabaseClient) =
           metadatos: {
             solicitudId: solicitud.id,
             nuevoEstado,
+          },
+          email: {
+            subject: emailTemplate.subject,
+            html: emailTemplate.html,
+            text: emailTemplate.text,
           },
         });
       }
